@@ -50,7 +50,8 @@ My focus is practical cybersecurity, technical problem-solving, and building a p
 ### Windows Debloat / Optimization Script
 A practical Windows optimization and cleanup project focused on usability, performance, and system control.
 
-[View Project](projects.md#windows-debloat--optimization-script)
+[Read More]({{ '/projects' | relative_url }}#windows-debloat)
+- [GitHub Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
 
 ### Security Lab Notes
 Hands-on lab notes, observations, and lessons learned from cybersecurity practice environments.
@@ -85,8 +86,8 @@ It is both a portfolio and a working archive.
 
 - [Projects](projects.md)
 - [Writeups](writeups.md)
-- [GitHub Profile](https://github.com/yourusername)
-- [LinkedIn](https://linkedin.com/in/yourprofile)
+- [GitHub Profile](https://github.com/su-Alexis)
+- [LinkedIn](www.linkedin.com/in/alexis-sm-pontious)
 
 ---
 
