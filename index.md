@@ -87,7 +87,7 @@ It is both a portfolio and a working archive.
 - [Projects](projects.md)
 - [Writeups](writeups.md)
 - [GitHub Profile](https://github.com/su-Alexis)
-- [LinkedIn](www.linkedin.com/in/alexis-sm-pontious)
+- [LinkedIn](https://linkedin.com/in/alexis-sm-pontious)
 
 ---
 
