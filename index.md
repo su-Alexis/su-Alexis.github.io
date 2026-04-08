@@ -50,8 +50,8 @@ My focus is practical cybersecurity, technical problem-solving, and building a p
 ### Windows Debloat / Optimization Script
 A practical Windows optimization and cleanup project focused on usability, performance, and system control.
 
-[Read More]({{ '/projects' | relative_url }}#windows-debloat)
-- [GitHub Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
+[Read More]({{ '/projects/Windows-Debloat-And-Optimize' | relative_url }})  
+[GitHub Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
 
 ### Security Lab Notes
 Hands-on lab notes, observations, and lessons learned from cybersecurity practice environments.
