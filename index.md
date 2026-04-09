@@ -66,7 +66,7 @@ I use PowerShell, Python, and AI-assisted tools to improve research, analysis, t
 ### Windows Debloat / Optimization Script
 A practical Windows optimization and cleanup project focused on usability, performance, and system control.
 
-[Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})
+[Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\n
 [GitHub Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
 
 ---
