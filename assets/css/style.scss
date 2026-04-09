@@ -11,8 +11,17 @@
 
 header.site-header {
   text-align: center !important;
-  padding-top: 24px !important;
-  margin: 0 auto 28px auto !important;
+  padding: 24px 0 22px 0 !important;
+  margin: 0 auto 32px auto !important;
+  position: relative;
+}
+
+header.site-header::after {
+  content: "";
+  display: block;
+  width: 100%;
+  margin: 22px auto 0 auto;
+  border-bottom: 1px solid rgba(240, 192, 64, 0.35);
 }
 
 header.site-header .site-title {
@@ -25,8 +34,9 @@ header.site-header .site-title {
 header.site-header .site-tagline {
   display: block;
   width: 100%;
-  margin: 0 0 18px 0 !important;
+  margin: 0 !important;
   text-align: center !important;
+  color: #d8d8d8;
 }
 
 main {
