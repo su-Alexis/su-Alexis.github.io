@@ -1,3 +1,7 @@
-title: Alexis' Site
-description: Projects, notes, and experiments
+title: Alexis Pontious
+description: Cybersecurity Portfolio | Projects, Writeups, Labs, and Technical Documentation
 theme: jekyll-theme-midnight
+show_downloads: false
+url: "https://su-alexis.github.io"
+baseurl: ""
+lang: en-US
