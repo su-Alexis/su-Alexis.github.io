@@ -101,7 +101,8 @@ This is an opinionated tuning script intended for users who want more control ov
   </figure>
 </div>
 
-<br><br>\
+<br><br>
+
 ---
 
 <p class="section-label">Quick Links</p>
