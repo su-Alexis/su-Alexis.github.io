@@ -4,10 +4,10 @@ title: Home
 ---
 
 
-<p>
-  <a href="{{ '/projects/' | relative_url }}" class="btn" style="display: inline-block; margin-right: 10px;">View Projects</a>
-  <a href="{{ '/writeups/' | relative_url }}" class="btn" style="display: inline-block;">View Writeups</a>
-</p>
+<div style="display: flex; gap: 14px; flex-wrap: wrap;">
+  <a href="{{ '/projects/' | relative_url }}" style="display: inline-block; padding: 4px 10px; border: 1px solid #f0c040;">View Projects</a>
+  <a href="{{ '/writeups/' | relative_url }}" style="display: inline-block; padding: 4px 10px; border: 1px solid #f0c040;">View Writeups</a>
+</div>
 
 ## Ethical Hacker \| Cybersecurity-Focused IT Specialist 
 
