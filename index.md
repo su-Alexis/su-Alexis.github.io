@@ -86,7 +86,8 @@ This site also serves as a place to document troubleshooting, security research,
 
 <a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
 
-<br><br>\
+<br><br>
+
 ---
 
 <p class="section-label">Quick Links</p>
