@@ -90,6 +90,7 @@ This site also serves as a place to document troubleshooting, security research,
   <p class="section-label">Quick Links</p>
 
   <div class="hub-links">
+    <a href="{{ '/' | relative_url }}">[ Home ]</a>
     <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
     <a href="{{ '/writeups/' | relative_url }}">[ Writeups ]</a>
     <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
