@@ -4,6 +4,9 @@ title: Home
 ---
 
 
+<p><a href="{{ '/projects/' | relative_url }}" class="btn">View Projects</a></p>
+<p><a href="{{ '/writeups/' | relative_url }}" class="btn">View Writeups</a></p>
+
 ## Ethical Hacker \| Cybersecurity-Focused IT Specialist 
 
 I focus on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS environments. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.
