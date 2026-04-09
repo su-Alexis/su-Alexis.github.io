@@ -26,7 +26,35 @@ A scripting project focused on improving usability, trimming unnecessary Windows
 <a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
 
 ### Screenshots
-![Project screenshot]({{ '/assets/images/project1/screenshot1.png' | relative_url }})
+<div class="screenshot-gallery">
+  <figure class="screenshot-tile">
+    <a class="screenshot-link" href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">
+      <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}" alt="Main Script Start">
+    </a>
+    <figcaption>Main Script Start</figcaption>
+  </figure>
+
+  <figure class="screenshot-tile">
+    <a class="screenshot-link" href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">
+      <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }}" alt="Bloat Removal">
+    </a>
+    <figcaption>Bloat Removal</figcaption>
+  </figure>
+
+  <figure class="screenshot-tile">
+    <a class="screenshot-link" href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">
+      <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }}" alt="Optimizations">
+    </a>
+    <figcaption>Optimizations</figcaption>
+  </figure>
+
+  <figure class="screenshot-tile">
+    <a class="screenshot-link" href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">
+      <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }}" alt="Main Script End">
+    </a>
+    <figcaption>Main Script End</figcaption>
+  </figure>
+</div>
 
 ---
 
