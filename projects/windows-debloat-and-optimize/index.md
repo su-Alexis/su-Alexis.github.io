@@ -106,6 +106,7 @@ This is an opinionated tuning script intended for users who want more control ov
   <p class="section-label">Quick Links</p>
 
   <div class="hub-links">
+    <a href="{{ '/' | relative_url }}">[ Home ]</a>
     <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
     <a href="{{ '/writeups/' | relative_url }}">[ Writeups ]</a>
     <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
