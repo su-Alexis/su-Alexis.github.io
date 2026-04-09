@@ -63,7 +63,7 @@ I use PowerShell, Python, and AI-assisted tools to improve research, analysis, t
 ## Featured Projects
 
 ### Windows Debloat / Optimization Script
-A practical Windows optimization and cleanup project focused on usability, performance, and system control.
+An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows10Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup.
 
 [Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\
 [GitHub Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
