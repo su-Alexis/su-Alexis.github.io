@@ -28,7 +28,7 @@ An all-in-one PowerShell project built to automate post-install and post-update 
 
 ### Links
 [Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})  
-<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
+<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">[ View Repository ]</a>
 
 ### Screenshots
 <div class="project-preview-gallery">
