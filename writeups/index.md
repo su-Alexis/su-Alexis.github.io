@@ -4,7 +4,11 @@ title: Writeups
 permalink: /writeups/
 ---
 
-<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+<div class="hub-links">
+  <a href="{{ '/' | relative_url }}">[ Back to Home ]</a>
+  <a href="{{ '/projects/' | relative_url }}">[ View Projects ]</a>
+</div>
+
 
 # Writeups
 
