@@ -5,51 +5,6 @@
     {% include head-custom.html %}
     <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
   </head>
-  <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
-  <div class="lightbox-content">
-    <button class="lightbox-close" type="button" onclick="closeLightboxButton()" aria-label="Close image viewer">×</button>
-    <img id="lightbox-image" src="" alt="">
-    <div id="lightbox-caption" class="lightbox-caption"></div>
-  </div>
-</div>
-
-<script>
-  function openLightbox(src, altText) {
-    const lightbox = document.getElementById('lightbox');
-    const image = document.getElementById('lightbox-image');
-    const caption = document.getElementById('lightbox-caption');
-
-    image.src = src;
-    image.alt = altText || '';
-    caption.textContent = altText || '';
-    lightbox.classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeLightbox(event) {
-    if (!event || event.target.id === 'lightbox') {
-      const lightbox = document.getElementById('lightbox');
-      const image = document.getElementById('lightbox-image');
-      lightbox.classList.remove('open');
-      image.src = '';
-      document.body.style.overflow = '';
-    }
-  }
-
-  function closeLightboxButton() {
-    const lightbox = document.getElementById('lightbox');
-    const image = document.getElementById('lightbox-image');
-    lightbox.classList.remove('open');
-    image.src = '';
-    document.body.style.overflow = '';
-  }
-
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      closeLightboxButton();
-    }
-  });
-</script>
   <body>
     <div class="wrapper">
       <header class="site-header">
@@ -73,5 +28,53 @@
         </p>
       </footer>
     </div>
+
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+      <div class="lightbox-content">
+        <button class="lightbox-close" type="button" onclick="closeLightboxButton()" aria-label="Close image viewer">×</button>
+        <img id="lightbox-image" src="" alt="">
+        <div id="lightbox-caption" class="lightbox-caption"></div>
+      </div>
+    </div>
+
+    <script>
+      function openLightbox(src, altText) {
+        const lightbox = document.getElementById('lightbox');
+        const image = document.getElementById('lightbox-image');
+        const caption = document.getElementById('lightbox-caption');
+
+        image.src = src;
+        image.alt = altText || '';
+        caption.textContent = altText || '';
+        lightbox.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeLightbox(event) {
+        if (!event || event.target.id === 'lightbox') {
+          const lightbox = document.getElementById('lightbox');
+          const image = document.getElementById('lightbox-image');
+          lightbox.classList.remove('open');
+          image.src = '';
+          image.alt = '';
+          document.body.style.overflow = '';
+        }
+      }
+
+      function closeLightboxButton() {
+        const lightbox = document.getElementById('lightbox');
+        const image = document.getElementById('lightbox-image');
+        lightbox.classList.remove('open');
+        image.src = '';
+        image.alt = '';
+        document.body.style.overflow = '';
+      }
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          closeLightboxButton();
+        }
+      });
+    </script>
   </body>
 </html>
