@@ -8,7 +8,7 @@ title: Home
   <a href="{{ '/projects/' | relative_url }}" style="display: inline-block; padding: 4px 10px; border: 1px solid #f0c040;">View Projects</a>
   <a href="{{ '/writeups/' | relative_url }}" style="display: inline-block; padding: 4px 10px; border: 1px solid #f0c040;">View Writeups</a>
 </div>
-
+---
 
 ## Ethical Hacker \| Cybersecurity-Focused IT Specialist 
 
