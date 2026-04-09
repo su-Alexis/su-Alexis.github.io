@@ -4,8 +4,10 @@ title: Home
 ---
 
 
-<p><a href="{{ '/projects/' | relative_url }}" class="btn">View Projects</a></p>
-<p><a href="{{ '/writeups/' | relative_url }}" class="btn">View Writeups</a></p>
+<p>
+  <a href="{{ '/projects/' | relative_url }}" class="btn" style="display: inline-block; margin-right: 10px;">View Projects</a>
+  <a href="{{ '/writeups/' | relative_url }}" class="btn" style="display: inline-block;">View Writeups</a>
+</p>
 
 ## Ethical Hacker \| Cybersecurity-Focused IT Specialist 
 
