@@ -1,86 +1,70 @@
-<!DOCTYPE html>
-<html lang="{{ site.lang | default: 'en-US' }}">
-  <head>
-    {% seo %}
-    {% include head-custom.html %}
-    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
-  </head>
-  <body>
-    <div class="wrapper">
-      <header class="site-header">
-        <h1 class="site-title">{{ site.title | default: site.github.repository_name }}</h1>
-        <p class="site-tagline">{{ site.tagline | default: site.description | default: site.github.project_tagline }}</p>
-      </header>
+<div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-content" onclick="event.stopPropagation()">
+    <button class="lightbox-close" type="button" onclick="closeLightboxButton()" aria-label="Close image viewer">×</button>
 
-      <main>
-        {{ content }}
-      </main>
+    <button class="lightbox-nav lightbox-prev" type="button" onclick="changeLightboxImage(-1)" aria-label="Previous image">
+      &#10094;
+    </button>
 
-      <footer class="site-footer">
-        <hr>
-        <p>
-          Project maintained by
-          <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>
-          <span class="footer-separator">—</span>
-          Hosted on GitHub Pages
-          <span class="footer-separator">—</span>
-          Theme by <a href="https://twitter.com/mattgraham" target="_blank" rel="noopener noreferrer">mattgraham</a>
-        </p>
-      </footer>
-    </div>
+    <img id="lightbox-image" src="" alt="">
 
-    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
-      <div class="lightbox-content">
-        <button class="lightbox-close" type="button" onclick="closeLightboxButton()" aria-label="Close image viewer">×</button>
-        <img id="lightbox-image" src="" alt="">
-        <div id="lightbox-caption" class="lightbox-caption"></div>
-      </div>
-    </div>
+    <button class="lightbox-nav lightbox-next" type="button" onclick="changeLightboxImage(1)" aria-label="Next image">
+      &#10095;
+    </button>
 
-   <script>
-  let lightboxImages = [];
+    <div id="lightbox-caption" class="lightbox-caption"></div>
+  </div>
+</div>
+
+<script>
   let currentLightboxIndex = 0;
+  let lightboxItems = [];
 
-  function initLightbox() {
-    lightboxImages = Array.from(document.querySelectorAll('.lightbox-trigger'));
-
-    lightboxImages.forEach((img, index) => {
-      img.style.cursor = 'pointer';
-      img.addEventListener('click', () => openLightbox(index));
-    });
+  function getLightboxItems() {
+    lightboxItems = Array.from(document.querySelectorAll('.screenshot-gallery .screenshot-link'));
+    return lightboxItems;
   }
 
-  function openLightbox(index) {
-    if (!lightboxImages.length) return;
+  function openLightbox(event, index) {
+    event.preventDefault();
+
+    const items = getLightboxItems();
+    if (!items.length) return;
 
     currentLightboxIndex = index;
+    updateLightboxImage();
 
     const lightbox = document.getElementById('lightbox');
-    const lightboxImage = document.getElementById('lightbox-image');
-    const caption = document.getElementById('lightbox-caption');
-
-    const selectedImage = lightboxImages[currentLightboxIndex];
-
-    lightboxImage.src = selectedImage.src;
-    lightboxImage.alt = selectedImage.alt || '';
-    caption.textContent = selectedImage.alt || '';
-
     lightbox.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
 
+  function updateLightboxImage() {
+    const items = getLightboxItems();
+    if (!items.length) return;
+
+    const item = items[currentLightboxIndex];
+    const lightboxImage = document.getElementById('lightbox-image');
+    const lightboxCaption = document.getElementById('lightbox-caption');
+
+    lightboxImage.src = item.href;
+    lightboxImage.alt = item.dataset.caption || item.querySelector('img')?.alt || '';
+    lightboxCaption.textContent = item.dataset.caption || item.querySelector('img')?.alt || '';
+  }
+
   function changeLightboxImage(direction) {
-    if (!lightboxImages.length) return;
+    const items = getLightboxItems();
+    if (!items.length) return;
 
     currentLightboxIndex += direction;
 
     if (currentLightboxIndex < 0) {
-      currentLightboxIndex = lightboxImages.length - 1;
-    } else if (currentLightboxIndex >= lightboxImages.length) {
+      currentLightboxIndex = items.length - 1;
+    } else if (currentLightboxIndex >= items.length) {
       currentLightboxIndex = 0;
     }
 
-    openLightbox(currentLightboxIndex);
+    updateLightboxImage();
   }
 
   function closeLightbox(event) {
@@ -109,8 +93,4 @@
       changeLightboxImage(1);
     }
   });
-
-  document.addEventListener('DOMContentLoaded', initLightbox);
 </script>
-  </body>
-</html>
