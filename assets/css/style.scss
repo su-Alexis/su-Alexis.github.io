@@ -6,23 +6,31 @@
 .wrapper {
   max-width: 860px;
   margin: 0 auto;
-  padding: 36px 24px 0;
+  padding: 40px 24px 0 !important;
 }
 
-.site-header {
-  text-align: center;
-  padding-top: 18px;
-  margin-bottom: 28px;
+header.site-header {
+  text-align: center !important;
+  padding-top: 24px !important;
+  margin: 0 auto 28px auto !important;
 }
 
-.site-title {
-  margin: 0 0 10px 0;
-  text-align: center;
+header.site-header .site-title {
+  display: block;
+  width: 100%;
+  margin: 0 0 10px 0 !important;
+  text-align: center !important;
 }
 
-.site-tagline {
-  margin: 0 0 18px 0;
-  text-align: center;
+header.site-header .site-tagline {
+  display: block;
+  width: 100%;
+  margin: 0 0 18px 0 !important;
+  text-align: center !important;
+}
+
+main {
+  clear: both;
 }
 
 .hub-links {
@@ -39,6 +47,7 @@
 }
 
 .site-footer {
+  clear: both;
   margin-top: 40px;
   color: #8b8b8b;
   font-size: 0.95rem;
