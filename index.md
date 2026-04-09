@@ -81,7 +81,7 @@ This site also serves as a place to document troubleshooting, security research,
 
 ## Quick Links
 
-- [Projects]({{ '/projects' | relative_url }})
+- [Projects]({{ '/projects/projects.md' | relative_url }})
 - [Writeups]({{ '/writeups' | relative_url }})
 - [GitHub](https://github.com/su-Alexis)
 - [Credly](https://www.credly.com/users/alexis-sm-pontious/badges#credly)
