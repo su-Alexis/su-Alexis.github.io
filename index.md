@@ -5,8 +5,8 @@ title: Home
 
 
 <div class="hub-links">
-  <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
-  <a href="{{ '/writeups/' | relative_url }}">[ Writeups ]</a>
+  <a href="{{ '/projects/' | relative_url }}">[ View Projects ]</a>
+  <a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
 </div>
 
 ---
