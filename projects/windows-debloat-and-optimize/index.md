@@ -37,7 +37,7 @@ The script was tested in a virtualized Windows environment with VMware before be
 ### Notes
 This is an opinionated tuning script intended for users who want more control over Windows behavior. Some changes are aggressive by design, so the project is best presented as a practical automation and tuning tool rather than a guaranteed performance booster.
 
-[View Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
+<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
 
 ### Screenshots
 
