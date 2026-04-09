@@ -4,6 +4,8 @@ title: Projects
 permalink: /projects/
 ---
 
+<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+
 # Projects
 
 ## Windows Debloat / Optimization Script
