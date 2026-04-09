@@ -14,6 +14,7 @@ permalink: /projects/windows-debloat-and-optimize/
 ## Windows 10/11 Debloat & Optimize
 
 **PowerShell \| Windows Internals \| Registry Tuning \| System Optimization \| Virtualization Testing**
+
 <strong>Status:</strong> <span class="status-active">Active</span>
 
 Windows 10/11 Debloat & Optimize is an all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration.
