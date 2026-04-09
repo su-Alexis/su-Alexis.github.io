@@ -48,8 +48,6 @@ This is an opinionated tuning script intended for users who want more control ov
 
 <a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">[ View Repository ]</a>
 
-### Screenshots
-
 ## Screenshots
 
 <div class="screenshot-gallery">
