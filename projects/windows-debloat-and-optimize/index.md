@@ -4,7 +4,12 @@ title: Windows Debloat & Optimize
 permalink: /projects/windows-debloat-and-optimize/
 ---
 
-<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+<div class="hub-links">
+  <a href="{{ '/' | relative_url }}">[ Back to Home ]</a>
+  <a href="{{ '/projects/' | relative_url }}">[ View Projects ]</a>
+  <a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
+</div>
+
 
 ## Windows 10/11 Debloat & Optimize
 
