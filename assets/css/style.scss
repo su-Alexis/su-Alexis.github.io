@@ -3,6 +3,28 @@
 
 @import "{{ site.theme }}";
 
+.wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 36px 24px 0;
+}
+
+.site-header {
+  text-align: center;
+  padding-top: 18px;
+  margin-bottom: 28px;
+}
+
+.site-title {
+  margin: 0 0 10px 0;
+  text-align: center;
+}
+
+.site-tagline {
+  margin: 0 0 18px 0;
+  text-align: center;
+}
+
 .hub-links {
   display: flex;
   gap: 14px;
