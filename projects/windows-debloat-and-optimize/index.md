@@ -102,7 +102,7 @@ This is an opinionated tuning script intended for users who want more control ov
 </div>
 
 
-## Quick Links
+<p class="section-label">Quick Links</p>
 
 <div class="hub-links">
   <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
