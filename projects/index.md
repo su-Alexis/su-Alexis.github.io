@@ -8,25 +8,36 @@ permalink: /projects/
 
 # Projects
 
-## Windows Debloat / Optimization Script
+---
+layout: default
+title: Projects
+permalink: /projects/
+---
+
+<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+
+# Projects
+
+## Windows 10/11 Debloat & Optimize
 
 **Status:** Active  
-**Type:** PowerShell / Windows / System Optimization
+**Type:** PowerShell / Windows Internals / Registry Tuning / System Optimization
 
-A scripting project focused on improving usability, trimming unnecessary Windows components, and giving users more control over their environment.
+An all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration. Built on top of the original **Windows10Debloater** project, this version expands the workflow with additional optimization, networking, privacy, gaming, and general system tweaks.
 
 ### Highlights
-- System cleanup
-- Optimization workflow
-- Repeatable configuration changes
-- Focus on clarity and practicality
+- Automates post-install Windows cleanup and debloating
+- Applies registry-based system, explorer, input, and service tweaks
+- Includes networking, gaming, and quality-of-life configuration changes
+- Uses restore points, DISM, and SFC before major changes
+- Tested in a virtualized Windows environment with VMware before host use
 
 ### Links
-[Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\
+[Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})  
 <a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
 
 ### Screenshots
-<div class="screenshot-gallery">
+<div class="project-preview-gallery">
   <figure class="screenshot-tile">
     <a class="screenshot-link" href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}" alt="Main Script Start">
@@ -55,6 +66,7 @@ A scripting project focused on improving usability, trimming unnecessary Windows
     <figcaption>Main Script End</figcaption>
   </figure>
 </div>
+
 
 ---
 
