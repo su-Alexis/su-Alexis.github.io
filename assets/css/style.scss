@@ -33,6 +33,7 @@ main {
   clear: both;
 }
 
+/* Shared nav link row */
 .hub-links {
   display: flex;
   gap: 14px;
@@ -46,6 +47,22 @@ main {
   font-weight: 600;
 }
 
+/* Quick Links section */
+.quick-links-section {
+  margin-top: 40px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(240, 192, 64, 0.35);
+}
+
+.section-label {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #bdbdbd;
+}
+
 .site-footer {
   clear: both;
   margin-top: 40px;
@@ -56,6 +73,8 @@ main {
 .footer-separator {
   margin: 0 8px;
 }
+
+/* Full screenshot gallery */
 .screenshot-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -151,7 +170,7 @@ main {
   color: #f0c040;
 }
 
-/* Hub preview smaller */
+/* Smaller previews for hub pages */
 .project-preview-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -184,28 +203,5 @@ main {
 .project-preview-gallery figcaption {
   margin-top: 6px;
   font-size: 0.9rem;
-  color: #bdbdbd;
-}
-
-/* wrapper for quick links */
-.hub-links {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin: 0 0 22px 0;
-}
-
-.hub-links a {
-  display: inline-block;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.section-label {
-  margin: 0 0 10px 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
   color: #bdbdbd;
 }
