@@ -4,17 +4,11 @@ title: Projects
 permalink: /projects/
 ---
 
-<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+<div class="hub-links">
+  <a href="{{ '/' | relative_url }}">[ Back to Home ]</a>
+  <a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
+</div>
 
-# Projects
-
----
-layout: default
-title: Projects
-permalink: /projects/
----
-
-<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
 
 # Projects
 
