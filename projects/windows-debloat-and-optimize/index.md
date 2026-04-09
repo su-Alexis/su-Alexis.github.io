@@ -1,3 +1,9 @@
+---
+layout: default
+title: Windows Debloat & Optimize
+permalink: /projects/windows-debloat-and-optimize/
+---
+
 ## Windows 10/11 Debloat & Optimize
 
 **PowerShell \| Windows Internals \| Registry Tuning \| System Optimization \| Virtualization Testing**
