@@ -25,10 +25,9 @@ An all-in-one PowerShell project built to automate post-install and post-update 
 - Includes networking, gaming, and quality-of-life configuration changes
 - Uses restore points, DISM, and SFC before major changes
 - Tested in a virtualized Windows environment with VMware before host use
-[Read more...]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})  
 
-### Links
-<br>
+<a href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">Read more...</a>
+
 <a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">[ View Repository ]</a>
 
 ### Screenshots
