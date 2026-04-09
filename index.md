@@ -29,10 +29,10 @@ I utilize PowerShell, Python, and AI-assisted tools to improve research, analysi
 - Additional digital badge-backed coursework and platform training in cybersecurity, IT, networking, and systems
 
 ### Verification and Badge Links
-- [Credly Profile](https://www.credly.com/users/alexis-sm-pontious/badges#credly)
-- [Skillsoft Badge Wallet](https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet)
-- [GitHub](https://github.com/su-Alexis)
-- [LinkedIn](https://linkedin.com/in/alexis-sm-pontious)
+- <a href="https://www.credly.com/users/alexis-sm-pontious/badges#credly" target="_blank" rel="noopener noreferrer">Credly Profile</a>
+- <a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">Skillsoft Badge Wallet</a>
+- <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">GitHub</a>
+- <a href="https://linkedin.com/in/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">LinkedIn</a>
 
 ---
 
@@ -66,8 +66,7 @@ I utilize PowerShell, Python, and AI-assisted tools to improve research, analysi
 An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup.
 
 [Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\
-[GitHub Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
-
+<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
 ---
 
 ## Writeups and Documentation
@@ -82,7 +81,7 @@ This site also serves as a place to document troubleshooting, security research,
 
 - [Projects]({{ '/projects/' | relative_url }})
 - [Writeups]({{ '/writeups/' | relative_url }})
-- [GitHub](https://github.com/su-Alexis)
-- [Credly](https://www.credly.com/users/alexis-sm-pontious/badges#credly)
-- [Skillsoft Badges](https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet)
-- [LinkedIn](https://linkedin.com/in/alexis-sm-pontious)
+- <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">GitHub</a>
+- <a href="https://www.credly.com/users/alexis-sm-pontious/badges#credly" target="_blank" rel="noopener noreferrer">Credly</a>
+- <a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">Skillsoft Badges</a>
+- <a href="https://linkedin.com/in/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">LinkedIn</a>
