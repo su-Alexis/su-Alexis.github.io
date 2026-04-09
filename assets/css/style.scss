@@ -50,8 +50,9 @@ main {
 /* Quick Links section */
 .quick-links-section {
   margin-top: 40px;
-  padding-top: 22px;
+  padding: 22px 0 26px 0;
   border-top: 1px solid rgba(240, 192, 64, 0.35);
+  border-bottom: 1px solid rgba(240, 192, 64, 0.35);
 }
 
 .section-label {
