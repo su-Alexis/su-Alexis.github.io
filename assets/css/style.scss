@@ -150,3 +150,39 @@ main {
   border-color: #f0c040;
   color: #f0c040;
 }
+
+/* Hub preview smaller */
+.project-preview-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.project-preview-gallery .screenshot-tile {
+  margin: 0;
+}
+
+.project-preview-gallery .screenshot-link {
+  display: block;
+  text-decoration: none;
+}
+
+.project-preview-gallery .screenshot-link img {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+}
+
+.project-preview-gallery .screenshot-link:hover img {
+  border-color: #f0c040;
+}
+
+.project-preview-gallery figcaption {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #bdbdbd;
+}
