@@ -82,7 +82,7 @@ This site also serves as a place to document troubleshooting, security research,
 ## Quick Links
 
 - [Projects]({{ '/projects/' | relative_url }})
-- [Writeups]({{ '/writeups' | relative_url }})
+- [Writeups]({{ '/writeups/' | relative_url }})
 - [GitHub](https://github.com/su-Alexis)
 - [Credly](https://www.credly.com/users/alexis-sm-pontious/badges#credly)
 - [Skillsoft Badges](https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet)
