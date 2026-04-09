@@ -54,49 +54,70 @@ This is an opinionated tuning script intended for users who want more control ov
 
 <div class="screenshot-gallery">
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}" onclick="openLightbox(this.href, 'Main Script Start'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}"
+       data-caption="Main Script Start"
+       onclick="openLightbox(event, 0)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}" alt="Main Script Start">
     </a>
     <figcaption>Main Script Start</figcaption>
   </figure>
 
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }}" onclick="openLightbox(this.href, 'Bloat Removal'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }}"
+       data-caption="Bloat Removal"
+       onclick="openLightbox(event, 1)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }}" alt="Bloat Removal">
     </a>
     <figcaption>Bloat Removal</figcaption>
   </figure>
 
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }}" onclick="openLightbox(this.href, 'Disabling Scheduled Tasks'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }}"
+       data-caption="Disabling Scheduled Tasks"
+       onclick="openLightbox(event, 2)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }}" alt="Disabling Scheduled Tasks">
     </a>
     <figcaption>Disabling Scheduled Tasks</figcaption>
   </figure>
 
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }}" onclick="openLightbox(this.href, 'Optimizations'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }}"
+       data-caption="Optimizations"
+       onclick="openLightbox(event, 3)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }}" alt="Optimizations">
     </a>
     <figcaption>Optimizations</figcaption>
   </figure>
 
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }}" onclick="openLightbox(this.href, 'Net Changes'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }}"
+       data-caption="Net Changes"
+       onclick="openLightbox(event, 4)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }}" alt="Net Changes">
     </a>
     <figcaption>Net Changes</figcaption>
   </figure>
 
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }}" onclick="openLightbox(this.href, 'Net Cleaner'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }}"
+       data-caption="Net Cleaner"
+       onclick="openLightbox(event, 5)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }}" alt="Net Cleaner">
     </a>
     <figcaption>Net Cleaner</figcaption>
   </figure>
 
   <figure class="screenshot-tile">
-    <a class="screenshot-link" href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }}" onclick="openLightbox(this.href, 'Main Script End'); return false;">
+    <a class="screenshot-link"
+       href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }}"
+       data-caption="Main Script End"
+       onclick="openLightbox(event, 6)">
       <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }}" alt="Main Script End">
     </a>
     <figcaption>Main Script End</figcaption>
