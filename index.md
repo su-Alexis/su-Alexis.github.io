@@ -88,7 +88,7 @@ This site also serves as a place to document troubleshooting, security research,
 
 ---
 
-## Quick Links
+<p class="section-label">Quick Links</p>
 
 <div class="hub-links">
   <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
