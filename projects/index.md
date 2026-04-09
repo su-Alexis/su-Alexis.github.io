@@ -78,7 +78,8 @@ A structured area for hands-on ethical hacking notes, defensive observations, an
 - Lab environment troubleshooting
 - Security tooling observations
 
-<br><br>\
+<br><br>
+
 ---
 
 <p class="section-label">Quick Links</p>
