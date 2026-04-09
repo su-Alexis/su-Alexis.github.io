@@ -22,7 +22,8 @@ A scripting project focused on improving usability, trimming unnecessary Windows
 - Focus on clarity and practicality
 
 ### Links
-- [GitHub Repository](https://github.com/yourusername/yourrepo)
+[Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\
+<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
 
 ### Screenshots
 ![Project screenshot]({{ '/assets/images/project1/screenshot1.png' | relative_url }})
