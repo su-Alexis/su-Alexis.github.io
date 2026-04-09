@@ -56,3 +56,97 @@ main {
 .footer-separator {
   margin: 0 8px;
 }
+.screenshot-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.screenshot-tile {
+  margin: 0;
+}
+
+.screenshot-link {
+  display: block;
+  text-decoration: none;
+}
+
+.screenshot-link img {
+  display: block;
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+}
+
+.screenshot-link:hover img {
+  border-color: #f0c040;
+}
+
+.screenshot-tile figcaption {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  color: #bdbdbd;
+}
+
+/* Lightbox */
+.lightbox {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  padding: 32px;
+}
+
+.lightbox.open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 95vw;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lightbox-content img {
+  max-width: 92vw;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  border: 1px solid #444;
+  border-radius: 6px;
+}
+
+.lightbox-caption {
+  margin-top: 12px;
+  text-align: center;
+  color: #d0d0d0;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #666;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-close:hover {
+  border-color: #f0c040;
+  color: #f0c040;
+}
