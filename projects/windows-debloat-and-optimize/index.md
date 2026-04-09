@@ -4,6 +4,8 @@ title: Windows Debloat & Optimize
 permalink: /projects/windows-debloat-and-optimize/
 ---
 
+<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+
 ## Windows 10/11 Debloat & Optimize
 
 **PowerShell \| Windows Internals \| Registry Tuning \| System Optimization \| Virtualization Testing**
