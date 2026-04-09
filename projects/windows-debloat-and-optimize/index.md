@@ -39,20 +39,20 @@ This is an opinionated tuning script intended for users who want more control ov
 
 [View Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
 
-## Screenshots
+### Screenshots
 
-### Main Script Output
+# Main Script Output
 ![Main script output]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }})
 
-### Registry and Tuning Work
+# Registry and Tuning Work
 ![Registry and tuning work]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }})
 
-## 3
+# 3
 
-## 4
+# 4
 
-## 5
+# 5
 
-## 6
+# 6
 
-## 7
+# 7
