@@ -80,7 +80,7 @@ A structured area for hands-on ethical hacking notes, defensive observations, an
 - Security tooling observations
 
 
-## Quick Links
+<p class="section-label">Quick Links</p>
 
 <div class="hub-links">
   <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
