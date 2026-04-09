@@ -81,14 +81,14 @@ An all-in-one PowerShell project for automating Windows cleanup, debloating, reg
 
 This site also serves as a place to document troubleshooting, security research, technical breakdowns, and lessons learned from hands-on work.
 
-[View Writeups]({{ '/writeups' | relative_url }})
+<a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
 
 ---
 
 ## Quick Links
 
-- [Projects]({{ '/projects/' | relative_url }})
-- [Writeups]({{ '/writeups/' | relative_url }})
+- <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
+- <a href="{{ '/writeups/' | relative_url }}">[ Writeups ]</a>
 - <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
 - <a href="https://www.credly.com/users/alexis-sm-pontious/badges#credly" target="_blank" rel="noopener noreferrer">[ Credly ]</a>
 - <a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">[ Skillsoft Badges ]</a>
