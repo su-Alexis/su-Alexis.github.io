@@ -73,7 +73,7 @@ main {
 }
 
 .section-label {
-  margin: 0 0 10px 0;
+  margin: 0 0 14px 0;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 1px;
@@ -82,20 +82,48 @@ main {
   text-align: center;
 }
 
+.quick-links-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  text-align: left;
+}
+
+.quick-links-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 16px 16px 14px;
+  min-width: 0;
+}
+
+.quick-links-sublabel {
+  margin: 0 0 10px 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9f9f9f;
+  text-align: center;
+}
+
 .quick-links-section .hub-links {
   justify-content: center;
   margin: 0;
 }
 
-.site-footer {
-  clear: both;
-  margin-top: 40px;
-  color: #8b8b8b;
-  font-size: 0.95rem;
-}
+@media (max-width: 760px) {
+  .quick-links-grid {
+    grid-template-columns: 1fr;
+  }
 
-.footer-separator {
-  margin: 0 8px;
+  .quick-links-section {
+    padding: 22px 16px 18px 16px;
+  }
+
+  .quick-links-section .hub-links {
+    gap: 10px 14px;
+  }
 }
 
 /* Full screenshot gallery */
