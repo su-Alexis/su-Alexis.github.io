@@ -70,7 +70,7 @@ I utilize PowerShell, Python, and AI-assisted tools to improve research, analysi
 ## Featured Projects
 
 ### Windows 10/11 Debloat & Optimize
-\<strong>Status:</strong> <span class="status-active">Active</span>\
+<strong>Status:</strong> <span class="status-active">Active</span>\
 An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup.
 <a href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">Read More...</a>
 
