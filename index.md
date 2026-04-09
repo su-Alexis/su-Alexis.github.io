@@ -4,8 +4,6 @@ title: Home
 ---
 
 
-# Projects, Writeups, and Hands-On Labs
-
 **Ethical Hacker \| Cybersecurity-Focused IT Specialist**
 
 I focus on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS environments. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.
