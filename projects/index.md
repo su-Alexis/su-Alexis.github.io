@@ -32,7 +32,7 @@ An all-in-one PowerShell project built to automate post-install and post-update 
 
 ## Screenshots
 
-<div class="screenshot-gallery">
+<div class="project-preview-gallery screenshot-gallery">
   <figure class="screenshot-tile">
     <a class="screenshot-link"
        href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}"
@@ -73,6 +73,7 @@ An all-in-one PowerShell project built to automate post-install and post-update 
     <figcaption>Main Script End</figcaption>
   </figure>
 </div>
+
 <br><br>
 
 ---
