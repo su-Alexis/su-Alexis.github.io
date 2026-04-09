@@ -89,7 +89,7 @@ This site also serves as a place to document troubleshooting, security research,
 
 - [Projects]({{ '/projects/' | relative_url }})
 - [Writeups]({{ '/writeups/' | relative_url }})
-- <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">GitHub</a>
-- <a href="https://www.credly.com/users/alexis-sm-pontious/badges#credly" target="_blank" rel="noopener noreferrer">Credly</a>
-- <a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">Skillsoft Badges</a>
-- <a href="https://linkedin.com/in/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+- <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
+- <a href="https://www.credly.com/users/alexis-sm-pontious/badges#credly" target="_blank" rel="noopener noreferrer">[ Credly ]</a>
+- <a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">[ Skillsoft Badges ]</a>
+- <a href="https://linkedin.com/in/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">[ LinkedIn ]</a>
