@@ -67,6 +67,7 @@ An all-in-one PowerShell project for automating Windows cleanup, debloating, reg
 
 [Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\
 <a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
+
 ---
 
 ## Writeups and Documentation
