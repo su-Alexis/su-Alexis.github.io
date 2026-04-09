@@ -66,7 +66,7 @@ An all-in-one PowerShell project built to automate post-install and post-update 
 
 ## Security Lab Notes
 
-**Status:** Ongoing  
+<strong>Status:</strong> <span class="status-ongoing">Ongoing</span>\
 **Type:** Cybersecurity / Labs / Documentation
 
 A structured area for hands-on ethical hacking notes, defensive observations, and technical lessons learned.
