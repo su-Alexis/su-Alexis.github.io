@@ -42,22 +42,36 @@ This is an opinionated tuning script intended for users who want more control ov
 ### Screenshots
 
 ## Main Script Start
-[![Main script start]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }}" alt="Main script start">
+</a>
 
 ## Bloat Removal
-[![Bloat Removal]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }}" alt="Bloat Removal">
+</a>
 
 ## Disabling Scheduled Tasks
-[![Disabling Scheduled Tasks]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptdisablingscheduledtasks.png' | relative_url }}" alt="Disabling Scheduled Tasks">
+</a>
 
 ## Optimizations
-[![Optimizations]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptoptimizations.png' | relative_url }}" alt="Optimizations">
+</a>
 
 ## Net Changes
-[![Net Changes]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetChanges.png' | relative_url }}" alt="Net Changes">
+</a>
 
 ## Net Cleaner
-[![Net Cleaner]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptNetCleaner.png' | relative_url }}" alt="Net Cleaner">
+</a>
 
 ## Main Script End
-[![Main Script End]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }})]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }})
+<a href="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }}" target="_blank" rel="noopener noreferrer">
+  <img src="{{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptend.png' | relative_url }}" alt="Main Script End">
+</a>
