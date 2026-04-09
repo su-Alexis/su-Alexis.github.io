@@ -227,3 +227,29 @@ main {
   font-size: 0.9rem;
   color: #bdbdbd;
 }
+
+/* Status Colors
+Active = green
+Maintained = green
+Completed = green
+Archived = red
+Ongoing = neutral or amber
+In Progress = neutral or amber 
+*/
+.status-active,
+.status-maintained,
+.status-completed {
+  color: #6ccf6c;
+  font-weight: 700;
+}
+
+.status-archived {
+  color: #d96c6c;
+  font-weight: 700;
+}
+
+.status-ongoing,
+.status-in-progress {
+  color: #f0c040;
+  font-weight: 700;
+}
