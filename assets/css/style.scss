@@ -57,6 +57,11 @@ main {
   font-weight: 600;
 }
 
+.hub-links a:hover {
+  text-decoration: none;
+  opacity: 0.9;
+}
+
 /* Quick Links section */
 .quick-links-section {
   margin-top: 40px;
