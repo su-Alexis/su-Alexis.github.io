@@ -73,7 +73,7 @@ I utilize PowerShell, Python, and AI-assisted tools to improve research, analysi
 An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup.
 
 [Read More]({{ '/projects/windows-debloat-and-optimize/' | relative_url }})\
-<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View Repository</a>
+<a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">[ View Repository ]</a>
 
 ---
 
