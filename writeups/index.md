@@ -30,7 +30,7 @@ Writeups are currently being prepared and will be published here as they are com
 Full writeups coming soon.
 
 
-## Quick Links
+<p class="section-label">Quick Links</p>
 
 <div class="hub-links">
   <a href="{{ '/projects/' | relative_url }}">[ Projects ]</a>
