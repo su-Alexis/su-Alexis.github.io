@@ -60,8 +60,7 @@ An all-in-one PowerShell project built to automate post-install and post-update 
     <figcaption>Main Script End</figcaption>
   </figure>
 </div>
-
-
+<br><br>
 
 ---
 
