@@ -3,7 +3,7 @@
   <head>
     {% seo %}
     {% include head-custom.html %}
-    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
   </head>
   <body>
     <div class="wrapper">
