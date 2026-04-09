@@ -4,6 +4,8 @@ title: Writeups
 permalink: /writeups/
 ---
 
+<a href="{{ '/' | relative_url }}" class="btn">← Back to Home</a>
+
 # Writeups
 
 This page is reserved for technical writeups, research notes, walkthroughs, and documentation.
