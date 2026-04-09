@@ -38,3 +38,21 @@ The script was tested in a virtualized Windows environment with VMware before be
 This is an opinionated tuning script intended for users who want more control over Windows behavior. Some changes are aggressive by design, so the project is best presented as a practical automation and tuning tool rather than a guaranteed performance booster.
 
 [View Repository](https://github.com/su-Alexis/w10n11debloat-optimize)
+
+## Screenshots
+
+### Main Script Output
+![Main script output]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptstart.png' | relative_url }})
+
+### Registry and Tuning Work
+![Registry and tuning work]({{ '/assets/images/projects/windows-debloat-and-optimize/wdebloatscriptbloatremoval.png' | relative_url }})
+
+## 3
+
+## 4
+
+## 5
+
+## 6
+
+## 7
