@@ -3,7 +3,6 @@ layout: default
 title: Home
 ---
 
-# Alexis Pontious
 
 **Ethical Hacker \| Cybersecurity-Focused IT Specialist**
 
