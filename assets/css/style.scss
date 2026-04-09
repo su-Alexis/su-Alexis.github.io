@@ -50,9 +50,9 @@ main {
 /* Quick Links section */
 .quick-links-section {
   margin-top: 40px;
-  padding: 22px 0 26px 0;
-  border-top: 1px solid rgba(240, 192, 64, 0.35);
-  border-bottom: 1px solid rgba(240, 192, 64, 0.35);
+  padding: 22px 18px 16px 18px;
+  border: 1px solid rgba(240, 192, 64, 0.35);
+  text-align: center;
 }
 
 .section-label {
@@ -62,6 +62,15 @@ main {
   letter-spacing: 1px;
   text-transform: uppercase;
   color: #bdbdbd;
+  text-align: center;
+}
+
+.quick-links-section .hub-links {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0;
 }
 
 .site-footer {
