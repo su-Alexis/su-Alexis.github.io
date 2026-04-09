@@ -100,7 +100,7 @@ This is an opinionated tuning script intended for users who want more control ov
     <figcaption>Main Script End</figcaption>
   </figure>
 </div>
-
+<br><br>
 ---
 
 <p class="section-label">Quick Links</p>
