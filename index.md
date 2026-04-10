@@ -4,11 +4,10 @@ title: Home
 ---
 
 
-<div class="hub-links">
-  <a href="{{ '/projects/' | relative_url }}">[ View Projects ]</a>
-  <a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
+<div class="button-link-group">
+  <a class="button-link" href="{{ '/projects/' | relative_url }}">View Projects</a>
+  <a class="button-link" href="{{ '/writeups/' | relative_url }}">View Writeups</a>
 </div>
-
 ---
 
 ## <span class="title-aqua">About Me</span>
