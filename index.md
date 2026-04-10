@@ -30,7 +30,7 @@ title: Home
 
 ---
 
-## <span class="title-aqua">Current Focus</span>
+## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">Current Focus</span></span>
 
 - **EC-Council CEH v13 AI coursework** in progress, expected completion by **end of Summer 2026**
 - Beginning **CompTIA SecurityX (formerly CASP+)** in **May 2026**
@@ -39,14 +39,14 @@ title: Home
 
 ---
 
-## <span class="title-aqua">Certifications and Ongoing Training</span>
+## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">Certifications and Ongoing Training</span></span>
 
 - **CompTIA Security+**
 - **EC-Council CEH v13 AI** — In Progress
 - **CompTIA SecurityX (formerly CASP+)** — Starting May 2026
 - Additional digital badge-backed coursework and platform training in cybersecurity, IT, networking, and systems
 
-### <span class="title-aqua">Verification and Badge Links</span>
+### <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">Verification and Badge Links</span></span>
 
 <div class="button-link-group">
   <a class="button-link" href="https://www.credly.com/users/alexis-sm-pontious/badges" target="_blank" rel="noopener noreferrer">Credly Profile</a>
@@ -58,9 +58,9 @@ title: Home
 
 ---
 
-## <span class="title-aqua">Core Areas</span>
+## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">Core Areas</span></span>
 
-### <span class="title-gold">Cybersecurity</span>
+### <span class="heading-terminal heading-glow-gold"><span class="title-gold">Cybersecurity</span></span>
 - Defensive security fundamentals
 - Ethical hacking labs and research
 - Windows and Linux hardening
