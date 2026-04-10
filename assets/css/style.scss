@@ -447,24 +447,27 @@ In Progress = neutral or amber
   text-shadow: 0 0 6px rgba(108, 207, 108, 0.18);
   border-right: 2px solid rgba(108, 207, 108, 0.9);
   animation:
-    status-typing 1.15s steps(var(--chars), end) forwards,
-    status-cursor 0.7s steps(1, end) 4;
+    status-typing-loop 7s steps(var(--chars), end) infinite,
+    status-cursor-loop 0.75s steps(1, end) infinite;
 }
 
-@keyframes status-typing {
-  from {
+@keyframes status-typing-loop {
+  0% {
     width: 0;
   }
-  to {
+  14% {
     width: calc(var(--chars) * 1ch);
+  }
+  86% {
+    width: calc(var(--chars) * 1ch);
+  }
+  100% {
+    width: 0;
   }
 }
 
-@keyframes status-cursor {
+@keyframes status-cursor-loop {
   50% {
     border-right-color: transparent;
-  }
-  100% {
-    border-right-color: rgba(108, 207, 108, 0.9);
   }
 }
