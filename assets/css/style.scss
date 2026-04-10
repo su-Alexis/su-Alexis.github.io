@@ -433,3 +433,38 @@ In Progress = neutral or amber
   animation: none;
   opacity: 0.95;
 }
+
+/* Terminal-style typing status */
+.status-terminal-typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  width: 0;
+  color: #6ccf6c;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  text-shadow: 0 0 6px rgba(108, 207, 108, 0.18);
+  border-right: 2px solid rgba(108, 207, 108, 0.9);
+  animation:
+    status-typing 1s steps(6, end) forwards,
+    status-cursor 0.7s steps(1, end) 4;
+}
+
+@keyframes status-typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 6ch;
+  }
+}
+
+@keyframes status-cursor {
+  50% {
+    border-right-color: transparent;
+  }
+  100% {
+    border-right-color: rgba(108, 207, 108, 0.9);
+  }
+}
