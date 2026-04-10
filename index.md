@@ -100,5 +100,6 @@ title: Home
 
 This site also serves as a place to document troubleshooting, security research, technical breakdowns, and lessons learned from hands-on work.
 
-<a href="{{ '/writeups/' | relative_url }}">[ View Writeups ]</a>
+<a class="button-link" href="{{ '/writeups/' | relative_url }}">View Writeups</a>
+
 
