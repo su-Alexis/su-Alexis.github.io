@@ -26,6 +26,7 @@ title: Home
 &emsp;Focused on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS environments. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.
 
 &emsp;Utilizing PowerShell, Python, and AI-assisted tools to improve research, analysis, troubleshooting, and remediation workflows. Going through C/C++/C# bootcamp to get better at revising malware, finding vulnerabilities, and creating something of my own to assist with exploitation.
+
 ---
 
 ## Current Focus
