@@ -46,10 +46,13 @@ title: Home
 - Additional digital badge-backed coursework and platform training in cybersecurity, IT, networking, and systems
 
 ### Verification and Badge Links
-- <a href="https://www.credly.com/users/alexis-sm-pontious/badges#credly" target="_blank" rel="noopener noreferrer">[ Credly Profile ]</a>
-- <a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">[ Skillsoft Badge Wallet ]</a>
-- <a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
-- <a href="https://linkedin.com/in/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">[ LinkedIn ]</a>
+
+<div class="button-link-group">
+  <a class="button-link" href="https://www.credly.com/users/alexis-sm-pontious/badges" target="_blank" rel="noopener noreferrer">Credly Profile</a>
+  <a class="button-link" href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">Skillsoft Badge Wallet</a>
+  <a class="button-link" href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">GitHub</a>
+  <a class="button-link" href="https://www.linkedin.com/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+</div>
 
 ---
 
