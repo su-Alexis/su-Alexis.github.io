@@ -8,7 +8,7 @@ title: Home
   <a class="button-link" href="{{ '/projects/' | relative_url }}">View Projects</a>
   <a class="button-link" href="{{ '/writeups/' | relative_url }}">View Writeups</a>
 </div>
-
+<br>
 
 ---
 
