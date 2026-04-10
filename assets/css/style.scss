@@ -383,3 +383,44 @@ In Progress = neutral or amber
 .button-link-group-compact {
   margin-top: 8px;
 }
+
+/* Terminal-inspired heading style */
+.heading-terminal {
+  display: inline-block;
+  position: relative;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.04);
+}
+
+.heading-terminal::before {
+  content: "> ";
+  color: #6ccf6c;
+  font-weight: 700;
+  margin-right: 0.08em;
+}
+
+.heading-terminal::after {
+  content: "_";
+  color: currentColor;
+  margin-left: 0.14em;
+  animation: terminal-cursor-blink 1.1s steps(1) infinite;
+}
+
+@keyframes terminal-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Optional glow modifiers */
+.heading-glow-aqua {
+  text-shadow:
+    0 0 6px rgba(0, 229, 255, 0.18),
+    0 0 14px rgba(0, 229, 255, 0.08);
+}
+
+.heading-glow-gold {
+  text-shadow:
+    0 0 6px rgba(255, 215, 0, 0.14),
+    0 0 14px rgba(255, 215, 0, 0.06);
+}
