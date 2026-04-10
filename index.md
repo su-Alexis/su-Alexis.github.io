@@ -45,7 +45,7 @@ title: Home
 - **CompTIA SecurityX (formerly CASP+)** — Starting May 2026
 - Additional digital badge-backed coursework and platform training in cybersecurity, IT, networking, and systems
 
-### <span class"title-aqua">Verification and Badge Links</span>
+### <span class="title-aqua">Verification and Badge Links</span>
 
 <div class="button-link-group">
   <a class="button-link" href="https://www.credly.com/users/alexis-sm-pontious/badges" target="_blank" rel="noopener noreferrer">Credly Profile</a>
@@ -57,23 +57,23 @@ title: Home
 
 ---
 
-## <span class"title-aqua">Core Areas</span>
+## <span class="title-aqua">Core Areas</span>
 
-### <span class"title-gold>Cybersecurity</span>
+### <span class="title-gold>Cybersecurity</span>
 - Defensive security fundamentals
 - Ethical hacking labs and research
 - Windows and Linux hardening
 - Security tooling and troubleshooting
 - Threat analysis mindset
 
-### IT / Systems
+### <span class="title-gold">IT / Systems</span>
 - Endpoint support and troubleshooting
 - DNS, DHCP, VPN, and network issue diagnosis
 - Virtualization and VM workflows
 - OS deployment, repair, and optimization
 - Cross-platform technical support
 
-### Scripting / Automation
+### <span class="title-gold">Scripting / Automation</span>
 - PowerShell automation
 - Python for utility and security workflows
 - Bash for Linux administration
@@ -81,9 +81,9 @@ title: Home
 
 ---
 
-## Featured Projects
+## <span class="title-aqua">Featured Projects</span>
 
-### Windows 10/11 Debloat & Optimize
+### <span class="title-gold">Windows 10/11 Debloat & Optimize</span>\
 <strong>Status:</strong> <span class="status-active">Active</span>\
 &emsp;An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup.
 <a href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">Read More...</a>
@@ -96,7 +96,7 @@ title: Home
 
 ---
 
-## Writeups and Documentation
+## <span class="title-gold">Writeups and Documentation</span>
 
 This site also serves as a place to document troubleshooting, security research, technical breakdowns, and lessons learned from hands-on work.
 
