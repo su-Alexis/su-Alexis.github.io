@@ -60,21 +60,21 @@ title: Home
 
 ## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">Core Areas</span></span>
 
-### <span class="heading-terminal heading-glow-gold"><span class="title-gold">Cybersecurity</span></span>
+### <span class="heading-terminal heading-terminal-path heading-glow-gold"><span class="title-gold">Cybersecurity</span></span>
 - Defensive security fundamentals
 - Ethical hacking labs and research
 - Windows and Linux hardening
 - Security tooling and troubleshooting
 - Threat analysis mindset
 
-### <span class="title-gold">IT / Systems</span>
+### <span class="heading-terminal heading-terminal-path heading-glow-gold"><span class="title-gold">IT / Systems</span></span>
 - Endpoint support and troubleshooting
 - DNS, DHCP, VPN, and network issue diagnosis
 - Virtualization and VM workflows
 - OS deployment, repair, and optimization
 - Cross-platform technical support
 
-### <span class="title-gold">Scripting / Automation</span>
+### <span class="heading-terminal heading-terminal-path heading-glow-gold"><span class="title-gold">Scripting / Automation</span></span>
 - PowerShell automation
 - Python for utility and security workflows
 - Bash for Linux administration
