@@ -21,7 +21,7 @@ title: Home
 
 ---
 
-## <span class="title-blue">Ethical Hacker |</span> <span class="title-gold">Cybersecurity-Focused IT Specialist</span>
+## <span class="title-aqua">Ethical Hacker |</span> <span class="title-aqua">Cybersecurity-Focused IT Specialist</span>
 
 &emsp;Focused on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS environments. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.
 
