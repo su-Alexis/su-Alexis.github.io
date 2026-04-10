@@ -82,9 +82,9 @@ title: Home
 
 ---
 
-## <span class="title-aqua">Featured Projects</span>
+## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">Featured Projects</span></span>
 
-### <span class="title-gold">Windows 10/11 Debloat & Optimize</span>
+### <span class="heading-terminal heading-terminal-path heading-glow-gold"><span class="title-gold">Windows 10/11 Debloat & Optimize</span></span>
 #### <strong>Status:</strong> <span class="status-active">Active</span>
 &emsp;An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup.
 <a href="{{ '/projects/windows-debloat-and-optimize/' | relative_url }}">Read More...</a>
@@ -97,7 +97,7 @@ title: Home
 
 ---
 
-## <span class="title-gold">Writeups and Documentation</span>
+## <span class="heading-terminal heading-glow-aqua"><span class="title-gold">Writeups and Documentation</span></span>
 
 This site also serves as a place to document troubleshooting, security research, technical breakdowns, and lessons learned from hands-on work.
 
