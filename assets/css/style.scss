@@ -86,6 +86,7 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  align-items: start;
   text-align: left;
 }
 
@@ -107,9 +108,14 @@ main {
   text-align: center;
 }
 
-.quick-links-section .hub-links {
+.quick-links-panel .button-link-group {
   justify-content: center;
-  margin: 0;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.quick-links-panel .button-link {
+  min-width: 140px;
 }
 
 @media (max-width: 760px) {
@@ -121,8 +127,8 @@ main {
     padding: 22px 16px 18px 16px;
   }
 
-  .quick-links-section .hub-links {
-    gap: 10px 14px;
+  .quick-links-panel .button-link {
+    min-width: 0;
   }
 }
 
@@ -320,6 +326,11 @@ In Progress = neutral or amber
 
 .title-gold {
   color: #FFD700;
+}
+
+.title-aqua,
+.title-gold {
+  font-weight: 700;
 }
 
 /* Buttons! */
