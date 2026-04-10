@@ -12,7 +12,7 @@ title: Home
 
 ---
 
-## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua"About Me</span></span>
+## <span class="heading-terminal heading-glow-aqua"><span class="title-aqua">About Me</span></span>
 
 &emsp;Yo! My name is Alexis and this site was put together primarily as a project for myself. I originally started getting into this a long time ago honestly thanks to video games asking for macro’s or fixing mods. Also at a young age I began getting more into technology since my families background involves similar fields not necessarily hacking but things involving technology and engineering. I always was interested in science and learning how things work under the hood pursuing understanding in why not just how. I always found hacking cool since it seemed like a logic puzzle you had to solve which I personally found fun plus who wasn’t an edgy teenager y’know? I’ve fiddled with things in the past doing things such as soldering to fix a guitar, replacing parts on my PSP like a broken screen, and trying to revive old hardware to give it a fresh breathe of life. I’d say Anime being something I genuinely enjoy in my free time as well, any One Piece fans?  I really gotta thank .Hack series for sparking more interest to hacking as well. Before anyone reading this asks my favorites is Cowboy Bebop, Trigun, One Piece, Deadman Wonderland, and .Hack series.
 
