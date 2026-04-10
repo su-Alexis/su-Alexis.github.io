@@ -424,3 +424,12 @@ In Progress = neutral or amber
     0 0 6px rgba(255, 215, 0, 0.14),
     0 0 14px rgba(255, 215, 0, 0.06);
 }
+
+/* Terminal heading variant for static path-style ending */
+.heading-terminal-path::after {
+  content: " :~";
+  color: #6ccf6c;
+  margin-left: 0.14em;
+  animation: none;
+  opacity: 0.95;
+}
