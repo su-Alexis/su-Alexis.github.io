@@ -17,9 +17,9 @@ permalink: /projects/windows-debloat-and-optimize/
 
 <strong>Status:</strong> <span class="status-active">Active</span>
 
-Windows 10/11 Debloat & Optimize is an all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration.
+&emsp;Windows 10/11 Debloat & Optimize is an all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration.
 
-Built on top of the original **Windows10Debloater** project, this version expands the concept with additional optimization, networking, privacy, gaming, and general system tweaks. The goal is to reduce manual setup time and give users a cleaner, more controlled Windows experience after a reformat or major update.
+&emsp;Built on top of the original **Windows10Debloater** project, this version expands the concept with additional optimization, networking, privacy, gaming, and general system tweaks. The goal is to reduce manual setup time and give users a cleaner, more controlled Windows experience after a reformat or major update.
 
 The script was tested in a virtualized Windows environment with VMware before being used on host systems.
 
@@ -44,7 +44,7 @@ The script was tested in a virtualized Windows environment with VMware before be
 - A hands-on approach to endpoint tuning, usability, and system control
 
 ### Notes
-This is an opinionated tuning script intended for users who want more control over Windows behavior. Some changes are aggressive by design, so the project is best presented as a practical automation and tuning tool rather than a guaranteed performance booster.
+&emsp;This is an opinionated tuning script intended for users who want more control over Windows behavior. Some changes are aggressive by design, so the project is best presented as a practical automation and tuning tool rather than a guaranteed performance booster.
 
 <a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">[ View Repository ]</a>
 
