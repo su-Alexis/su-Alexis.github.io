@@ -447,7 +447,7 @@ In Progress = neutral or amber
   text-shadow: 0 0 6px rgba(108, 207, 108, 0.18);
   border-right: 2px solid rgba(108, 207, 108, 0.9);
   animation:
-    status-typing 1s steps(8, end) forwards,
+    status-typing 1.15s steps(var(--chars), end) forwards,
     status-cursor 0.7s steps(1, end) 4;
 }
 
@@ -456,7 +456,7 @@ In Progress = neutral or amber
     width: 0;
   }
   to {
-    width: 6ch;
+    width: calc(var(--chars) * 1ch);
   }
 }
 
