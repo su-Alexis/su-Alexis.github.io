@@ -11,7 +11,7 @@ title: Home
 
 ---
 
-## About Me
+## <span class="title-aqua">About Me</span>
 
 &emsp;Yo! My name is Alexis and this site was put together primarily as a project for myself. I originally started getting into this a long time ago honestly thanks to video games asking for macro’s or fixing mods. Also at a young age I began getting more into technology since my families background involves similar fields not necessarily hacking but things involving technology and engineering. I always was interested in science and learning how things work under the hood pursuing understanding in why not just how. I always found hacking cool since it seemed like a logic puzzle you had to solve which I personally found fun plus who wasn’t an edgy teenager y’know? I’ve fiddled with things in the past doing things such as soldering to fix a guitar, replacing parts on my PSP like a broken screen, and trying to revive old hardware to give it a fresh breathe of life. I’d say Anime being something I genuinely enjoy in my free time as well, any One Piece fans?  I really gotta thank .Hack series for sparking more interest to hacking as well. Before anyone reading this asks my favorites is Cowboy Bebop, Trigun, One Piece, Deadman Wonderland, and .Hack series.
 
@@ -29,7 +29,7 @@ title: Home
 
 ---
 
-## Current Focus
+## <span class="title-aqua">Current Focus</span>
 
 - **EC-Council CEH v13 AI coursework** in progress, expected completion by **end of Summer 2026**
 - Beginning **CompTIA SecurityX (formerly CASP+)** in **May 2026**
@@ -38,14 +38,14 @@ title: Home
 
 ---
 
-## Certifications and Ongoing Training
+## <span class="title-aqua">Certifications and Ongoing Training</span>
 
 - **CompTIA Security+**
 - **EC-Council CEH v13 AI** — In Progress
 - **CompTIA SecurityX (formerly CASP+)** — Starting May 2026
 - Additional digital badge-backed coursework and platform training in cybersecurity, IT, networking, and systems
 
-### Verification and Badge Links
+### <span class"title-aqua">Verification and Badge Links</span>
 
 <div class="button-link-group">
   <a class="button-link" href="https://www.credly.com/users/alexis-sm-pontious/badges" target="_blank" rel="noopener noreferrer">Credly Profile</a>
@@ -57,9 +57,9 @@ title: Home
 
 ---
 
-## Core Areas
+## <span class"title-aqua">Core Areas</span>
 
-### Cybersecurity
+### <span class"title-gold>Cybersecurity</span>
 - Defensive security fundamentals
 - Ethical hacking labs and research
 - Windows and Linux hardening
