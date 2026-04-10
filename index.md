@@ -23,9 +23,9 @@ title: Home
 
 ## Ethical Hacker \| Cybersecurity-Focused IT Specialist 
 
-Focused on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS environments. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.
+&emsp;Focused on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS environments. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.
 
-Utilizing PowerShell, Python, and AI-assisted tools to improve research, analysis, troubleshooting, and remediation workflows. This site documents my projects, writeups, lab work, and technical growth through hands-on work and documented results.
+&emsp;Utilizing PowerShell, Python, and AI-assisted tools to improve research, analysis, troubleshooting, and remediation workflows. This site documents my projects, writeups, lab work, and technical growth through hands-on work and documented results.
 
 ---
 
