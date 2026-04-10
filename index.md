@@ -29,7 +29,7 @@ title: Home
 
 ---
 
-## <span class="title-aqua"> Current Focus </span>
+## <span class="title-aqua">Current Focus</span>
 
 - **EC-Council CEH v13 AI coursework** in progress, expected completion by **end of Summer 2026**
 - Beginning **CompTIA SecurityX (formerly CASP+)** in **May 2026**
