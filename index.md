@@ -53,6 +53,7 @@ title: Home
   <a class="button-link" href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">GitHub</a>
   <a class="button-link" href="https://www.linkedin.com/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">LinkedIn</a>
 </div>
+<br>
 
 ---
 
