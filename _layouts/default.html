@@ -135,6 +135,9 @@
         } else if (event.key === 'ArrowRight') {
           changeLightboxImage(1);
         }
+        document.querySelectorAll('.auto-status').forEach((el) => {
+        el.style.setProperty('--chars', el.textContent.length);
+        }
       });
     </script>
   </body>
