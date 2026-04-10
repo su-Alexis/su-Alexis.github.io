@@ -17,7 +17,7 @@ permalink: /projects/
 <strong>Status:</strong> <span class="status-active">Active</span>\
 **Type:** PowerShell / Windows Internals / Registry Tuning / System Optimization
 
-An all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration. Built on top of the original **Windows10Debloater** project, this version expands the workflow with additional optimization, networking, privacy, gaming, and general system tweaks.
+&emsp;An all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration. Built on top of the original **Windows10Debloater** project, this version expands the workflow with additional optimization, networking, privacy, gaming, and general system tweaks.
 
 ### Highlights
 - Automates post-install Windows cleanup and debloating
