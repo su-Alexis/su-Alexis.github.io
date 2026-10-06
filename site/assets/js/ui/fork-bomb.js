@@ -5,7 +5,10 @@
 //      to the limit, the top-bar status chips read CPU 100% / PROCESSES and the whole site
 //      glitches (html.fork-bomb, terminal.css).
 //   2. Crash (~4.5s): a full-screen blue "wafflesOS" stop screen with a 0-100% counter.
-//   3. Reboot: the session is cleared and the home page plays the full boot again.
+//   3. Power off, then reboot: the stop screen collapses like a CRT switching off (a bright
+//      line, then a dot, then black), which chains into the boot's own power-on line; the
+//      session is cleared and the home page plays the full boot again. This navigation
+//      skips the usual sliding page transition (html.power-off, read by layers/layer1.js).
 // Escape at any point skips straight to the reboot. Reduced motion: no glitch, no spawn
 // storm; the stop screen appears at once (static) and reboots after a short pause.
 // All text is rendered with textContent via el(); timers are tracked and cleared.
@@ -16,6 +19,7 @@ const FORK_LINES = 18; // lines printed during the bomb, each faster than the la
 const BOMB_MS = 2800;
 const CRASH_MS = 4500;
 const STILL_CRASH_MS = 3500; // reduced motion: how long the static stop screen stays
+const POWER_OFF_MS = 750; // CRT switch-off animation (terminal.css, crt-off)
 
 let running = false;
 
@@ -69,7 +73,12 @@ export function runForkBomb({ shell, spawn, reboot, reducedMotion = false }) {
     done = true;
     for (const t of timers) window.clearTimeout(t);
     document.removeEventListener('keydown', onKey, true);
-    reboot();
+    // Skipped before the crash: show the stop screen so there is a screen to switch off.
+    if (!document.querySelector('.bsod')) stopScreen(true);
+    const html = document.documentElement;
+    html.classList.remove('fork-bomb', 'fork-bomb-critical');
+    html.classList.add('power-off');
+    window.setTimeout(reboot, reducedMotion ? 0 : POWER_OFF_MS);
   };
   const onKey = (event) => {
     if (event.key !== 'Escape') return;

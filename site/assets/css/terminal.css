@@ -331,3 +331,33 @@
   opacity: 0.7;
   font-size: 0.85rem;
 }
+
+/* Power off (fork bomb reboot): everything but the stop screen goes dark, then the stop
+   screen collapses like a CRT switching off: squeezed to a bright line, shrunk to a dot,
+   gone. The next page starts black and plays the boot's power-on line (layer1.css). */
+.power-off body {
+  background: #000;
+}
+
+.power-off .site,
+.power-off .console-spawned,
+.power-off .matrix-rain {
+  visibility: hidden;
+}
+
+.power-off .bsod {
+  animation: crt-off 0.75s cubic-bezier(0.55, 0, 0.75, 0.4) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-off .bsod {
+    visibility: hidden;
+  }
+}
+
+@keyframes crt-off {
+  0% { transform: none; filter: none; opacity: 1; }
+  45% { transform: scale(1, 0.004); filter: brightness(5) saturate(0.2); opacity: 1; }
+  80% { transform: scale(0.02, 0.004); filter: brightness(6) saturate(0); opacity: 1; }
+  100% { transform: scale(0, 0.004); filter: brightness(6) saturate(0); opacity: 0; }
+}

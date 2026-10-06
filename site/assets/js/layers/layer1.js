@@ -86,7 +86,14 @@
   // ---------- Desktop transitions (cross-document view transitions) ----------
 
   window.addEventListener('pageswap', function (event) {
-    if (event.viewTransition) storageSet(FROM_DEPTH_KEY, String(depth));
+    if (!event.viewTransition) return;
+    // The fork bomb's crash powers the screen off (html.power-off, ui/fork-bomb.js) and
+    // reboots: no sliding desktop transition, so it chains into the boot's power-on line.
+    if (root.classList.contains('power-off')) {
+      event.viewTransition.skipTransition();
+      return;
+    }
+    storageSet(FROM_DEPTH_KEY, String(depth));
   });
   window.addEventListener('pagereveal', function (event) {
     if (!event.viewTransition) return;
