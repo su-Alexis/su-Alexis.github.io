@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writeups | Alexis Pontious</title>
+  <meta name="description" content="Technical writeups, research notes, lab walkthroughs and documentation by Alexis Pontious.">
+  <link rel="icon" type="image/png" href="../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/utilities.css">
+  <link rel="stylesheet" href="../assets/css/layer1.css">
+  <link rel="stylesheet" href="../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../"><img src="../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="writeups" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-writeups">cd ~/writeups</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/writeups</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-writeups">load --module writeups</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-planned">load --module planned</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-status">load --module status</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../">~</a> <span aria-hidden="true">/</span> <span aria-current="page">writeups</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-writeups" aria-labelledby="writeups-heading">
+          <div class="module-bar"><span>module // writeups</span><span class="module-state state-ongoing"><span class="status-dot" aria-hidden="true"></span>in preparation</span></div>
+          <div class="module-body">
+            <h1 id="writeups-heading">Writeups</h1>
+            <p class="identity-role">This page is reserved for technical writeups, research notes, walkthroughs, and documentation.</p>
+          </div>
+        </section>
+        <section class="module boot-step step-2" id="module-planned" aria-labelledby="planned-heading">
+          <div class="module-bar"><span>module // planned</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="planned-heading">What Will Be Here</h2>
+            <ul class="area-list">
+              <li>Cybersecurity research and notes</li>
+              <li>Lab walkthroughs</li>
+              <li>Troubleshooting breakdowns</li>
+              <li>Tool and workflow documentation</li>
+              <li>Long-form technical analysis with screenshots and findings</li>
+            </ul>
+          </div>
+        </section>
+        <section class="module boot-step step-3" id="module-status" aria-labelledby="status-heading">
+          <div class="module-bar"><span>module // status</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>preparing</span></div>
+          <div class="module-body">
+            <h2 id="status-heading">Status</h2>
+            <p class="project-status">Status: <span class="status-tag status-ongoing">[ IN PREPARATION<span class="typing-dots" aria-hidden="true"></span> ]</span></p>
+            <p>Writeups are currently being prepared and will be published here as they are completed.</p>
+            <ul class="link-list">
+              <li><a href="../projects/">View projects</a></li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+</body>
+</html>

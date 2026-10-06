@@ -1,0 +1,87 @@
+# Reviewed publish inventory (doctrine sections 2 and 13).
+# One path per line, relative to site/. Only files listed here may be deployed,
+# and every listed file must exist. Adding a line is a review decision.
+
+# Projects: Windows 10/11 Debloat & Optimize screenshots
+# (resized to 1400 px, metadata stripped, 2026-10-02)
+assets/media/images/projects/windows-debloat-and-optimize/start.jpg
+assets/media/images/projects/fridge-friends/overview.jpg
+assets/media/images/projects/wingg/run-start.jpg
+assets/media/images/projects/wingg/debloat.jpg
+assets/media/images/projects/wingg/privacy-and-games.jpg
+assets/media/images/projects/wingg/network-and-hosts.jpg
+assets/media/images/projects/wingg/hardening.jpg
+assets/media/images/projects/wingg/run-summary.jpg
+assets/media/images/projects/network-stack-reset/menu.jpg
+assets/media/images/projects/network-stack-reset/pre-flight.jpg
+assets/media/images/projects/network-stack-reset/reset-complete.jpg
+assets/media/images/projects/network-stack-reset/verify.jpg
+assets/media/images/projects/windows-cleanup/scan-results.jpg
+assets/media/images/projects/windows-cleanup/disk-cleanup-options.jpg
+assets/media/images/projects/windows-cleanup/disk-cleanup-running.jpg
+assets/media/images/projects/windows-cleanup/report.jpg
+assets/media/images/projects/network-refresh/intro.jpg
+assets/media/images/projects/network-refresh/before.jpg
+assets/media/images/projects/network-refresh/cache-flush.jpg
+assets/media/images/projects/network-refresh/dhcp-renew.jpg
+assets/media/images/projects/network-refresh/before-after.jpg
+assets/media/images/projects/fridge-friends/grocery-list.jpg
+assets/media/images/projects/fridge-friends/fridge-finder.jpg
+assets/media/images/projects/fridge-friends/add-recipe.jpg
+assets/media/images/projects/fridge-friends/backup-restore.jpg
+assets/media/images/projects/windows-debloat-and-optimize/bloat-removal.jpg
+assets/media/images/projects/windows-debloat-and-optimize/optimizations.jpg
+assets/media/images/projects/windows-debloat-and-optimize/net-changes.jpg
+assets/media/images/projects/windows-debloat-and-optimize/net-cleaner.jpg
+assets/media/images/projects/windows-debloat-and-optimize/scheduled-tasks.jpg
+assets/media/images/projects/windows-debloat-and-optimize/end.jpg
+
+# Core and utilities (foundation step 3, 2026-10-02)
+assets/js/core/app.js
+assets/js/core/constants.js
+assets/js/utils/dom.js
+assets/js/utils/validate.js
+
+# Page shells and shared styles (foundation step 4, 2026-10-02)
+index.html
+404.html
+assets/css/theme.css
+assets/css/base.css
+assets/css/layout.css
+assets/css/utilities.css
+
+# Layer 1 boot screen (fragment 1, 2026-10-02)
+assets/js/layers/layer1.js
+assets/css/layer1.css
+
+# Placeholder waffle logo (boot screen, top bar, favicon; 2026-10-02)
+assets/media/icons/logo-512.png
+assets/media/icons/logo-64.png
+
+# Interactive console (2026-10-02)
+assets/css/terminal.css
+assets/js/core/state.js
+assets/js/core/storage.js
+assets/js/data/commands.js
+assets/js/features/command-engine.js
+assets/js/ui/terminal-ui.js
+
+# Projects hub and Debloat project page (2026-10-02)
+projects/index.html
+projects/windows-debloat-and-optimize/index.html
+projects/wingg/index.html
+projects/fridge-friends/index.html
+projects/windows-cleanup/index.html
+projects/network-stack-reset/index.html
+projects/network-refresh/index.html
+
+# Writeups hub (2026-10-02)
+writeups/index.html
+
+# hello world easter egg (2026-10-02)
+assets/js/data/hello.js
+assets/js/ui/hello-animation.js
+assets/js/ui/status-scramble.js
+assets/js/ui/matrix-rain.js
+assets/js/ui/cert-verify.js
+assets/js/ui/shot-viewer.js

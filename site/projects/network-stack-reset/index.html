@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Network Stack Reset | Alexis Pontious</title>
+  <meta name="description" content="A full Windows TCP/IP, IPv6, Winsock and proxy reset that backs up first and verifies after the reboot.">
+  <link rel="icon" type="image/png" href="../../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../../assets/css/theme.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/layout.css">
+  <link rel="stylesheet" href="../../assets/css/utilities.css">
+  <link rel="stylesheet" href="../../assets/css/layer1.css">
+  <link rel="stylesheet" href="../../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../../"><img src="../../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="net-reset" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-net-reset">cd ~/projects/net-reset</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/projects/net-reset</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-overview">load --module overview</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-notes">load --module notes</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-screenshots">load --module screenshots</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">~</a> <span aria-hidden="true">/</span> <a href="../">projects</a> <span aria-hidden="true">/</span> <span aria-current="page">net-reset</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-overview" aria-labelledby="overview-heading">
+          <div class="module-bar"><span>module // overview</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>active</span></div>
+          <div class="module-body">
+            <h1 id="overview-heading" class="identity-name">Network Stack Reset</h1>
+            <p class="project-file"><code>net-reset-reboot.bat</code></p>
+            <p class="project-stack">Batch · PowerShell · netsh · Windows Networking</p>
+            <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+            <div class="identity-summary">
+              <p>Network Stack Reset is the heavy option for when Windows networking is truly broken. It resets TCP/IP, IPv6, Winsock and proxy settings, then reboots.</p>
+              <p>Before it changes anything it backs up the netsh configuration, the Winsock provider list and any hand-set DNS servers, and it restores those DNS servers after the reset. Gateway, internet and DNS tests run before the reset, and a verify mode repeats them after the reboot, all in the same log.</p>
+            </div>
+            <div class="overview-columns">
+              <div class="area">
+                <h2>Key Features</h2>
+                <ul class="area-list">
+                  <li>Full reset of TCP/IP, IPv6, Winsock and proxy settings</li>
+                  <li>Backs up netsh config, Winsock providers and manual DNS, then restores the DNS servers</li>
+                  <li>Gateway, internet and DNS tests before the reset; verify mode after the reboot</li>
+                  <li>Menu with reset, dry run and verify modes</li>
+                  <li>Optional firewall reset</li>
+                  <li>Choice of restart, shutdown or neither when finished</li>
+                  <li>Numbered, logged steps with pass/fail results</li>
+                  <li>Cancellable 15-second countdown before the restart</li>
+                  <li>Refuses to run over Remote Desktop unless forced, since it would cut the session</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h2>What This Project Demonstrates</h2>
+                <ul class="area-list">
+                  <li>Practical Windows network troubleshooting</li>
+                  <li>Backup-before-change discipline</li>
+                  <li>Clear, step-by-step logging with pass/fail results</li>
+                  <li>Thinking through how a tool can lock its own user out</li>
+                </ul>
+              </div>
+            </div>
+            <ul class="link-list">
+              <li><a href="https://github.com/su-Alexis/Network-Stack-Reset" target="_blank" rel="noopener noreferrer">View repository</a></li>
+              <li><a href="../">All projects</a></li>
+            </ul>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-2" id="module-notes" aria-labelledby="notes-heading">
+          <div class="module-bar"><span>module // notes</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="notes-heading">Notes</h2>
+            <p>The script is published on GitHub with its full documentation. For lighter problems, Network Refresh clears caches and renews DHCP without a reboot.</p>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-3" id="module-screenshots" aria-labelledby="screenshots-heading">
+          <div class="module-bar"><span>module // screenshots</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>4 captures</span></div>
+          <div class="module-body">
+            <h2 id="screenshots-heading">Screenshots</h2>
+            <!-- Captures from a real run; IP addresses, the Windows user name and log paths are redacted. -->
+            <div class="shot-gallery">
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-1"><img src="../../assets/media/images/projects/network-stack-reset/menu.jpg" alt="Network Stack Reset menu: run the reset, a dry run that changes nothing, or verify after a reboot" width="1113" height="621" loading="lazy" decoding="async"></a>
+                <figcaption>Main Menu</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-2"><img src="../../assets/media/images/projects/network-stack-reset/pre-flight.jpg" alt="Pre-flight: netsh configuration and Winsock catalog backed up, static DNS servers saved for re-applying, and a connectivity baseline recorded" width="975" height="511" loading="lazy" decoding="async"></a>
+                <figcaption>Pre-flight Backup</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-3"><img src="../../assets/media/images/projects/network-stack-reset/reset-complete.jpg" alt="End of the reset: DNS servers restored, lease renewed, a step summary that is honest about errors, and the restart, shut down or do-nothing prompt" width="1214" height="632" loading="lazy" decoding="async"></a>
+                <figcaption>Reset Complete</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-4"><img src="../../assets/media/images/projects/network-stack-reset/verify.jpg" alt="Post-reset verification after the reboot: gateway, internet and DNS checks re-run and appended to the same log, with DNS servers confirmed" width="1114" height="621" loading="lazy" decoding="async"></a>
+                <figcaption>Post-reset Verify</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+
+  <!-- Screenshot viewer: plain links and :target, no script needed. -->
+  <div class="lightbox" id="shot-1" role="dialog" aria-label="Screenshot 1 of 4: Main Menu">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-stack-reset/menu.jpg" alt="Network Stack Reset menu: run the reset, a dry run that changes nothing, or verify after a reboot" width="1113" height="621" loading="lazy" decoding="async">
+      <figcaption>Main Menu · 1 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-4">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-2">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-2" role="dialog" aria-label="Screenshot 2 of 4: Pre-flight Backup">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-stack-reset/pre-flight.jpg" alt="Pre-flight: netsh configuration and Winsock catalog backed up, static DNS servers saved for re-applying, and a connectivity baseline recorded" width="975" height="511" loading="lazy" decoding="async">
+      <figcaption>Pre-flight Backup · 2 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-1">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-3">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-3" role="dialog" aria-label="Screenshot 3 of 4: Reset Complete">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-stack-reset/reset-complete.jpg" alt="End of the reset: DNS servers restored, lease renewed, a step summary that is honest about errors, and the restart, shut down or do-nothing prompt" width="1214" height="632" loading="lazy" decoding="async">
+      <figcaption>Reset Complete · 3 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-2">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-4">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-4" role="dialog" aria-label="Screenshot 4 of 4: Post-reset Verify">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-stack-reset/verify.jpg" alt="Post-reset verification after the reboot: gateway, internet and DNS checks re-run and appended to the same log, with DNS servers confirmed" width="1114" height="621" loading="lazy" decoding="async">
+      <figcaption>Post-reset Verify · 4 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-3">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-1">Next &gt;</a>
+    </nav>
+  </div>
+</body>
+</html>

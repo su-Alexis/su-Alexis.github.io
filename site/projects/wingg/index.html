@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WindowsGG | Alexis Pontious</title>
+  <meta name="description" content="A one-shot PowerShell baselining script for a freshly installed Windows 10/11 gaming PC: debloat, performance, privacy and security hardening.">
+  <link rel="icon" type="image/png" href="../../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../../assets/css/theme.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/layout.css">
+  <link rel="stylesheet" href="../../assets/css/utilities.css">
+  <link rel="stylesheet" href="../../assets/css/layer1.css">
+  <link rel="stylesheet" href="../../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../../"><img src="../../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="wingg" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-wingg">cd ~/projects/wingg</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/projects/wingg</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-overview">load --module overview</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-notes">load --module notes</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-screenshots">load --module screenshots</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">~</a> <span aria-hidden="true">/</span> <a href="../">projects</a> <span aria-hidden="true">/</span> <span aria-current="page">wingg</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-overview" aria-labelledby="overview-heading">
+          <div class="module-bar"><span>module // overview</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>active</span></div>
+          <div class="module-body">
+            <h1 id="overview-heading" class="identity-name">WindowsGG</h1>
+            <p class="project-file"><code>winGG10&amp;11.ps1</code></p>
+            <p class="project-stack">PowerShell · Windows Internals · Registry · Security Hardening · Gaming Performance</p>
+            <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+            <div class="identity-summary">
+              <p>WindowsGG is a one-shot baselining script for a freshly installed Windows 10 or 11 gaming PC. It debloats, applies a set of performance, privacy and security-hardening changes, and writes the three Utility Tools and a God Mode folder to the Desktop on its way out.</p>
+              <p>It is the third generation of the Debloat &amp; Optimize line, which is now archived. Every step runs through one harness that prints OK, PARTIAL or ERROR, counts and surfaces errors per step instead of swallowing them, times each step and ends with a run summary. A full transcript of every run is kept.</p>
+              <p>It is built on Sycnex&#x27;s Windows10Debloater (MIT) and uses Dan Pollock&#x27;s hosts file for the blocklist step, both credited in the script.</p>
+            </div>
+            <div class="overview-columns">
+              <div class="area">
+                <h2>Key Features</h2>
+                <ul class="area-list">
+                  <li>Debloat with a whitelist sweep for all users plus curated sponsored-app patterns, removing both per-user and provisioned packages</li>
+                  <li>Two protection lists (89 entries) checked before anything is removed, keeping Xbox and Game Pass, codecs, accessibility tools, Store apps and Edge (WebView2)</li>
+                  <li>Privacy and telemetry: Recall and Windows AI, Copilot, Cortana, activity history, error reporting and Edge telemetry turned off</li>
+                  <li>Gaming and performance: GPU priority, MMCSS and GameDVR tuning, CPU unparking, Nagle-related changes, High Performance power plan</li>
+                  <li>Security hardening: SMBv1 and guest auth, LLMNR, mDNS and NetBIOS-NS, WDigest off, LSA protection on, PowerShell v2 engine removed, AutoRun and legacy remote access disabled</li>
+                  <li>Network: hosts blocklist, encrypted DNS over HTTPS, network stack reset</li>
+                  <li>Safety: restore point first, hosts file backed up and swapped in only after verification, verified idempotent across consecutive runs</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h2>What This Project Demonstrates</h2>
+                <ul class="area-list">
+                  <li>PowerShell automation at scale with a consistent step harness and reporting</li>
+                  <li>Windows hardening grounded in real attack surface (SMB, name-resolution poisoning, credential storage)</li>
+                  <li>Debugging and fixing long-hidden defects across generations of a script</li>
+                  <li>Honest documentation of known limits and a diagnosed antivirus false positive</li>
+                  <li>Safe testing habits: validated in a VMware guest before any host use</li>
+                </ul>
+              </div>
+            </div>
+            <ul class="link-list">
+              <li><a href="https://github.com/su-Alexis/winGG10-11" target="_blank" rel="noopener noreferrer">View repository</a></li>
+              <li><a href="../">All projects</a></li>
+            </ul>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-2" id="module-notes" aria-labelledby="notes-heading">
+          <div class="module-bar"><span>module // notes</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="notes-heading">Notes</h2>
+            <p>Windows Defender flags the script as a trojan; it is a diagnosed false positive (the hosts blocklist and the embedded cleanup payload together trip the classifier, either one alone scans clean). It has been validated across 13 runs in a VMware guest, not yet on real hardware, and it makes substantial, persistent changes, so it is meant for a freshly reformatted machine. It succeeds the archived Windows 10/11 Debloat &amp; Optimize.</p>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-3" id="module-screenshots" aria-labelledby="screenshots-heading">
+          <div class="module-bar"><span>module // screenshots</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>6 captures</span></div>
+          <div class="module-body">
+            <h2 id="screenshots-heading">Screenshots</h2>
+            <!-- Captures from a real run in a VMware guest; IP addresses, the network interface ID, the Windows user name and log paths are redacted. -->
+            <div class="shot-gallery">
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-1"><img src="../../assets/media/images/projects/wingg/run-start.jpg" alt="WindowsGG starting in PowerShell: the ASCII banner, the color legend for each status, the Desktop tools written, a restore point created and the system image check starting" width="1164" height="1025" loading="lazy" decoding="async"></a>
+                <figcaption>Run Start</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-2"><img src="../../assets/media/images/projects/wingg/debloat.jpg" alt="The curated list of sponsored and bloat packages being removed, ending in a PARTIAL result with its errors reported in full" width="1209" height="826" loading="lazy" decoding="async"></a>
+                <figcaption>Debloat</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-3"><img src="../../assets/media/images/projects/wingg/privacy-and-games.jpg" alt="Privacy and telemetry settings applied, scheduled tasks disabled, Cortana and diagnostics tracking off, .NET 3.5 enabled and gaming optimizations starting" width="1210" height="828" loading="lazy" decoding="async"></a>
+                <figcaption>Privacy and Games</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-4"><img src="../../assets/media/images/projects/wingg/network-and-hosts.jpg" alt="System optimizations, Nagle tuning, the hosts blocklist applied after a backup, DNS set, and the bundled network stack reset starting" width="1218" height="830" loading="lazy" decoding="async"></a>
+                <figcaption>Network and Hosts</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-5"><img src="../../assets/media/images/projects/wingg/hardening.jpg" alt="Security hardening steps: power plan, SMB, LLMNR, mDNS and NetBIOS, credential storage, PowerShell v2 removal, Recall and telemetry off, DNS over HTTPS" width="1216" height="835" loading="lazy" decoding="async"></a>
+                <figcaption>Hardening</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-6"><img src="../../assets/media/images/projects/wingg/run-summary.jpg" alt="Run summary listing every step with its result and time: every step OK except one PARTIAL for the blacklisted packages" width="1218" height="833" loading="lazy" decoding="async"></a>
+                <figcaption>Run Summary</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+
+  <!-- Screenshot viewer: plain links and :target, no script needed. -->
+  <div class="lightbox" id="shot-1" role="dialog" aria-label="Screenshot 1 of 6: Run Start">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/wingg/run-start.jpg" alt="WindowsGG starting in PowerShell: the ASCII banner, the color legend for each status, the Desktop tools written, a restore point created and the system image check starting" width="1164" height="1025" loading="lazy" decoding="async">
+      <figcaption>Run Start · 1 / 6</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-6">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-2">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-2" role="dialog" aria-label="Screenshot 2 of 6: Debloat">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/wingg/debloat.jpg" alt="The curated list of sponsored and bloat packages being removed, ending in a PARTIAL result with its errors reported in full" width="1209" height="826" loading="lazy" decoding="async">
+      <figcaption>Debloat · 2 / 6</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-1">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-3">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-3" role="dialog" aria-label="Screenshot 3 of 6: Privacy and Games">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/wingg/privacy-and-games.jpg" alt="Privacy and telemetry settings applied, scheduled tasks disabled, Cortana and diagnostics tracking off, .NET 3.5 enabled and gaming optimizations starting" width="1210" height="828" loading="lazy" decoding="async">
+      <figcaption>Privacy and Games · 3 / 6</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-2">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-4">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-4" role="dialog" aria-label="Screenshot 4 of 6: Network and Hosts">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/wingg/network-and-hosts.jpg" alt="System optimizations, Nagle tuning, the hosts blocklist applied after a backup, DNS set, and the bundled network stack reset starting" width="1218" height="830" loading="lazy" decoding="async">
+      <figcaption>Network and Hosts · 4 / 6</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-3">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-5">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-5" role="dialog" aria-label="Screenshot 5 of 6: Hardening">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/wingg/hardening.jpg" alt="Security hardening steps: power plan, SMB, LLMNR, mDNS and NetBIOS, credential storage, PowerShell v2 removal, Recall and telemetry off, DNS over HTTPS" width="1216" height="835" loading="lazy" decoding="async">
+      <figcaption>Hardening · 5 / 6</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-4">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-6">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-6" role="dialog" aria-label="Screenshot 6 of 6: Run Summary">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/wingg/run-summary.jpg" alt="Run summary listing every step with its result and time: every step OK except one PARTIAL for the blacklisted packages" width="1218" height="833" loading="lazy" decoding="async">
+      <figcaption>Run Summary · 6 / 6</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-5">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-1">Next &gt;</a>
+    </nav>
+  </div>
+</body>
+</html>

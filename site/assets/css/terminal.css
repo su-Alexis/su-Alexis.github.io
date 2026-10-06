@@ -1,0 +1,237 @@
+/* Interactive console window. Loaded with ui/terminal-ui.js (doctrine section 17).
+   Position and size come from fixed individual style properties set by reviewed code;
+   everything else is classes. */
+
+/* ---------- Output and prompt ---------- */
+
+.term-output {
+  margin: 0;
+}
+
+.term-line {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+
+.term-cmd {
+  color: var(--color-text);
+}
+
+.term-out {
+  color: var(--color-text-muted);
+}
+
+.term-ok {
+  color: var(--color-ok);
+}
+
+.term-err {
+  color: var(--color-error);
+}
+
+.term-input-line {
+  position: relative;
+  display: none;
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+
+.is-ready .term-input-line {
+  display: block;
+}
+
+/* The real input sits invisibly over the line; the mirror shows text and a block cursor. */
+.term-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font: inherit;
+  opacity: 0;
+}
+
+.term-input:focus {
+  outline: none;
+}
+
+.term-mirror {
+  white-space: pre-wrap;
+}
+
+.term-cursor {
+  display: inline-block;
+  width: 0.62em;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  border: 1px solid var(--color-ok);
+  background: transparent;
+}
+
+.is-focused .term-cursor {
+  background: var(--color-ok);
+  animation: term-blink 1.05s steps(1, end) infinite;
+}
+
+.is-focused .term-input-line {
+  outline: 1px dashed var(--color-border-strong);
+  outline-offset: 2px;
+}
+
+
+/* ---------- Window chrome ---------- */
+
+.console.is-interactive .console-bar {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.console.is-dragging,
+.console.is-dragging .console-bar {
+  cursor: grabbing;
+}
+
+.console-controls {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.console-button {
+  min-width: 1.9rem;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tiny);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.console-button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-heading);
+}
+
+/* Docked: sits in the page; the output area can be resized vertically. */
+.console.is-interactive .console-body {
+  max-height: 26rem;
+  min-height: 8rem;
+  overflow: auto;
+  resize: vertical;
+}
+
+/* Floating: a window above the page, dragged by its bar, resized from the corner. */
+.console.is-floating {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  min-height: 160px;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  resize: both;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--color-border-strong);
+}
+
+.console.is-floating .console-body {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+  resize: none;
+}
+
+.console.is-minimized .console-body {
+  display: none;
+}
+
+.console.is-floating.is-minimized {
+  height: auto !important;
+  min-height: 0;
+  resize: none;
+}
+
+/* ---------- Module highlight after "open" ---------- */
+
+.module-flash {
+  animation: module-flash 1.2s ease-out;
+}
+
+@keyframes module-flash {
+  0% { box-shadow: 0 0 0 1px var(--color-accent), 0 0 24px rgba(79, 209, 224, 0.35); }
+  100% { box-shadow: 0 0 0 1px transparent, 0 0 0 transparent; }
+}
+
+@keyframes term-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* The log's prompt line renders exactly like a history command line (no flex gap
+   between user and path), so nothing shifts when the log joins the history. */
+.console-log .line-prompt {
+  display: block;
+}
+
+/* The interactive prompt replaces the startup log's decorative cursor. */
+.is-ready .console-log .cursor {
+  display: none;
+}
+
+/* ---------- Spawned shells and stacking ---------- */
+
+.console.is-front {
+  z-index: 45;
+}
+
+/* Spawned shells stay out of sight during the full startup boot only. On other pages
+   they are already open and simply carry over. */
+.boot-run:not(.page-boot) .console-spawned {
+  visibility: hidden;
+}
+
+/* Shells restored from an earlier page are the same windows, not new ones: no
+   window-open animation, so they hold still while the page slides underneath.
+   ui/terminal-ui.js sets .shells-resumed (before first paint; app.js is render-blocking). */
+.shells-resumed .console {
+  animation: none;
+}
+
+.console-spawned .console-bar {
+  background: var(--color-surface-raised);
+}
+
+/* A page already loaded this session resumes: its load log is not replayed. */
+.page-cached .console-log {
+  display: none;
+}
+
+/* ---------- ASCII art and animation ---------- */
+
+.term-art {
+  color: var(--color-brand);
+}
+
+.term-anim {
+  overflow: hidden;
+  white-space: pre;
+}
+
+/* While an animation plays, the prompt waits. */
+.is-busy .term-input-line {
+  display: none;
+}
+
+/* Room under the prompt so its focus outline is never clipped by the window edge. */
+.console.is-interactive .console-body {
+  padding-bottom: var(--space-4);
+}

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Network Refresh | Alexis Pontious</title>
+  <meta name="description" content="A no-reboot Windows network refresh that clears DNS, NetBIOS, ARP and route caches, renews DHCP and proves the result.">
+  <link rel="icon" type="image/png" href="../../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../../assets/css/theme.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/layout.css">
+  <link rel="stylesheet" href="../../assets/css/utilities.css">
+  <link rel="stylesheet" href="../../assets/css/layer1.css">
+  <link rel="stylesheet" href="../../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../../"><img src="../../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="net-refresh" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-net-refresh">cd ~/projects/net-refresh</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/projects/net-refresh</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-overview">load --module overview</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-notes">load --module notes</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-screenshots">load --module screenshots</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">~</a> <span aria-hidden="true">/</span> <a href="../">projects</a> <span aria-hidden="true">/</span> <span aria-current="page">net-refresh</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-overview" aria-labelledby="overview-heading">
+          <div class="module-bar"><span>module // overview</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>active</span></div>
+          <div class="module-body">
+            <h1 id="overview-heading" class="identity-name">Network Refresh</h1>
+            <p class="project-file"><code>net-reset-lite.bat</code></p>
+            <p class="project-stack">Batch · PowerShell · netsh · Windows Networking</p>
+            <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+            <div class="identity-summary">
+              <p>Network Refresh is the first thing to try when a connection misbehaves. It clears the DNS, NetBIOS, ARP and route caches and renews DHCP leases without a reboot, then proves whether it worked. If the network is still down, it points to Network Stack Reset.</p>
+              <p>Checks use Test-Connection and Resolve-DnsName, because ipconfig, nslookup and ping can report success when the connection is still broken. Results are shown as a before/after table.</p>
+            </div>
+            <div class="overview-columns">
+              <div class="area">
+                <h2>Key Features</h2>
+                <ul class="area-list">
+                  <li>Clears DNS, NetBIOS, ARP and route caches, and renews DHCP without a reboot</li>
+                  <li>Before/after table covering gateway, internet, DNS, adapters and failed DHCP</li>
+                  <li>Checks that the DHCP and DNS client services are running, and shows the proxy</li>
+                  <li>Optional adapter restart for physical adapters only; VMware and Hyper-V networks keep running</li>
+                  <li>Rejects unknown options and escapes quotes when elevating</li>
+                  <li>Language-independent checks that work on non-English Windows</li>
+                  <li>Exit codes that other scripts can use</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h2>What This Project Demonstrates</h2>
+                <ul class="area-list">
+                  <li>Diagnostic rigour: proving a fix instead of assuming it</li>
+                  <li>Input validation, even in a batch script</li>
+                  <li>Composable tools that other scripts can call</li>
+                  <li>Care for virtual machine networks while troubleshooting the host</li>
+                </ul>
+              </div>
+            </div>
+            <ul class="link-list">
+              <li><a href="https://github.com/su-Alexis/Network-Refresh" target="_blank" rel="noopener noreferrer">View repository</a></li>
+              <li><a href="../">All projects</a></li>
+            </ul>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-2" id="module-notes" aria-labelledby="notes-heading">
+          <div class="module-bar"><span>module // notes</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="notes-heading">Notes</h2>
+            <p>The script is published on GitHub with its full documentation.</p>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-3" id="module-screenshots" aria-labelledby="screenshots-heading">
+          <div class="module-bar"><span>module // screenshots</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>5 captures</span></div>
+          <div class="module-body">
+            <h2 id="screenshots-heading">Screenshots</h2>
+            <!-- Captures from a real run; IP addresses and the local log path are redacted. -->
+            <div class="shot-gallery">
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-1"><img src="../../assets/media/images/projects/network-refresh/intro.jpg" alt="Network Refresh start screen explaining what it flushes and renews, with adapter counts and a continue prompt" width="1115" height="655" loading="lazy" decoding="async"></a>
+                <figcaption>Start Screen</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-2"><img src="../../assets/media/images/projects/network-refresh/before.jpg" alt="Before checks: configured DNS servers left untouched, adapter configuration logged, proxy and dependent services reported" width="1116" height="652" loading="lazy" decoding="async"></a>
+                <figcaption>Before Checks</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-3"><img src="../../assets/media/images/projects/network-refresh/cache-flush.jpg" alt="Numbered steps flushing the ARP, IPv4 and IPv6 destination and neighbour caches, each reporting ok" width="1113" height="644" loading="lazy" decoding="async"></a>
+                <figcaption>Cache Flush Steps</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-4"><img src="../../assets/media/images/projects/network-refresh/dhcp-renew.jpg" alt="Steps releasing and renewing IPv4 and IPv6 DHCP leases, re-registering DNS and flushing the DNS cache again" width="1122" height="645" loading="lazy" decoding="async"></a>
+                <figcaption>DHCP Renew</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-5"><img src="../../assets/media/images/projects/network-refresh/before-after.jpg" alt="Before and after table showing gateway, internet and DNS reachability and adapter counts, ending with network up, no reboot needed" width="1119" height="647" loading="lazy" decoding="async"></a>
+                <figcaption>Before / After Table</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+
+  <!-- Screenshot viewer: plain links and :target, no script needed. -->
+  <div class="lightbox" id="shot-1" role="dialog" aria-label="Screenshot 1 of 5: Start Screen">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-refresh/intro.jpg" alt="Network Refresh start screen explaining what it flushes and renews, with adapter counts and a continue prompt" width="1115" height="655" loading="lazy" decoding="async">
+      <figcaption>Start Screen · 1 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-5">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-2">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-2" role="dialog" aria-label="Screenshot 2 of 5: Before Checks">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-refresh/before.jpg" alt="Before checks: configured DNS servers left untouched, adapter configuration logged, proxy and dependent services reported" width="1116" height="652" loading="lazy" decoding="async">
+      <figcaption>Before Checks · 2 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-1">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-3">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-3" role="dialog" aria-label="Screenshot 3 of 5: Cache Flush Steps">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-refresh/cache-flush.jpg" alt="Numbered steps flushing the ARP, IPv4 and IPv6 destination and neighbour caches, each reporting ok" width="1113" height="644" loading="lazy" decoding="async">
+      <figcaption>Cache Flush Steps · 3 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-2">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-4">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-4" role="dialog" aria-label="Screenshot 4 of 5: DHCP Renew">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-refresh/dhcp-renew.jpg" alt="Steps releasing and renewing IPv4 and IPv6 DHCP leases, re-registering DNS and flushing the DNS cache again" width="1122" height="645" loading="lazy" decoding="async">
+      <figcaption>DHCP Renew · 4 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-3">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-5">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-5" role="dialog" aria-label="Screenshot 5 of 5: Before / After Table">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/network-refresh/before-after.jpg" alt="Before and after table showing gateway, internet and DNS reachability and adapter counts, ending with network up, no reboot needed" width="1119" height="647" loading="lazy" decoding="async">
+      <figcaption>Before / After Table · 5 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-4">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-1">Next &gt;</a>
+    </nav>
+  </div>
+</body>
+</html>

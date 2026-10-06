@@ -1,0 +1,761 @@
+/* Layer 1: portfolio styles, including the boot sequence.
+   Doctrine section 12, "Boot animation": content is already in the HTML; this file only
+   reveals it. Every animation uses fill-mode "both", so its end state is fully visible
+   even if JavaScript stops. Without "boot-run" on <html>, nothing here hides anything.
+
+   Timeline (seconds from page load):
+     0.00 - 0.40  power on: a CRT line opens into the screen
+     0.40 - 2.70  BIOS POST: firmware lines, memory count, drive detection
+     2.80 - 4.70  logo in the center with a loading bar
+     4.70 - 5.10  boot screen fades out
+     5.10 - 6.30  top bar, console window, ./startup.sh, session line
+     --t (.step-N) each module: console types "load --module <name>", bar fills, module opens
+     --boot-end   "all modules online", footer, and the "boot-complete" marker
+
+   The short "page" sequence (html.page-boot: other pages, and home after the first visit)
+   skips the boot screen and runs the console part from --page-start with faster timings.
+   Each page sets its module count with a .steps-N class on <html>; --boot-end follows. */
+
+@property --pct {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 100;
+}
+
+/* Registered so scripts read a resolved time (ui/cert-verify.js paces lines from it). */
+@property --fill-at {
+  syntax: "<time>";
+  inherits: true;
+  initial-value: 0s;
+}
+
+@property --mem {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 32768;
+}
+
+:root {
+  /* +1.2s (owner, Oct 3): the wafflesOS loading screen holds longer. */
+  --page-start: 6.3s;
+  --prompt-at: 0.5s;
+  --init-at: 1.1s;
+  --steps-at: 1.3s;
+  --step-gap: 1s;
+  --type-dur: 0.45s;
+  --bar-delay: 0.5s;
+  --bar-dur: 0.55s;
+  --steps: 1;
+}
+
+:root.page-boot {
+  --page-start: 0.15s;
+  --prompt-at: 0.3s;
+  --init-at: 0.75s;
+  --steps-at: 0.95s;
+  --step-gap: 0.6s;
+  --type-dur: 0.3s;
+  --bar-delay: 0.3s;
+  --bar-dur: 0.35s;
+}
+
+/* SITE STANDARD (owner, October 3, 2026): a module loads in sync with its console line's
+   loading bar. Its title bar opens as the bar starts filling, its body expands and its
+   contents fill in while the bar runs, and it is complete when the bar reaches 100%.
+   Everything below is derived from --bar-delay and --bar-dur, so retiming the bars (or
+   the short page sequence above) retimes every module with them. Do not give modules
+   their own fixed timings. Declared on each .boot-step too, so a step with a longer bar
+   (see "long steps" below) stretches its own module, not the others. Caps keep the
+   frame of a long module quick; its extra time goes to what fills it. */
+:root,
+.boot-step {
+  --open-delay: var(--bar-delay);
+  --open-dur: min(calc(var(--bar-dur) * 0.4), 0.35s);
+  --expand-at: min(calc(var(--bar-dur) * 0.1), 0.1s);
+  --expand-dur: min(calc(var(--bar-dur) * 0.3), 0.35s);
+  --fill-at: min(calc(var(--bar-dur) * 0.3), 0.4s);
+  --fill-gap: min(calc(var(--bar-dur) * 0.07), 0.08s);
+  --fill-dur: min(calc(var(--bar-dur) * 0.2), 0.28s);
+}
+
+/* Long steps: a module that does more while it loads gets a longer bar, and every later
+   step and the end of the sequence move back by the difference, so commands still run
+   one after another. Home: certifications (step 2) loads and verifies each line while its
+   bar fills (ui/cert-verify.js reads this module's --bar-dur to pace the lines). */
+.long-step-2 {
+  --long-bar: 3.4s;
+  --long-extra: calc(var(--long-bar) - var(--bar-dur));
+  --shift-3: var(--long-extra);
+  --shift-4: var(--long-extra);
+  --shift-5: var(--long-extra);
+  --shift-6: var(--long-extra);
+  --shift-7: var(--long-extra);
+  --shift-8: var(--long-extra);
+  --shift-9: var(--long-extra);
+  --shift-end: var(--long-extra);
+}
+
+.long-step-2 .step-2 {
+  --bar-dur: var(--long-bar);
+}
+
+.steps-1 { --steps: 1; }
+.steps-2 { --steps: 2; }
+.steps-3 { --steps: 3; }
+.steps-4 { --steps: 4; }
+.steps-5 { --steps: 5; }
+.steps-6 { --steps: 6; }
+.steps-7 { --steps: 7; }
+.steps-8 { --steps: 8; }
+.steps-9 { --steps: 9; }
+
+:root {
+  --boot-end: calc(var(--page-start) + var(--steps-at) + (var(--steps) - 1) * var(--step-gap) + var(--bar-delay) + var(--bar-dur) + 0.35s + var(--shift-end, 0s));
+}
+
+.step-1 { --t: calc(var(--page-start) + var(--steps-at) + 0 * var(--step-gap)); }
+.step-2 { --t: calc(var(--page-start) + var(--steps-at) + 1 * var(--step-gap)); }
+.step-3 { --t: calc(var(--page-start) + var(--steps-at) + 2 * var(--step-gap) + var(--shift-3, 0s)); }
+.step-4 { --t: calc(var(--page-start) + var(--steps-at) + 3 * var(--step-gap) + var(--shift-4, 0s)); }
+.step-5 { --t: calc(var(--page-start) + var(--steps-at) + 4 * var(--step-gap) + var(--shift-5, 0s)); }
+.step-6 { --t: calc(var(--page-start) + var(--steps-at) + 5 * var(--step-gap) + var(--shift-6, 0s)); }
+.step-7 { --t: calc(var(--page-start) + var(--steps-at) + 6 * var(--step-gap) + var(--shift-7, 0s)); }
+.step-8 { --t: calc(var(--page-start) + var(--steps-at) + 7 * var(--step-gap) + var(--shift-8, 0s)); }
+.step-9 { --t: calc(var(--page-start) + var(--steps-at) + 8 * var(--step-gap) + var(--shift-9, 0s)); }
+
+/* ---------- Typed commands, bars and counters (static, complete by default) ---------- */
+
+.typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  width: calc(var(--n) * 1ch);
+  color: var(--color-text);
+}
+
+.typed-startup { --n: 12; }
+.typed-identity { --n: 22; }
+.typed-certifications { --n: 28; }
+.typed-core-areas { --n: 24; }
+.typed-projects { --n: 22; }
+.typed-writeups { --n: 22; }
+.typed-links { --n: 19; }
+.typed-cd-projects { --n: 13; }
+.typed-cd-debloat { --n: 21; }
+.typed-cd-writeups { --n: 13; }
+.typed-cd-fridge-friends { --n: 28; }
+.typed-cd-cleanup { --n: 21; }
+.typed-cd-wingg { --n: 19; }
+.typed-cd-net-reset { --n: 23; }
+.typed-cd-net-refresh { --n: 25; }
+.typed-debloat { --n: 21; }
+.typed-lab-notes { --n: 23; }
+.typed-fridge-friends { --n: 28; }
+.typed-cleanup { --n: 21; }
+.typed-wingg { --n: 19; }
+.typed-net-reset { --n: 23; }
+.typed-net-refresh { --n: 25; }
+.typed-overview { --n: 22; }
+.typed-notes { --n: 19; }
+.typed-screenshots { --n: 25; }
+.typed-planned { --n: 21; }
+.typed-status { --n: 20; }
+.typed-languages { --n: 23; }
+
+.bar {
+  white-space: nowrap;
+  color: var(--color-text-faint);
+}
+
+.bar::before { content: "["; }
+.bar::after { content: "]"; }
+
+.bar-fill,
+.bar-empty {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.bar-fill {
+  width: 20ch;
+  color: var(--color-ok);
+}
+
+.bar-empty {
+  width: 0;
+}
+
+.pct {
+  color: var(--color-ok);
+}
+
+.pct::after {
+  counter-reset: pct var(--pct);
+  content: counter(pct) "%";
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1em;
+  vertical-align: text-bottom;
+  background: var(--color-ok);
+}
+
+/* Decorative blink. Exempt from the boot-run scoping test: it hides no content. */
+.cursor {
+  animation: cursor-blink 1.1s steps(1, end) infinite;
+}
+
+/* ---------- Boot screen and skip button (shown only while booting) ---------- */
+
+.boot-screen,
+.boot-skip {
+  display: none;
+}
+
+.boot-run .boot-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: block;
+  overflow: hidden;
+  background: #000;
+  color: #c7c7c7;
+  animation: boot-fade-out 0.4s ease-in 5.9s both;
+}
+
+.boot-run .boot-skip {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 60;
+  display: inline-flex;
+  margin: 0;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid #3a3a3a;
+  border-radius: var(--radius);
+  background: #0b0b0b;
+  color: #bdbdbd;
+  font-size: var(--font-size-tiny);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Keyboard devices skip with Esc; touch-only devices (no hover, coarse pointer) tap. */
+.skip-tap {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .skip-key {
+    display: none;
+  }
+
+  .skip-tap {
+    display: inline;
+  }
+}
+
+.boot-skip kbd {
+  font-family: var(--font-mono);
+  color: #7a7a7a;
+}
+
+/* Power on: a thin line opens vertically into the screen, like a CRT warming up. */
+.boot-power {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e8f4ff;
+  box-shadow: 0 0 24px 6px rgba(200, 230, 255, 0.5);
+}
+
+.boot-run .boot-power {
+  animation: power-on 0.45s ease-out both;
+}
+
+/* BIOS POST */
+.boot-post {
+  position: absolute;
+  inset: 0;
+  padding: clamp(1rem, 4vw, 3rem);
+  font-size: clamp(0.72rem, 0.65rem + 0.35vw, 0.95rem);
+  line-height: 1.5;
+}
+
+.boot-run .boot-post {
+  animation: boot-fade-out 0.15s linear 2.65s both;
+}
+
+.post-logo {
+  position: absolute;
+  top: clamp(1rem, 4vw, 3rem);
+  right: clamp(1rem, 4vw, 3rem);
+  width: clamp(48px, 8vw, 88px);
+  height: auto;
+}
+
+.post-line {
+  margin: 0;
+  min-height: 1.5em;
+  white-space: pre-wrap;
+}
+
+.post-title {
+  color: #ffffff;
+}
+
+.post-ok {
+  color: #9be29b;
+}
+
+.post-hint {
+  position: absolute;
+  left: clamp(1rem, 4vw, 3rem);
+  bottom: clamp(1rem, 4vw, 3rem);
+  margin: 0;
+  color: #8a8a8a;
+}
+
+.mem::after {
+  counter-reset: mem var(--mem);
+  content: counter(mem);
+}
+
+.boot-run .post-line,
+.boot-run .post-hint,
+.boot-run .post-logo {
+  animation: boot-print 0.01s linear both;
+}
+
+.boot-run .post-logo { animation-delay: 0.45s; }
+.boot-run .post-line:nth-child(2) { animation-delay: 0.5s; }
+.boot-run .post-line:nth-child(3) { animation-delay: 0.6s; }
+.boot-run .post-line:nth-child(4) { animation-delay: 0.7s; }
+.boot-run .post-line:nth-child(5) { animation-delay: 0.85s; }
+.boot-run .post-line:nth-child(6) { animation-delay: 1.0s; }
+.boot-run .post-line:nth-child(7) { animation-delay: 1.75s; }
+.boot-run .post-line:nth-child(8) { animation-delay: 1.85s; }
+.boot-run .post-line:nth-child(9) { animation-delay: 2.0s; }
+.boot-run .post-line:nth-child(10) { animation-delay: 2.15s; }
+.boot-run .post-line:nth-child(11) { animation-delay: 2.3s; }
+.boot-run .post-line:nth-child(12) { animation-delay: 2.45s; }
+.boot-run .post-hint { animation-delay: 0.6s; }
+
+.boot-run .mem {
+  animation: mem-count 0.7s linear 1.0s both;
+}
+
+.boot-run .mem-ok {
+  animation: boot-print 0.01s linear 1.7s both;
+}
+
+/* Logo stage */
+.boot-logo-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.boot-logo {
+  width: clamp(96px, 18vw, 168px);
+  height: auto;
+}
+
+.boot-loader {
+  position: relative;
+  width: clamp(140px, 22vw, 220px);
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #1c1c1c;
+}
+
+.boot-loader span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  background: var(--color-brand);
+  box-shadow: 0 0 10px rgba(245, 164, 0, 0.6);
+}
+
+.boot-loader-text {
+  margin: 0;
+  color: #7a7a7a;
+  font-size: var(--font-size-tiny);
+  letter-spacing: 0.2em;
+}
+
+.boot-run .boot-logo-stage {
+  animation: boot-print 0.01s linear 2.8s both;
+}
+
+.boot-run .boot-logo {
+  animation: logo-in 0.6s ease-out 2.8s both;
+}
+
+.boot-run .boot-loader,
+.boot-run .boot-loader-text {
+  animation: boot-reveal 0.3s ease-out 3.2s both;
+}
+
+.boot-run .boot-loader span {
+  animation: loader-fill 2.5s cubic-bezier(0.4, 0, 0.2, 1) 3.3s both;
+}
+
+/* ---------- Page timeline ---------- */
+
+.boot-run .topbar {
+  animation: slide-down 0.35s ease-out var(--page-start) both;
+}
+
+/* The short sequence skips the boot screen and keeps the top bar in place. */
+.boot-run.page-boot .boot-screen {
+  display: none;
+}
+
+.boot-run.page-boot .topbar {
+  animation: none;
+}
+
+.boot-run .console {
+  animation: window-open 0.3s ease-out calc(var(--page-start) + 0.2s) both;
+}
+
+.boot-run .line-prompt {
+  animation: boot-print 0.01s linear calc(var(--page-start) + var(--prompt-at)) both;
+}
+
+.boot-run .line-prompt .typed {
+  animation: type var(--type-dur) steps(var(--n), end) calc(var(--page-start) + var(--prompt-at) + 0.05s) both;
+}
+
+.boot-run .line-init {
+  animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at)) both;
+}
+
+.boot-run .console-line.boot-step {
+  animation: boot-print 0.01s linear var(--t) both;
+}
+
+.boot-run .console-line.boot-step .typed {
+  animation: type var(--type-dur) steps(var(--n), end) var(--t) both;
+}
+
+.boot-run .console-line.boot-step .bar-fill {
+  animation: bar-fill var(--bar-dur) steps(20, end) calc(var(--t) + var(--bar-delay)) both;
+}
+
+.boot-run .console-line.boot-step .bar-empty {
+  animation: bar-empty var(--bar-dur) steps(20, end) calc(var(--t) + var(--bar-delay)) both;
+}
+
+.boot-run .console-line.boot-step .pct {
+  animation: pct var(--bar-dur) linear calc(var(--t) + var(--bar-delay)) both;
+}
+
+.boot-run .module.boot-step {
+  animation: window-open var(--open-dur) ease-out calc(var(--t) + var(--open-delay)) both;
+}
+
+/* Staged module opening: the bar opens (window-open above), then the body grows from
+   nothing to its full height, then each direct child fades in, top to bottom.
+   interpolate-size lets height animate to auto; older browsers snap open instead. */
+.boot-run .module.boot-step > .module-body {
+  interpolate-size: allow-keywords;
+  overflow: hidden;
+  animation: module-expand var(--expand-dur) ease-out calc(var(--t) + var(--open-delay) + var(--expand-at)) both;
+}
+
+.boot-run .module.boot-step > .module-body > * {
+  animation: module-fill var(--fill-dur) ease-out calc(var(--t) + var(--open-delay) + var(--fill-at) + var(--fill-i, 0) * var(--fill-gap)) both;
+}
+
+.boot-run .line-ready,
+.boot-run .site-footer {
+  animation: boot-print 0.01s linear var(--boot-end) both;
+}
+
+/* Console log lines take no room until they print, so a shell carried over from another
+   page keeps its history and prompt in place and the new lines push in at the bottom,
+   like a real terminal, instead of opening blank space first. Same timing as each line's
+   boot-print rule above; only the keyframes differ. Height collapses rather than display:
+   none, because display: none would restart the typing and bar animations inside each
+   line late. 0 -> auto flips discretely, at once given the 0.01s duration. */
+.boot-run .console-log .console-line {
+  animation-name: boot-line;
+}
+
+/* Module status connects with its loading bar (site loading standard): from the moment the
+   title bar opens until the bar reaches 100%, the badge reads CONNECTING with a blinking
+   amber dot, then switches to its real status with a short flash. The real label is only
+   made transparent, so assistive technology still reads it. */
+.boot-run .module.boot-step .module-state {
+  animation:
+    state-connecting var(--bar-dur) linear calc(var(--t) + var(--bar-delay)) backwards,
+    state-online 0.6s ease-out calc(var(--t) + var(--bar-delay) + var(--bar-dur)) backwards;
+}
+
+.boot-run .module.boot-step .module-state::after {
+  content: "connecting";
+  position: absolute;
+  right: 0;
+  color: var(--color-warn);
+  white-space: nowrap;
+  opacity: 0;
+  animation: state-connecting-label var(--bar-dur) linear calc(var(--t) + var(--bar-delay)) backwards;
+}
+
+/* "connecting" is wider than the real label, so the real dot is hidden while connecting and
+   an amber dot blinks just left of the word (10 characters at the bar's 0.1em spacing). */
+.boot-run .module.boot-step .module-state .status-dot {
+  animation: state-dot-hidden var(--bar-dur) linear calc(var(--t) + var(--bar-delay)) backwards;
+}
+
+.boot-run .module.boot-step .module-state::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: calc(10 * (1ch + 0.1em) + var(--space-1));
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--color-warn);
+  opacity: 0;
+  animation: state-dot-connecting var(--bar-dur) linear calc(var(--t) + var(--bar-delay)) backwards;
+}
+
+/* Archived projects: the [ ARCHIVED ] stamp thumps down while its module's bar fills
+   (three quarters of the way, after the module's contents appear), lands crooked and the
+   ink spreads. Timed from the module's bar like everything else in a module. */
+.boot-run .module.boot-step .status-archived {
+  animation: archive-stamp 0.45s cubic-bezier(0.3, 0, 0.2, 1) calc(var(--t) + var(--bar-delay) + var(--bar-dur) * 0.75) backwards;
+}
+
+/* Marker the script listens for; its end is the end of the whole sequence. */
+.boot-run body {
+  animation: boot-complete 0.01s linear var(--boot-end) both;
+}
+
+/* ---------- Desktop transitions between pages ----------
+   Same-origin navigations slide like switching virtual desktops: the old page slides
+   out, the new one slides in (reversed when going back up the site). The top bar and
+   shell windows keep their place. CSS only (cross-document view transitions); browsers
+   without support simply navigate. Off for reduced motion. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+.topbar {
+  view-transition-name: topbar;
+}
+
+#terminal {
+  view-transition-name: tty1;
+}
+
+.shell-tty2 {
+  view-transition-name: tty2;
+}
+
+.shell-tty3 {
+  view-transition-name: tty3;
+}
+
+::view-transition-old(root) {
+  animation: desktop-out-left 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: desktop-in-right 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+html:active-view-transition-type(back)::view-transition-old(root) {
+  animation-name: desktop-out-right;
+}
+
+html:active-view-transition-type(back)::view-transition-new(root) {
+  animation-name: desktop-in-left;
+}
+
+::view-transition-group(tty1),
+::view-transition-group(tty2),
+::view-transition-group(tty3),
+::view-transition-group(topbar) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Shell windows are one persistent entity, not two pictures to blend: show the live new
+   window at once instead of cross-fading from the old one. Without this, tty1 "blinks"
+   because its contents change on arrival (new log or typed lines), so the default fade
+   ghosts the old and new text over each other. */
+::view-transition-old(tty1),
+::view-transition-old(tty2),
+::view-transition-old(tty3) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(tty1),
+::view-transition-new(tty2),
+::view-transition-new(tty3) {
+  animation: none;
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes desktop-out-left {
+  to { transform: translateX(-100%) scale(0.96); opacity: 0.4; }
+}
+
+@keyframes desktop-in-right {
+  from { transform: translateX(100%) scale(0.96); opacity: 0.4; }
+}
+
+@keyframes desktop-out-right {
+  to { transform: translateX(100%) scale(0.96); opacity: 0.4; }
+}
+
+@keyframes desktop-in-left {
+  from { transform: translateX(-100%) scale(0.96); opacity: 0.4; }
+}
+
+
+@keyframes boot-print {
+  from { visibility: hidden; }
+  to { visibility: visible; }
+}
+
+@keyframes state-connecting {
+  from, to { color: transparent; }
+}
+
+@keyframes state-connecting-label {
+  from, to { opacity: 1; }
+}
+
+@keyframes state-dot-hidden {
+  from, to { opacity: 0; }
+}
+
+@keyframes state-dot-connecting {
+  0%, 24%, 50%, 74% { opacity: 1; }
+  12%, 37%, 62%, 87%, 100% { opacity: 0.25; }
+}
+
+@keyframes state-online {
+  from { text-shadow: 0 0 10px currentColor, 0 0 18px currentColor; }
+  to { text-shadow: none; }
+}
+
+@keyframes archive-stamp {
+  0% { opacity: 0; transform: scale(2.4) rotate(-14deg); box-shadow: none; }
+  55% { opacity: 1; transform: scale(0.9) rotate(-2deg); box-shadow: 0 0 0 0 rgba(201, 168, 106, 0.6); }
+  75% { transform: scale(1.04) rotate(-3.5deg); box-shadow: 0 0 0 5px rgba(201, 168, 106, 0); }
+  100% { opacity: 1; transform: rotate(-3deg); box-shadow: none; }
+}
+
+@keyframes module-expand {
+  from { height: 0; padding-top: 0; padding-bottom: 0; }
+  to { height: auto; }
+}
+
+@keyframes module-fill {
+  from { opacity: 0; transform: translateY(0.35rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes boot-line {
+  from { height: 0; overflow: hidden; visibility: hidden; }
+  to { height: auto; overflow: visible; visibility: visible; }
+}
+
+@keyframes boot-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes boot-fade-out {
+  from { opacity: 1; visibility: visible; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes power-on {
+  0% { transform: scaleX(0); opacity: 1; }
+  45% { transform: scaleX(1) scaleY(1); opacity: 1; }
+  100% { transform: scaleX(1) scaleY(400); opacity: 0; }
+}
+
+@keyframes logo-in {
+  from { opacity: 0; transform: scale(0.92); filter: brightness(1.8); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes loader-fill {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes window-open {
+  from { opacity: 0; transform: scale(0.985) translateY(0.4rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes type {
+  from { width: 0; }
+  to { width: calc(var(--n) * 1ch); }
+}
+
+@keyframes bar-fill {
+  from { width: 0; }
+  to { width: 20ch; }
+}
+
+@keyframes bar-empty {
+  from { width: 20ch; }
+  to { width: 0; }
+}
+
+@keyframes pct {
+  from { --pct: 0; }
+  to { --pct: 100; }
+}
+
+@keyframes mem-count {
+  from { --mem: 0; }
+  to { --mem: 32768; }
+}
+
+@keyframes cursor-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes boot-complete {
+  from { opacity: 1; }
+  to { opacity: 1; }
+}

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en-US" class="steps-7 long-step-2">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alexis Pontious | Cybersecurity Portfolio</title>
+  <meta name="description" content="Cybersecurity portfolio of Alexis Pontious: projects, technical writeups, certifications and hands-on labs.">
+  <link rel="icon" type="image/png" href="assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: decides whether the boot sequence plays before first paint. -->
+  <script src="assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="assets/css/theme.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/utilities.css">
+  <link rel="stylesheet" href="assets/css/layer1.css">
+  <link rel="stylesheet" href="assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <!-- Decorative power-on sequence. Hidden from assistive technology; the real content is below. -->
+  <div class="boot-screen" id="boot-screen" aria-hidden="true">
+    <div class="boot-power"></div>
+    <div class="boot-post">
+      <img class="post-logo" src="assets/media/icons/logo-64.png" alt="" width="64" height="64">
+      <p class="post-line post-title">WAFFL Modular BIOS v1.3.0</p>
+      <p class="post-line">Copyright (C) 2026 Alexis Pontious. All rights reserved.</p>
+      <p class="post-line"></p>
+      <p class="post-line">Main Processor   : Analyst Core x8 @ 3.20GHz</p>
+      <p class="post-line">Memory Testing   : <span class="mem"></span>K <span class="mem-ok post-ok">OK</span></p>
+      <p class="post-line"></p>
+      <p class="post-line">Detecting Primary Master ... PORTFOLIO-SSD 512GB</p>
+      <p class="post-line">Detecting Primary Slave  ... None</p>
+      <p class="post-line">USB Devices total: 1 Keyboard, 1 Mouse</p>
+      <p class="post-line">Verifying DMI Pool Data ........ <span class="post-ok">Update Success</span></p>
+      <p class="post-line">Boot from /dev/portfolio ...</p>
+      <p class="post-hint">Press DEL to run Setup · F12 for Boot Menu</p>
+    </div>
+    <div class="boot-logo-stage">
+      <img class="boot-logo" src="assets/media/icons/logo-512.png" alt="" width="512" height="512">
+      <div class="boot-loader"><span></span></div>
+      <p class="boot-loader-text">Starting wafflesOS</p>
+    </div>
+  </div>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="./"><img src="assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The startup log is decorative; ui/terminal-ui.js adds the prompt. -->
+      <section class="console" id="terminal" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+          <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-startup">./startup.sh</span></p>
+          <p class="console-line line-init"><span class="ok">[ ok ]</span> secure session initialized</p>
+          <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-identity">load --module identity</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-certifications">load --module certifications</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-core-areas">load --module core-areas</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line boot-step step-4"><span class="cmd-prompt">$</span> <span class="typed typed-projects">load --module projects</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line boot-step step-5"><span class="cmd-prompt">$</span> <span class="typed typed-writeups">load --module writeups</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line boot-step step-6"><span class="cmd-prompt">$</span> <span class="typed typed-links">load --module links</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line boot-step step-7"><span class="cmd-prompt">$</span> <span class="typed typed-languages">load --module languages</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+          <p class="console-line line-ready"><span class="ok">[ ok ]</span> all modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-identity" aria-labelledby="identity-heading">
+          <div class="module-bar"><span>module // identity</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h1 id="identity-heading" class="identity-name">Alexis Pontious</h1>
+            <p class="identity-role">Ethical Hacker | Cybersecurity-Focused IT Specialist</p>
+            <div class="identity-summary">
+              <p>I focus on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.</p>
+              <p>I use PowerShell, Python, and AI-assisted tools to speed up research, analysis, troubleshooting, and remediation. I'm currently completing a C, C++, and C# bootcamp to strengthen my malware analysis and vulnerability research, and to build my own tooling for authorized security testing.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="module module-wide boot-step step-2" id="module-certifications" aria-labelledby="certifications-heading">
+          <div class="module-bar"><span>module // certifications</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="certifications-heading">Certifications and Ongoing Training</h2>
+            <ul class="cert-list">
+              <li class="cert"><span class="cert-name">CompTIA Security+</span> <span class="cert-status cert-earned">Certified</span></li>
+              <li class="cert"><span class="cert-name">CompTIA SecurityX <span class="cert-note">(formerly CASP+)</span></span> <span class="cert-status cert-scheduled">Exam <time datetime="2026-10-21">Oct 21, 2026</time></span></li>
+              <li class="cert"><span class="cert-name">EC-Council CEH v13 AI</span> <span class="cert-status cert-progress">In progress · <time datetime="2026-12">Dec 2026</time></span></li>
+              <li class="cert"><span class="cert-name">CompTIA Network+</span> <span class="cert-status cert-progress">In progress · <time datetime="2027-01-31">Jan 31, 2027</time></span></li>
+              <li class="cert"><span class="cert-name">EC-Council CEH v13 AI Practical</span> <span class="cert-status cert-planned">Target <time datetime="2027-02">Feb 2027</time></span></li>
+            </ul>
+            <p class="cert-extra">Additional digital badge-backed coursework and platform training in cybersecurity, IT, networking, and systems.</p>
+          </div>
+        </section>
+
+        <section class="module module-wide boot-step step-3" id="module-core-areas" aria-labelledby="core-areas-heading">
+          <div class="module-bar"><span>module // core-areas</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="core-areas-heading">Core Areas</h2>
+            <div class="areas-grid">
+              <div class="area">
+                <h3>Cybersecurity</h3>
+                <ul class="area-list">
+                  <li>Defensive security fundamentals</li>
+                  <li>Ethical hacking labs and research</li>
+                  <li>Windows and Linux hardening</li>
+                  <li>Security tooling and troubleshooting</li>
+                  <li>Threat analysis and vulnerability assessment</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h3>IT / Systems</h3>
+                <ul class="area-list">
+                  <li>Endpoint support and troubleshooting</li>
+                  <li>DNS, DHCP, VPN, and network issue diagnosis</li>
+                  <li>Virtualization and VM workflows</li>
+                  <li>OS deployment, repair, and optimization</li>
+                  <li>Cross-platform technical support</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h3>Scripting / Automation</h3>
+                <ul class="area-list">
+                  <li>PowerShell automation</li>
+                  <li>Python for utility and security workflows</li>
+                  <li>Bash for Linux administration</li>
+                  <li>Repeatable tooling for system tasks and documentation</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h3>Artificial Intelligence</h3>
+                <ul class="area-list">
+                  <li>AI-assisted research, analysis, and troubleshooting workflows</li>
+                  <li>AI-enabled attack and defense techniques (CEH v13 AI coursework)</li>
+                  <li>AI security, governance, and risk (CompTIA SecurityX exam prep)</li>
+                  <li>LLM threats such as prompt injection and data leakage (hands-on labs across CEH v13 AI and other platforms)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="module module-wide boot-step step-4" id="module-projects" aria-labelledby="projects-heading">
+          <div class="module-bar"><span>module // projects</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="projects-heading">Featured Projects</h2>
+            <!-- WindowsGG: the current generation of the Debloat & Optimize line, featured first. -->
+            <article class="project" aria-labelledby="project-wingg-heading">
+              <a class="project-shot" href="projects/wingg/"><img src="assets/media/images/projects/wingg/run-start.jpg" alt="WindowsGG starting in PowerShell: the ASCII banner, the color legend for each status, the Desktop tools written, a restore point created and the system image check starting" width="1164" height="1025" loading="lazy" decoding="async"></a>
+              <div class="project-info">
+                <h3 id="project-wingg-heading" class="project-title">WindowsGG</h3>
+                <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+                <p class="project-stack">PowerShell · Windows Internals · Security Hardening · Gaming Performance</p>
+                <p>A one-shot baselining script for a freshly installed Windows 10 or 11 gaming PC. It debloats, applies performance, privacy and security-hardening changes, and leaves the Utility Tools on the Desktop. The current generation of the Debloat &amp; Optimize line, rebuilt from the ground up. <a class="read-more" href="projects/wingg/">Read more…</a></p>
+                <ul class="link-list">
+                  <li><a href="https://github.com/su-Alexis/winGG10-11" target="_blank" rel="noopener noreferrer">View repository</a></li>
+                  <li><a href="projects/">View all projects</a></li>
+                </ul>
+              </div>
+            </article>
+            <article class="project" aria-labelledby="project-debloat-heading">
+              <a class="project-shot" href="projects/windows-debloat-and-optimize/"><img src="assets/media/images/projects/windows-debloat-and-optimize/start.jpg" alt="PowerShell window showing the Debloat &amp; Optimize script starting: color legend, restore point creation and DISM image check" width="1400" height="1353" loading="lazy" decoding="async"></a>
+              <div class="project-info">
+                <h3 id="project-debloat-heading" class="project-title">Windows 10/11 Debloat &amp; Optimize</h3>
+                <p class="project-status">Status: <span class="status-tag status-archived">[ ARCHIVED ]<span class="dust" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></p>
+                <p class="project-stack">PowerShell · Windows Internals · Registry Tuning · System Optimization</p>
+                <p>An all-in-one PowerShell project for automating Windows cleanup, debloating, registry-based tuning, and post-install system configuration. This expanded version of Windows Debloater adds optimization, privacy, networking, gaming, and quality-of-life tweaks to give users a cleaner and more controlled Windows setup. <a class="read-more" href="projects/windows-debloat-and-optimize/">Read more…</a></p>
+                <ul class="link-list">
+                  <li><a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View repository</a></li>
+                  <li><a href="projects/">View all projects</a></li>
+                </ul>
+              </div>
+            </article>
+            <article class="project" aria-labelledby="project-fridge-heading">
+              <a class="project-shot" href="projects/fridge-friends/"><img src="assets/media/images/projects/fridge-friends/overview.jpg" alt="Fridge Friends recipe view: goal filters, a selected recipe with its quick perishables, the batch calculator, macros, ingredients and instructions" width="1400" height="1010" loading="lazy" decoding="async"></a>
+              <div class="project-info">
+                <h3 id="project-fridge-heading" class="project-title">Fridge Friends</h3>
+                <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+                <p class="project-stack">TypeScript · React · Vite · Offline Web App</p>
+                <p>A static React app for matching recipes to what is in your fridge, scaling batches, building grocery lists, and saving personal recipes. It runs entirely in the browser with no server, database or API keys, validates everything it stores, works offline, and can back up and restore your data between devices. <a class="read-more" href="projects/fridge-friends/">Read more…</a></p>
+                <ul class="link-list">
+                  <li><a href="https://su-alexis.github.io/Fridge-Friends/" target="_blank" rel="noopener noreferrer">View web app</a></li>
+                  <li><a href="https://github.com/su-Alexis/Fridge-Friends" target="_blank" rel="noopener noreferrer">View repository</a></li>
+                  <li><a href="projects/">View all projects</a></li>
+                </ul>
+              </div>
+            </article>
+            <!-- Utility Tools: a growing set of Windows batch scripts. The site shows write-ups
+                 only (no downloadable .bat files or script source); each tool links to its own
+                 GitHub repository. Add a tool by copying one .tool block; keep text free of real
+                 IPs and domains (doctrine §3). -->
+            <article class="project project-tools" aria-labelledby="project-tools-heading">
+              <div class="project-info">
+                <h3 id="project-tools-heading" class="project-title">Utility Tools</h3>
+                <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+                <p class="project-stack">Batch · PowerShell · netsh · Windows Internals</p>
+                <p>A growing toolbox of Windows batch scripts for cleanup and network troubleshooting. Each one checks before it changes anything, logs what it did, and reports the result.</p>
+              </div>
+              <ul class="tool-grid">
+                <li class="tool">
+                  <p class="tool-name">Windows Cleanup <code class="tool-file">cleanup_main.bat</code></p>
+                  <p>A scan-first cleanup tool. It measures every cache it can clear and lists apps that have stopped responding, then lets you choose from a six-option menu. Nothing is deleted until you pick. <a class="read-more" href="projects/windows-cleanup/">Read more…</a></p>
+                  <ul class="area-list">
+                    <li>Before/after free-space report, plus a re-scan that flags files locked by running apps</li>
+                    <li>Refuses drive roots, system folders and browser profiles; never closes core OS processes</li>
+                    <li>Old Downloads go to the Recycle Bin, and only after typing DELETE to confirm</li>
+                  </ul>
+                  <p class="tool-shows">Shows: safe-by-default design, Windows internals, AV-aware scripting</p>
+                  <ul class="link-list">
+                    <li><a href="https://github.com/su-Alexis/Windows-Cleanup" target="_blank" rel="noopener noreferrer">View repository</a></li>
+                  </ul>
+                </li>
+                <li class="tool">
+                  <p class="tool-name">Network Stack Reset <code class="tool-file">net-reset-reboot.bat</code></p>
+                  <p>A full TCP/IP, IPv6, Winsock and proxy reset for when Windows networking is truly broken. It backs up everything first and checks the result after the reboot. <a class="read-more" href="projects/network-stack-reset/">Read more…</a></p>
+                  <ul class="area-list">
+                    <li>Saves netsh config, the Winsock provider list and hand-set DNS servers, then restores the DNS servers</li>
+                    <li>Tests gateway, internet and DNS before the reset; a verify mode repeats them after the reboot</li>
+                    <li>Refuses to run over Remote Desktop unless forced, since it would cut the session</li>
+                  </ul>
+                  <p class="tool-shows">Shows: network troubleshooting, backup-before-change discipline, clear logging</p>
+                  <ul class="link-list">
+                    <li><a href="https://github.com/su-Alexis/Network-Stack-Reset" target="_blank" rel="noopener noreferrer">View repository</a></li>
+                  </ul>
+                </li>
+                <li class="tool">
+                  <p class="tool-name">Network Refresh <code class="tool-file">net-reset-lite.bat</code></p>
+                  <p>The lighter sibling: clears the DNS, NetBIOS, ARP and route caches and renews DHCP leases without a reboot, then proves whether it worked. <a class="read-more" href="projects/network-refresh/">Read more…</a></p>
+                  <ul class="area-list">
+                    <li>Checks with Test-Connection and Resolve-DnsName, since ipconfig, nslookup and ping can report false success</li>
+                    <li>Optional adapter restart touches physical adapters only, so VMware and Hyper-V networks keep running</li>
+                    <li>Rejects unknown options and escapes quotes when elevating; returns exit codes other scripts can use</li>
+                  </ul>
+                  <p class="tool-shows">Shows: diagnostic rigour, input validation, tools other scripts can call</p>
+                  <ul class="link-list">
+                    <li><a href="https://github.com/su-Alexis/Network-Refresh" target="_blank" rel="noopener noreferrer">View repository</a></li>
+                  </ul>
+                </li>
+              </ul>
+              <ul class="link-list">
+                <li><a href="projects/">View all projects</a></li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="module module-wide boot-step step-5" id="module-writeups" aria-labelledby="writeups-heading">
+          <div class="module-bar"><span>module // writeups</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="writeups-heading">Writeups and Documentation</h2>
+            <p>This site also serves as a place to document troubleshooting, security research, technical breakdowns, and lessons learned from hands-on work.</p>
+            <ul class="link-list">
+              <li><a href="writeups/">View writeups</a></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="module boot-step step-6" id="module-links" aria-labelledby="links-heading">
+          <div class="module-bar"><span>module // links</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="links-heading">Verification and Links</h2>
+            <ul class="link-list">
+              <li><a href="https://www.credly.com/users/alexis-sm-pontious/badges" target="_blank" rel="noopener noreferrer">Credly Profile</a></li>
+              <li><a href="https://skillsoft.digitalbadges.skillsoft.com/profile/seanpontious369113/wallet" target="_blank" rel="noopener noreferrer">Skillsoft Badge Wallet</a></li>
+              <li><a href="https://github.com/su-Alexis" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+              <li><a href="https://www.linkedin.com/in/alexis-sm-pontious" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+              <!-- The original portfolio, kept on GitHub Pages as-is. This URL goes live at cutover,
+                   when the old repo su-Alexis.github.io is renamed to
+                   original-portfolio-site_humble-beginnings (with baseurl set to match in its
+                   _config.yml) and this site takes over su-alexis.github.io. Until then it 404s. -->
+              <li><a href="https://su-alexis.github.io/original-portfolio-site_humble-beginnings/" target="_blank" rel="noopener noreferrer">Humble Beginnings</a></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="module boot-step step-7" id="module-languages" aria-labelledby="languages-heading">
+          <div class="module-bar"><span>module // languages</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="languages-heading">Languages and Tools</h2>
+            <p class="lang-group-label">Proficient</p>
+            <ul class="tag-list">
+              <li class="tag tag-proficient">HTML</li>
+              <li class="tag tag-proficient">CSS</li>
+              <li class="tag tag-proficient">JavaScript</li>
+              <li class="tag tag-proficient">Python</li>
+              <li class="tag tag-proficient">PowerShell</li>
+              <li class="tag tag-proficient">Bash</li>
+            </ul>
+            <p class="lang-group-label">Web app stack <span class="lang-group-note">· built Fridge Friends</span></p>
+            <ul class="tag-list">
+              <li class="tag tag-competent">TypeScript</li>
+              <li class="tag tag-competent">React</li>
+              <li class="tag tag-competent">Node.js / npm</li>
+              <li class="tag tag-competent">Vite</li>
+              <li class="tag tag-competent">Tailwind CSS</li>
+              <li class="tag tag-competent">Zod</li>
+              <li class="tag tag-competent">ESLint</li>
+              <li class="tag tag-competent">Service Workers</li>
+            </ul>
+            <!-- Tools used in the Debloat & Optimize project and the Utility Tools scripts. Grouped by
+                 what they were used to build, without claiming a proficiency level (AGENTS.md). -->
+            <p class="lang-group-label">Windows tooling <span class="lang-group-note">· built Debloat &amp; Utility Tools</span></p>
+            <ul class="tag-list">
+              <li class="tag tag-windows">Batch</li>
+              <li class="tag tag-windows">netsh</li>
+              <li class="tag tag-windows">Registry</li>
+              <li class="tag tag-windows">DISM / SFC</li>
+              <li class="tag tag-windows">Disk Cleanup</li>
+            </ul>
+            <p class="lang-group-label">Learning</p>
+            <ul class="tag-list">
+              <li class="tag tag-learning">C</li>
+              <li class="tag tag-learning">C++</li>
+              <li class="tag tag-learning">C#</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+</body>
+</html>

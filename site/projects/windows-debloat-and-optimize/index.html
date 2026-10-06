@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows 10/11 Debloat &amp; Optimize | Alexis Pontious</title>
+  <meta name="description" content="An all-in-one PowerShell project for automating Windows cleanup, debloating, registry tuning and post-install configuration.">
+  <link rel="icon" type="image/png" href="../../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../../assets/css/theme.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/layout.css">
+  <link rel="stylesheet" href="../../assets/css/utilities.css">
+  <link rel="stylesheet" href="../../assets/css/layer1.css">
+  <link rel="stylesheet" href="../../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../../"><img src="../../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="debloat" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-debloat">cd ~/projects/debloat</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/projects/debloat</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-overview">load --module overview</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-notes">load --module notes</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-screenshots">load --module screenshots</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">~</a> <span aria-hidden="true">/</span> <a href="../">projects</a> <span aria-hidden="true">/</span> <span aria-current="page">debloat</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-overview" aria-labelledby="overview-heading">
+          <div class="module-bar"><span>module // overview</span><span class="module-state state-archived"><span class="status-dot" aria-hidden="true"></span>archived</span></div>
+          <div class="module-body">
+            <h1 id="overview-heading" class="identity-name">Windows 10/11 Debloat &amp; Optimize</h1>
+            <p class="project-stack">PowerShell · Windows Internals · Registry Tuning · System Optimization · Virtualization Testing</p>
+            <p class="project-status">Status: <span class="status-tag status-archived">[ ARCHIVED ]<span class="dust" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></p>
+            <div class="identity-summary">
+              <p>Windows 10/11 Debloat &amp; Optimize is an all-in-one PowerShell project built to automate post-install and post-update Windows cleanup, debloating, tuning, and quality-of-life configuration.</p>
+              <p>Built on top of the original <strong>Windows10Debloater</strong> project, this version expands the concept with additional optimization, networking, privacy, gaming, and general system tweaks. The goal is to reduce manual setup time and give users a cleaner, more controlled Windows experience after a reformat or major update.</p>
+              <p>The script was tested in a virtualized Windows environment with VMware before being used on host systems.</p>
+            </div>
+            <div class="overview-columns">
+              <div class="area">
+                <h2>Key Features</h2>
+                <ul class="area-list">
+                  <li>Creates a System Restore point before major changes</li>
+                  <li>Runs DISM and SFC health and repair checks</li>
+                  <li>Removes common Windows bloatware and unnecessary AppX packages</li>
+                  <li>Applies registry-based system, explorer, keyboard, mouse, and service-related tweaks</li>
+                  <li>Includes gaming-focused changes such as GameDVR-related tuning, responsiveness adjustments, and network throttling-related tweaks</li>
+                  <li>Unparks CPU cores</li>
+                  <li>Disables AutoRun</li>
+                  <li>Applies TCP/network-related tweaks, including Nagle-related changes</li>
+                  <li>Changes DNS settings to Cloudflare</li>
+                  <li>Modifies the hosts file using a large blocklist with custom additions</li>
+                  <li>Includes additional privacy, cleanup, and general quality-of-life changes</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h2>What This Project Demonstrates</h2>
+                <ul class="area-list">
+                  <li>PowerShell scripting for real-world Windows automation</li>
+                  <li>Registry modification and system configuration management</li>
+                  <li>Practical Windows debloating and post-install workflow design</li>
+                  <li>Safe testing habits through virtualization before host deployment</li>
+                  <li>A hands-on approach to endpoint tuning, usability, and system control</li>
+                </ul>
+              </div>
+            </div>
+            <ul class="link-list">
+              <li><a href="https://github.com/su-Alexis/w10n11debloat-optimize" target="_blank" rel="noopener noreferrer">View repository</a></li>
+              <li><a href="../">All projects</a></li>
+            </ul>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-2" id="module-notes" aria-labelledby="notes-heading">
+          <div class="module-bar"><span>module // notes</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="notes-heading">Notes</h2>
+            <p>Archived: this earlier version is kept for reference. Its successor is <a href="../wingg/">WindowsGG</a>, a rebuilt third generation of the script.</p>
+            <p>This is an opinionated tuning script intended for users who want more control over Windows behavior. Some changes are aggressive by design, so the project is best presented as a practical automation and tuning tool rather than a guaranteed performance booster.</p>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-3" id="module-screenshots" aria-labelledby="screenshots-heading">
+          <div class="module-bar"><span>module // screenshots</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>7 captures</span></div>
+          <div class="module-body">
+            <h2 id="screenshots-heading">Screenshots</h2>
+            <div class="shot-gallery">
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-1"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/start.jpg" alt="PowerShell window with the script banner, color legend, restore point creation and DISM image check" width="1400" height="1353" loading="lazy" decoding="async"></a>
+                <figcaption>Main Script Start</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-2"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/bloat-removal.jpg" alt="Script output removing preinstalled Windows AppX packages" width="1400" height="1359" loading="lazy" decoding="async"></a>
+                <figcaption>Bloat Removal</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-3"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/scheduled-tasks.jpg" alt="Script output disabling telemetry and other scheduled tasks" width="1400" height="1360" loading="lazy" decoding="async"></a>
+                <figcaption>Disabling Scheduled Tasks</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-4"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/optimizations.jpg" alt="Script output applying registry and system optimization tweaks" width="1400" height="1348" loading="lazy" decoding="async"></a>
+                <figcaption>Optimizations</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-5"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/net-changes.jpg" alt="Script output applying TCP and network setting changes" width="1400" height="1356" loading="lazy" decoding="async"></a>
+                <figcaption>Net Changes</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-6"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/net-cleaner.jpg" alt="Script output cleaning network caches and settings" width="1400" height="1364" loading="lazy" decoding="async"></a>
+                <figcaption>Net Cleaner</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-7"><img src="../../assets/media/images/projects/windows-debloat-and-optimize/end.jpg" alt="Script finishing with a summary and completion message" width="1400" height="1356" loading="lazy" decoding="async"></a>
+                <figcaption>Main Script End</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+
+  <!-- Screenshot viewer: plain links and :target, no script needed. -->
+  <div class="lightbox" id="shot-1" role="dialog" aria-label="Screenshot 1 of 7: Main Script Start">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/start.jpg" alt="PowerShell window with the script banner, color legend, restore point creation and DISM image check" width="1400" height="1353" loading="lazy" decoding="async">
+      <figcaption>Main Script Start · 1 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-7">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-2">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-2" role="dialog" aria-label="Screenshot 2 of 7: Bloat Removal">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/bloat-removal.jpg" alt="Script output removing preinstalled Windows AppX packages" width="1400" height="1359" loading="lazy" decoding="async">
+      <figcaption>Bloat Removal · 2 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-1">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-3">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-3" role="dialog" aria-label="Screenshot 3 of 7: Disabling Scheduled Tasks">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/scheduled-tasks.jpg" alt="Script output disabling telemetry and other scheduled tasks" width="1400" height="1360" loading="lazy" decoding="async">
+      <figcaption>Disabling Scheduled Tasks · 3 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-2">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-4">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-4" role="dialog" aria-label="Screenshot 4 of 7: Optimizations">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/optimizations.jpg" alt="Script output applying registry and system optimization tweaks" width="1400" height="1348" loading="lazy" decoding="async">
+      <figcaption>Optimizations · 4 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-3">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-5">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-5" role="dialog" aria-label="Screenshot 5 of 7: Net Changes">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/net-changes.jpg" alt="Script output applying TCP and network setting changes" width="1400" height="1356" loading="lazy" decoding="async">
+      <figcaption>Net Changes · 5 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-4">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-6">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-6" role="dialog" aria-label="Screenshot 6 of 7: Net Cleaner">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/net-cleaner.jpg" alt="Script output cleaning network caches and settings" width="1400" height="1364" loading="lazy" decoding="async">
+      <figcaption>Net Cleaner · 6 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-5">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-7">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-7" role="dialog" aria-label="Screenshot 7 of 7: Main Script End">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-debloat-and-optimize/end.jpg" alt="Script finishing with a summary and completion message" width="1400" height="1356" loading="lazy" decoding="async">
+      <figcaption>Main Script End · 7 / 7</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-6">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-1">Next &gt;</a>
+    </nav>
+  </div>
+</body>
+</html>

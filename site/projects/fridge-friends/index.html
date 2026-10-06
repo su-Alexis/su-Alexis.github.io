@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fridge Friends | Alexis Pontious</title>
+  <meta name="description" content="A static React app for matching recipes to your fridge, scaling batches and building grocery lists, entirely in the browser.">
+  <link rel="icon" type="image/png" href="../../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../../assets/css/theme.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/layout.css">
+  <link rel="stylesheet" href="../../assets/css/utilities.css">
+  <link rel="stylesheet" href="../../assets/css/layer1.css">
+  <link rel="stylesheet" href="../../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../../"><img src="../../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="fridge-friends" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-fridge-friends">cd ~/projects/fridge-friends</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/projects/fridge-friends</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-overview">load --module overview</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-notes">load --module notes</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-screenshots">load --module screenshots</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">~</a> <span aria-hidden="true">/</span> <a href="../">projects</a> <span aria-hidden="true">/</span> <span aria-current="page">fridge-friends</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-overview" aria-labelledby="overview-heading">
+          <div class="module-bar"><span>module // overview</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>active</span></div>
+          <div class="module-body">
+            <h1 id="overview-heading" class="identity-name">Fridge Friends</h1>
+            <p class="project-stack">TypeScript · React · Vite · Tailwind CSS · Zod · Service Workers</p>
+            <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+            <div class="identity-summary">
+              <p>Fridge Friends is a static React and TypeScript app for planning meals around what is already in the fridge. Pick your ingredients and it ranks recipes by shared ingredients, then scales batches, converts units and combines everything into a single grocery list.</p>
+              <p>It is built to need nothing but the browser: no server, database, hosting credentials or API keys. Personal recipes and the grocery list are saved in browser storage, validated on the way in and on the way out, and can be exported to a JSON backup and restored on another device or address.</p>
+              <p>After its first successful load the app works offline through a service worker that is generated with each production build and caches only the site&#x27;s own files.</p>
+            </div>
+            <div class="overview-columns">
+              <div class="area">
+                <h2>Key Features</h2>
+                <ul class="area-list">
+                  <li>Fridge finder: pick ingredients and get recipes ranked by shared ingredients</li>
+                  <li>Batch and unit calculator with nutrition figures scaled by batch</li>
+                  <li>Grocery list that combines quantities and tracks purchased items</li>
+                  <li>Cutting and bulking labels with a goal filter for the recipe picker</li>
+                  <li>Add, edit and delete personal recipes, saved on the current device</li>
+                  <li>JSON backup and restore, with a confirmation before anything is replaced</li>
+                  <li>Offline support through a service worker generated at build time</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h2>What This Project Demonstrates</h2>
+                <ul class="area-list">
+                  <li>Building a typed React front end with TypeScript and Vite</li>
+                  <li>Schema validation with Zod for forms, files and stored data</li>
+                  <li>Recoverable errors and validated browser storage</li>
+                  <li>Offline-first delivery with a generated service worker</li>
+                  <li>Release checks: lint, type checking, regression tests and dependency audit</li>
+                </ul>
+              </div>
+            </div>
+            <ul class="link-list">
+              <li><a href="https://su-alexis.github.io/Fridge-Friends/" target="_blank" rel="noopener noreferrer">View web app</a></li>
+              <li><a href="https://github.com/su-Alexis/Fridge-Friends" target="_blank" rel="noopener noreferrer">View repository</a></li>
+              <li><a href="../">All projects</a></li>
+            </ul>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-2" id="module-notes" aria-labelledby="notes-heading">
+          <div class="module-bar"><span>module // notes</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="notes-heading">Notes</h2>
+            <p>Recipes added in the app are saved on the current browser only; they are not shared with other visitors. Saved data belongs to one web address, so the backup feature is how data moves between devices or addresses. Quantities represent recipe batches, not verified serving yields.</p>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-3" id="module-screenshots" aria-labelledby="screenshots-heading">
+          <div class="module-bar"><span>module // screenshots</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>5 captures</span></div>
+          <div class="module-body">
+            <h2 id="screenshots-heading">Screenshots</h2>
+            <div class="shot-gallery">
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-1"><img src="../../assets/media/images/projects/fridge-friends/overview.jpg" alt="Fridge Friends recipe view: goal filters, a selected recipe with its quick perishables, the batch calculator, macros, ingredients and instructions" width="1400" height="1010" loading="lazy" decoding="async"></a>
+                <figcaption>Recipe Overview</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-2"><img src="../../assets/media/images/projects/fridge-friends/grocery-list.jpg" alt="Combined grocery list totalling ingredients across two planned recipes at 12 batches each, with unit pickers and checkboxes" width="1400" height="746" loading="lazy" decoding="async"></a>
+                <figcaption>Grocery List</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-3"><img src="../../assets/media/images/projects/fridge-friends/fridge-finder.jpg" alt="Fridge finder with ingredient chips ticked and recipes ranked by how many of the chosen ingredients they use" width="1400" height="1404" loading="lazy" decoding="async"></a>
+                <figcaption>Fridge Finder</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-4"><img src="../../assets/media/images/projects/fridge-friends/add-recipe.jpg" alt="Add your recipe form: name, meal type, goal, refrigerated ingredients, full ingredient list, instructions and optional macros" width="902" height="1633" loading="lazy" decoding="async"></a>
+                <figcaption>Add Your Recipe</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-5"><img src="../../assets/media/images/projects/fridge-friends/backup-restore.jpg" alt="Backup and restore dialog explaining device-only storage, with Download backup and Restore from a file buttons" width="885" height="600" loading="lazy" decoding="async"></a>
+                <figcaption>Backup &amp; Restore</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+
+  <!-- Screenshot viewer: plain links and :target, no script needed. -->
+  <div class="lightbox" id="shot-1" role="dialog" aria-label="Screenshot 1 of 5: Recipe Overview">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/fridge-friends/overview.jpg" alt="Fridge Friends recipe view: goal filters, a selected recipe with its quick perishables, the batch calculator, macros, ingredients and instructions" width="1400" height="1010" loading="lazy" decoding="async">
+      <figcaption>Recipe Overview · 1 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-5">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-2">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-2" role="dialog" aria-label="Screenshot 2 of 5: Grocery List">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/fridge-friends/grocery-list.jpg" alt="Combined grocery list totalling ingredients across two planned recipes at 12 batches each, with unit pickers and checkboxes" width="1400" height="746" loading="lazy" decoding="async">
+      <figcaption>Grocery List · 2 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-1">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-3">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-3" role="dialog" aria-label="Screenshot 3 of 5: Fridge Finder">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/fridge-friends/fridge-finder.jpg" alt="Fridge finder with ingredient chips ticked and recipes ranked by how many of the chosen ingredients they use" width="1400" height="1404" loading="lazy" decoding="async">
+      <figcaption>Fridge Finder · 3 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-2">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-4">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-4" role="dialog" aria-label="Screenshot 4 of 5: Add Your Recipe">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/fridge-friends/add-recipe.jpg" alt="Add your recipe form: name, meal type, goal, refrigerated ingredients, full ingredient list, instructions and optional macros" width="902" height="1633" loading="lazy" decoding="async">
+      <figcaption>Add Your Recipe · 4 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-3">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-5">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-5" role="dialog" aria-label="Screenshot 5 of 5: Backup &amp; Restore">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/fridge-friends/backup-restore.jpg" alt="Backup and restore dialog explaining device-only storage, with Download backup and Restore from a file buttons" width="885" height="600" loading="lazy" decoding="async">
+      <figcaption>Backup &amp; Restore · 5 / 5</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-4">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-1">Next &gt;</a>
+    </nav>
+  </div>
+</body>
+</html>

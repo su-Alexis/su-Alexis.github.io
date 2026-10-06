@@ -1,0 +1,57 @@
+/* Shared design tokens. A restrained console look: charcoal surfaces, one cool accent
+   for links, the logo's waffle gold for brand marks, green for status. */
+:root {
+  color-scheme: dark;
+
+  --color-bg: #0a0c0e;
+  --color-bg-grid: rgba(255, 255, 255, 0.025);
+  --color-surface: #111518;
+  --color-surface-raised: #161b1f;
+  --color-bar: #0d1013;
+  --color-border: #232a30;
+  --color-border-strong: #2f3840;
+
+  --color-text: #d3d7db;
+  --color-text-muted: #8b949c;
+  --color-text-faint: #5f6971;
+  --color-heading: #f2f4f5;
+
+  --color-accent: #4fd1e0;
+  --color-brand: #f5a400;
+  --color-ok: #5fcf80;
+  --color-warn: #e8b04a;
+  --color-error: #e06c6c;
+  /* Archived projects (old versions kept for safe keeping): aged gilt, like a book spine. */
+  --color-archive: #c9a86a;
+  --color-focus: #4fd1e0;
+
+  --glow-accent: 0 0 10px rgba(79, 209, 224, 0.15);
+  --glow-ok: 0 0 8px rgba(95, 207, 128, 0.2);
+
+  --font-mono: ui-monospace, "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-size-base: 0.95rem;
+  --font-size-small: 0.8rem;
+  --font-size-tiny: 0.7rem;
+  --font-size-h1: clamp(1.6rem, 1.2rem + 2vw, 2.6rem);
+  --font-size-h2: clamp(1.05rem, 1rem + 0.4vw, 1.25rem);
+  --line-height: 1.65;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius: 4px;
+  --content-width: 68rem;
+  --prose-width: 92ch;
+  --gutter: 1rem;
+}
+
+@media (min-width: 40em) {
+  :root {
+    --gutter: 1.5rem;
+  }
+}

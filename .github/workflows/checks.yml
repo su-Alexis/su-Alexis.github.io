@@ -1,0 +1,40 @@
+# Doctrine section 13: run the security, publish and test checks on every pull request and push.
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Actions are pinned to full commit SHAs (supply chain, doctrine section 10).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Security checks
+        run: node scripts/check-security.mjs
+
+      # Strict since the first release: placeholders and missing pages fail too, so nothing
+      # merged to main can break the published site.
+      - name: Publish checks (strict)
+        run: node scripts/check-publish.mjs
+
+      - name: Tests
+        run: node --test "tests/**/*.test.mjs"

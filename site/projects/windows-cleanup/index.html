@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en-US" class="steps-3" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows Cleanup | Alexis Pontious</title>
+  <meta name="description" content="A scan-first Windows cleanup batch script: measures caches, shows a menu, and deletes nothing until you choose.">
+  <link rel="icon" type="image/png" href="../../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../../assets/css/theme.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/layout.css">
+  <link rel="stylesheet" href="../../assets/css/utilities.css">
+  <link rel="stylesheet" href="../../assets/css/layer1.css">
+  <link rel="stylesheet" href="../../assets/css/terminal.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../../"><img src="../../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <ul class="status" aria-label="Site status">
+          <li><span class="status-dot" aria-hidden="true"></span>CSP strict</li>
+          <li>Trackers 0</li>
+          <li>User visitor</li>
+        </ul>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="cleanup" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-cleanup">cd ~/projects/cleanup</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/projects/cleanup</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-overview">load --module overview</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-notes">load --module notes</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-screenshots">load --module screenshots</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 3 modules online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">~</a> <span aria-hidden="true">/</span> <a href="../">projects</a> <span aria-hidden="true">/</span> <span aria-current="page">cleanup</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide boot-step step-1" id="module-overview" aria-labelledby="overview-heading">
+          <div class="module-bar"><span>module // overview</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>active</span></div>
+          <div class="module-body">
+            <h1 id="overview-heading" class="identity-name">Windows Cleanup</h1>
+            <p class="project-file"><code>cleanup_main.bat</code></p>
+            <p class="project-stack">Batch · PowerShell · Disk Cleanup · Registry · Windows Internals</p>
+            <p class="project-status">Status: <span class="status-tag">[ ACTIVE ]</span></p>
+            <div class="identity-summary">
+              <p>Windows Cleanup is a batch script that treats cleanup as a two-step job: look first, then act. It measures every cache it can clear and lists applications that have stopped responding, then offers a six-option menu. Nothing is deleted until you pick.</p>
+              <p>After a run it prints a before/after report of free space and re-scans for files that were locked by running apps, so you can see what was left behind and why.</p>
+            </div>
+            <div class="overview-columns">
+              <div class="area">
+                <h2>Key Features</h2>
+                <ul class="area-list">
+                  <li>Scan-first: measures caches and lists hung apps before any change</li>
+                  <li>Six-option menu; nothing is deleted until you choose</li>
+                  <li>Before/after free-space report and a re-scan for locked files</li>
+                  <li>Guardrails: refuses drive roots, system folders and browser profiles</li>
+                  <li>Never closes core OS processes, and restarts Explorer when needed</li>
+                  <li>Its own Disk Cleanup profile, with risky items off by default</li>
+                  <li>Recycle Bin scope: the system drive or all drives</li>
+                  <li>Old Downloads move to the Recycle Bin after typing DELETE to confirm</li>
+                  <li>Self-elevates, and keeps a log that trims itself</li>
+                </ul>
+              </div>
+              <div class="area">
+                <h2>What This Project Demonstrates</h2>
+                <ul class="area-list">
+                  <li>Safe-by-default design: scan, confirm, then change</li>
+                  <li>Working knowledge of Windows internals and cleanup locations</li>
+                  <li>Antivirus-aware scripting that avoids false-positive patterns</li>
+                  <li>Clear reporting so the user can verify the result</li>
+                </ul>
+              </div>
+            </div>
+            <ul class="link-list">
+              <li><a href="https://github.com/su-Alexis/Windows-Cleanup" target="_blank" rel="noopener noreferrer">View repository</a></li>
+              <li><a href="../">All projects</a></li>
+            </ul>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-2" id="module-notes" aria-labelledby="notes-heading">
+          <div class="module-bar"><span>module // notes</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>online</span></div>
+          <div class="module-body">
+            <h2 id="notes-heading">Notes</h2>
+            <p>The script is published on GitHub with its full documentation. Cleanup scripts are a common antivirus false-positive target, and it was written with that in mind.</p>
+          </div>
+        </section>
+        <section class="module module-wide boot-step step-3" id="module-screenshots" aria-labelledby="screenshots-heading">
+          <div class="module-bar"><span>module // screenshots</span><span class="module-state"><span class="status-dot" aria-hidden="true"></span>4 captures</span></div>
+          <div class="module-body">
+            <h2 id="screenshots-heading">Screenshots</h2>
+            <!-- Captures from a real run; the Windows user name and local log path are redacted. -->
+            <div class="shot-gallery">
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-1"><img src="../../assets/media/images/projects/windows-cleanup/scan-results.jpg" alt="Windows Cleanup scan results: cache sizes and file counts, hung apps, then the six-option menu where nothing is deleted until you choose" width="1095" height="1108" loading="lazy" decoding="async"></a>
+                <figcaption>Scan Results</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-2"><img src="../../assets/media/images/projects/windows-cleanup/disk-cleanup-options.jpg" alt="Disk Cleanup handler list with tick boxes, risky items such as the Downloads folder and Recycle Bin left off by default and warnings on destructive ones" width="1083" height="890" loading="lazy" decoding="async"></a>
+                <figcaption>Disk Cleanup Options</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-3"><img src="../../assets/media/images/projects/windows-cleanup/disk-cleanup-running.jpg" alt="Windows Disk Cleanup calculating space while the script lists the folders it has already cleaned" width="1400" height="504" loading="lazy" decoding="async"></a>
+                <figcaption>Disk Cleanup Running</figcaption>
+              </figure>
+              <figure class="shot-tile">
+                <a class="shot-link" href="#shot-4"><img src="../../assets/media/images/projects/windows-cleanup/report.jpg" alt="Final report: folders cleaned, space reclaimed, files still in use by running apps, and memory freed by trimming process working sets" width="1169" height="562" loading="lazy" decoding="async"></a>
+                <figcaption>Cleanup Report</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+
+  <!-- Screenshot viewer: plain links and :target, no script needed. -->
+  <div class="lightbox" id="shot-1" role="dialog" aria-label="Screenshot 1 of 4: Scan Results">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-cleanup/scan-results.jpg" alt="Windows Cleanup scan results: cache sizes and file counts, hung apps, then the six-option menu where nothing is deleted until you choose" width="1095" height="1108" loading="lazy" decoding="async">
+      <figcaption>Scan Results · 1 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-4">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-2">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-2" role="dialog" aria-label="Screenshot 2 of 4: Disk Cleanup Options">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-cleanup/disk-cleanup-options.jpg" alt="Disk Cleanup handler list with tick boxes, risky items such as the Downloads folder and Recycle Bin left off by default and warnings on destructive ones" width="1083" height="890" loading="lazy" decoding="async">
+      <figcaption>Disk Cleanup Options · 2 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-1">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-3">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-3" role="dialog" aria-label="Screenshot 3 of 4: Disk Cleanup Running">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-cleanup/disk-cleanup-running.jpg" alt="Windows Disk Cleanup calculating space while the script lists the folders it has already cleaned" width="1400" height="504" loading="lazy" decoding="async">
+      <figcaption>Disk Cleanup Running · 3 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-2">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-4">Next &gt;</a>
+    </nav>
+  </div>
+  <div class="lightbox" id="shot-4" role="dialog" aria-label="Screenshot 4 of 4: Cleanup Report">
+    <a class="lightbox-backdrop" href="#module-screenshots" aria-label="Close screenshot"></a>
+    <figure class="lightbox-figure">
+      <img src="../../assets/media/images/projects/windows-cleanup/report.jpg" alt="Final report: folders cleaned, space reclaimed, files still in use by running apps, and memory freed by trimming process working sets" width="1169" height="562" loading="lazy" decoding="async">
+      <figcaption>Cleanup Report · 4 / 4</figcaption>
+    </figure>
+    <nav class="lightbox-nav" aria-label="Screenshot navigation">
+      <a href="#shot-3">&lt; Prev</a>
+      <a href="#module-screenshots">Close</a>
+      <a href="#shot-1">Next &gt;</a>
+    </nav>
+  </div>
+</body>
+</html>
