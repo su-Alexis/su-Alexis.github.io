@@ -15,9 +15,9 @@
 import { el } from '../utils/dom.js';
 
 const FRAME_MS = 33; // ~30 fps
-const AREA_PER_SHAPE = 60000; // px^2 of viewport per shape
-const MIN_SHAPES = 8;
-const MAX_SHAPES = 26; // bounded work on very large screens
+const AREA_PER_SHAPE = 45000; // px^2 of viewport per shape
+const MIN_SHAPES = 10;
+const MAX_SHAPES = 34; // bounded work on very large screens
 const FADE_IN_MS = 1200;
 // Neon palette: the site's cyan accent, a hot magenta, and the amber brand color.
 const COLORS = [
@@ -64,7 +64,11 @@ function geometry(kind) {
 
 function makeShape(width, height, anywhere) {
   const depth = rand(0.35, 1); // 1 = near: bigger, brighter, faster
-  const radius = rand(28, 82) * depth;
+  // Sizes vary a lot (owner request): mostly small and medium, now and then a big one.
+  // Depth still shrinks far shapes, but only partly, so size is not just distance.
+  const roll = Math.random();
+  const size = roll < 0.35 ? rand(10, 30) : roll < 0.85 ? rand(30, 80) : rand(80, 150);
+  const radius = size * (0.6 + 0.4 * depth);
   return {
     ...geometry(Math.random() < 0.6 ? 'prism' : 'rings'),
     depth,
