@@ -1323,11 +1323,13 @@ a.project-shot-placeholder {
   font-size: var(--font-size-tiny);
 }
 
-/* ---------- 31337 easter egg: matrix rain behind the page (ui/matrix-rain.js) ---------- */
+/* ---------- Canvas backgrounds: 31337 matrix rain (ui/matrix-rain.js) and the
+   "background" command's choices (ui/backgrounds.js, ui/hex-float.js) ---------- */
 
 /* The canvas sits fixed behind everything; .site is lifted above it so modules, links and
-   shells stay readable and clickable. Only present while the effect is on. */
-.matrix-rain {
+   shells stay readable and clickable. Only present while an effect is on. */
+.matrix-rain,
+.bg-canvas {
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -1336,7 +1338,15 @@ a.project-shot-placeholder {
   pointer-events: none;
 }
 
-.matrix-on .site {
+.matrix-on .site,
+.bg-on .site {
   position: relative;
   z-index: 1;
+}
+
+/* With a "background" choice on, modules turn faintly translucent so the shapes ghost
+   behind them (text contrast is unchanged: the shapes are dim and this lets ~14% through).
+   :where() keeps the specificity of .module, so status-specific module styles still win. */
+.bg-on :where(.module) {
+  background: rgba(17, 21, 24, 0.86);
 }

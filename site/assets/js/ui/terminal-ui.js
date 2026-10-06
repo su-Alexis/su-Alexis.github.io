@@ -20,7 +20,8 @@ import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WI
 import { PAGES, PAGE_IDS } from '../data/commands.js';
 import { pickKnown } from '../utils/validate.js';
 import { playHello } from './hello-animation.js';
-import { toggleMatrix, resumeMatrix } from './matrix-rain.js';
+import { resumeMatrix } from './matrix-rain.js';
+import { resumeBackground, setBackground, currentBackground, toggleMatrixBackground } from './backgrounds.js';
 import { runForkBomb } from './fork-bomb.js';
 
 const NOT_KEPT = '(input not kept)';
@@ -96,9 +97,12 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, TERMINAL_STORAGE_KEY);
     removeKey(store, SESSION_KEYS.hintShown);
     removeKey(store, SESSION_KEYS.matrix);
+    removeKey(store, SESSION_KEYS.background);
   }
   // Bring the 31337 rain back if it was on when the visitor left the last page.
   resumeMatrix({ reducedMotion: document.documentElement.classList.contains('reduced-motion') });
+  // And the background picked with "background" (paused under the rain, if that is on).
+  resumeBackground({ reducedMotion: document.documentElement.classList.contains('reduced-motion') });
   const stored = readJson(store, TERMINAL_STORAGE_KEY);
   const state = restoreTerminalState(stored);
   // A fresh machine places tty1 by device: detached in the top-left on desktops,
@@ -215,6 +219,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.visited);
     removeKey(store, SESSION_KEYS.hintShown);
     removeKey(store, SESSION_KEYS.matrix);
+    removeKey(store, SESSION_KEYS.background);
     for (const shell of shells.values()) shell.disable();
     window.setTimeout(() => {
       try {
@@ -493,7 +498,7 @@ export function mountTerminal(primaryRoot) {
     // ---------- Commands ----------
 
     function run(raw) {
-      const result = execute(raw, { page, shell: id, oldpwd: state.oldpwd });
+      const result = execute(raw, { page, shell: id, oldpwd: state.oldpwd, background: currentBackground() });
       if (raw.trim().length === 0 && result.lines.length === 0) {
         print([{ kind: 'cmd', text: '', cwd }]);
         return;
@@ -523,7 +528,11 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'reboot') reboot();
       else if (action.type === 'spawn') spawn(api);
       else if (action.type === 'hello') helloWorld(api);
-      else if (action.type === 'matrix') print([toggleMatrix({ reducedMotion })]);
+      else if (action.type === 'matrix') print([toggleMatrixBackground({ reducedMotion })]);
+      else if (action.type === 'background') {
+        const lines = setBackground(action.id, { reducedMotion });
+        if (lines.length) print(lines);
+      }
       else if (action.type === 'forkbomb') {
         runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
       }

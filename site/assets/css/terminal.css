@@ -341,7 +341,8 @@
 
 .power-off .site,
 .power-off .console-spawned,
-.power-off .matrix-rain {
+.power-off .matrix-rain,
+.power-off .bg-canvas {
   visibility: hidden;
 }
 

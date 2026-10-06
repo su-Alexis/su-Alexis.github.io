@@ -228,3 +228,22 @@ test('eggs is a hidden command that lists every other easter egg', () => {
   assert.equal(complete('eg'), null);
   assert.equal(execute('eggs now').valid, false);
 });
+
+test('background lists and switches only the known backgrounds', async () => {
+  const { BACKGROUND_IDS } = await import('../site/assets/js/data/commands.js');
+  const list = texts(execute('background', { background: 'hex_float' }));
+  for (const id of BACKGROUND_IDS) assert.ok(list.includes(id), id);
+  assert.match(list, /\* hex_float/);
+  assert.doesNotMatch(list, /31337|matrix/);
+  // Unknown or hostile context values fall back to the default marker.
+  assert.match(texts(execute('background', { background: '__proto__' })), /\* default/);
+  for (const id of BACKGROUND_IDS) assert.deepEqual({ ...execute(`background ${id}`).action }, { type: 'background', id });
+  for (const bad of ['matrix', '31337', 'HEX_FLOAT', 'hex', '../default', 'constructor', 'default hex_float']) {
+    const result = execute(`background ${bad}`);
+    assert.equal(result.valid, false, bad);
+    assert.equal(result.action, null, bad);
+  }
+  assert.match(texts(execute('help')), /background \[name\]/);
+  assert.equal(complete('ba'), 'background ');
+  assert.equal(complete('background hex'), 'background hex_float');
+});

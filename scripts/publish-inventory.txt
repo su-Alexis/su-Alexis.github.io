@@ -86,3 +86,5 @@ assets/js/ui/matrix-rain.js
 assets/js/ui/cert-verify.js
 assets/js/ui/shot-viewer.js
 assets/js/ui/fork-bomb.js
+assets/js/ui/backgrounds.js
+assets/js/ui/hex-float.js

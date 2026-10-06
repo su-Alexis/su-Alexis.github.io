@@ -37,6 +37,14 @@ export const PROJECTS = Object.freeze([
   Object.freeze({ id: 'net-refresh', title: 'Network Refresh', page: 'net-refresh' }),
 ]);
 
+// Page backgrounds the "background" command switches between (ui/backgrounds.js).
+// The 31337 matrix rain is a hidden easter egg, not one of these.
+export const BACKGROUNDS = Object.freeze([
+  Object.freeze({ id: 'default', description: 'the plain grid' }),
+  Object.freeze({ id: 'hex_float', description: 'neon wireframe hexagons drifting up' }),
+]);
+export const BACKGROUND_IDS = Object.freeze(BACKGROUNDS.map((background) => background.id));
+
 // args.min / args.max bound the argument count; args.oneOf names a fixed value set.
 export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'help', usage: 'help, ?', description: 'list available commands', args: Object.freeze({ min: 0, max: 0 }) }),
@@ -46,6 +54,7 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'open', usage: 'open <target>', description: 'open a module, page or project', args: Object.freeze({ min: 1, max: 1, oneOf: 'targets' }) }),
   Object.freeze({ name: 'whoami', usage: 'whoami', description: 'print the current user', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'clear', usage: 'clear', description: 'clear this shell', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'background', usage: 'background [name]', description: 'list or switch page backgrounds', args: Object.freeze({ min: 0, max: 1, oneOf: 'backgrounds' }) }),
   Object.freeze({ name: 'spawn', usage: 'spawn', description: 'open a new shell window', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'exit', usage: 'exit', description: 'close this shell window', args: Object.freeze({ min: 0, max: 0 }) }),
   // Easter egg: hidden from help and Tab completion.

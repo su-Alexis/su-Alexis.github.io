@@ -67,6 +67,9 @@ export const SESSION_KEYS = Object.freeze({
   // The 31337 matrix rain is on: it follows the visitor across Layer 1 pages until
   // toggled off, a refresh or a reboot (ui/matrix-rain.js, ui/terminal-ui.js).
   matrix: `${STORAGE_PREFIX}matrix`,
+  // The background picked with the "background" command, when it is not the default.
+  // Same lifetime as the matrix flag (ui/backgrounds.js, ui/terminal-ui.js).
+  background: `${STORAGE_PREFIX}background`,
 });
 
 // Hosts that reviewed external links may point to (https only). Doctrine section 12.

@@ -7,7 +7,7 @@
 // Error messages never repeat what the visitor typed.
 
 import { parseCommand, knownId, pickKnown } from '../utils/validate.js';
-import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS } from '../data/commands.js';
+import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS } from '../data/commands.js';
 import { LIMITS, TERMINAL_USER, SHELL_IDS } from '../core/constants.js';
 
 const META = new Map(COMMANDS.map((command) => [command.name, command]));
@@ -29,8 +29,10 @@ for (const module of MODULES) {
 for (const id of ['home', 'projects', 'writeups']) TARGETS.set(id, Object.freeze({ page: id, anchor: null, label: PAGES[id].cwd }));
 for (const project of PROJECTS) TARGETS.set(project.id, Object.freeze({ page: project.page, anchor: null, label: PAGES[project.page].cwd }));
 
-const ARG_SETS = new Map([['targets', [...TARGETS.keys()]], ['greeting', ['world']]]);
+const ARG_SETS = new Map([['targets', [...TARGETS.keys()]], ['greeting', ['world']], ['backgrounds', BACKGROUND_IDS]]);
 const VISIBLE = COMMANDS.filter((command) => !command.hidden);
+// help's usage column fits the longest visible usage.
+const HELP_WIDTH = Math.max(...VISIBLE.map((command) => command.usage.length)) + 2;
 // Easter eggs listed by the hidden "eggs" command; read from the metadata so new eggs
 // show up automatically.
 const EGGS = COMMANDS.filter((command) => command.hidden && command.name !== 'eggs');
@@ -99,7 +101,7 @@ const HANDLERS = new Map([
   ['help', () => ({
     lines: [
       out('available commands:'),
-      ...VISIBLE.map((command) => out(`  ${pad(command.usage, 16)}${command.description}`)),
+      ...VISIBLE.map((command) => out(`  ${pad(command.usage, HELP_WIDTH)}${command.description}`)),
     ],
   })],
   ['ls', (args, context) => {
@@ -146,6 +148,17 @@ const HANDLERS = new Map([
     const target = TARGETS.get(id);
     return { lines: [ok(`opening ${target.label}`)], action: Object.freeze({ type: 'goto', page: target.page, anchor: target.anchor }) };
   }],
+  // No argument lists the backgrounds and marks the current one (context.background, from
+  // the UI); a name asks the UI to switch (ui/backgrounds.js).
+  ['background', ([id], context) => (id === undefined
+    ? {
+      lines: [
+        out('backgrounds:'),
+        ...BACKGROUNDS.map((background) => out(`  ${background.id === context.background ? '*' : ' '} ${pad(background.id, 12)}${background.description}`)),
+        out("type 'background <name>' to switch"),
+      ],
+    }
+    : { lines: [ok(`background: switching to ${id}`)], action: Object.freeze({ type: 'background', id }) })],
   ['whoami', () => ({ lines: [out(TERMINAL_USER)] })],
   ['clear', () => ({ lines: [], action: Object.freeze({ type: 'clear' }) })],
   // Easter egg: "hello world" opens a new shell and plays an ASCII animation there.
@@ -210,7 +223,8 @@ export function execute(raw, context = {}) {
   }
 
   const oldpwd = context && typeof context.oldpwd === 'string' && DIRS.has(context.oldpwd) ? context.oldpwd : null;
-  const result = handler(args, { page, shell, oldpwd });
+  const background = pickKnown(context && context.background, BACKGROUND_IDS, 'default');
+  const result = handler(args, { page, shell, oldpwd, background });
   if (result.invalid) return { lines: result.lines, action: null, recognized: true, valid: false, echo: null };
   return {
     lines: result.lines,
@@ -237,7 +251,7 @@ export function complete(raw, context = {}) {
     const names = childDirs(parent).map((path) => segments(path).pop()).filter((name) => name.startsWith(partial));
     return names.length === 1 ? `cd ${base}${names[0]}/` : null;
   }
-  if (!/^[a-z -]*$/.test(raw)) return null;
+  if (!/^[a-z_ -]*$/.test(raw)) return null;
   const parts = raw.split(' ');
   if (parts.length === 1) {
     const matches = VISIBLE.map((command) => command.name).filter((name) => name.startsWith(parts[0]));

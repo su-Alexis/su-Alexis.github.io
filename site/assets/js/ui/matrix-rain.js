@@ -105,6 +105,11 @@ function start({ resume = false } = {}) {
   return { stop };
 }
 
+// Whether the rain is on right now (ui/backgrounds.js pauses other backgrounds under it).
+export function matrixActive() {
+  return active !== null;
+}
+
 // Turns the rain on or off and returns the line the shell prints.
 export function toggleMatrix({ reducedMotion = false } = {}) {
   const store = sessionStore();
