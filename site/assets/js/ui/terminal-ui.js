@@ -21,6 +21,7 @@ import { PAGES, PAGE_IDS } from '../data/commands.js';
 import { pickKnown } from '../utils/validate.js';
 import { playHello } from './hello-animation.js';
 import { toggleMatrix, resumeMatrix } from './matrix-rain.js';
+import { runForkBomb } from './fork-bomb.js';
 
 const NOT_KEPT = '(input not kept)';
 
@@ -203,7 +204,9 @@ export function mountTerminal(primaryRoot) {
     window.setTimeout(() => window.location.assign(url || './'), 250);
   }
 
-  function reboot() {
+  // home: start again on the home page (the fork bomb crash), so the full BIOS boot plays;
+  // otherwise reload the current page, as the "reboot" command always has.
+  function reboot({ home = false } = {}) {
     // Stop pending and future saves so nothing is written back after the reset.
     rebooting = true;
     window.clearTimeout(saveTimer);
@@ -220,7 +223,9 @@ export function mountTerminal(primaryRoot) {
         // Older browsers: the page may reopen scrolled; the boot still covers it.
       }
       window.scrollTo(0, 0);
-      window.location.reload();
+      // Fixed internal URL built from the reviewed page depth; nothing typed reaches it.
+      if (home) window.location.assign('../'.repeat(PAGES[page].depth) || './');
+      else window.location.reload();
     }, 400);
   }
 
@@ -519,6 +524,9 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'spawn') spawn(api);
       else if (action.type === 'hello') helloWorld(api);
       else if (action.type === 'matrix') print([toggleMatrix({ reducedMotion })]);
+      else if (action.type === 'forkbomb') {
+        runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
+      }
       else if (action.type === 'exit') window.setTimeout(() => close(id), 300);
     }
 

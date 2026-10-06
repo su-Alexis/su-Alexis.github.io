@@ -9,7 +9,9 @@ const texts = (result) => result.lines.map((l) => l.text).join('\n');
 
 test('every command in the metadata has a handler and runs', () => {
   for (const command of COMMANDS) {
-    const raw = command.args.min > 0 ? `${command.name} ${MODULES[0].id}` : command.name;
+    // The fork bomb is only reachable through its own syntax (its usage string).
+    const raw = command.name === 'forkbomb' ? command.usage
+      : command.args.min > 0 ? `${command.name} ${MODULES[0].id}` : command.name;
     const result = execute(raw);
     assert.equal(result.recognized, true, command.name);
     assert.equal(result.valid, true, command.name);
@@ -202,4 +204,15 @@ test('31337 is a hidden easter egg that toggles the matrix rain', () => {
   }
   assert.doesNotMatch(texts(execute('help')), /31337|leet|matrix/);
   for (const near of ['3133', '313377', '31337 x', '1337']) assert.equal(execute(near).action, null, near);
+});
+
+test('the fork bomb is a hidden easter egg matched exactly', () => {
+  for (const raw of [':(){ :|:& };:', ':(){:|:&};:', '  :() { :|: & }; :  ']) {
+    const result = execute(raw);
+    assert.equal(result.valid, true, raw);
+    assert.deepEqual({ ...result.action }, { type: 'forkbomb' });
+    assert.equal(result.echo, ':(){ :|:& };:');
+  }
+  assert.doesNotMatch(texts(execute('help')), /forkbomb|:\(\)/);
+  for (const near of [':(){ :|: };:', ':(){ :|:& }', 'forkbomb', ':(){ :|:& };: ; ls']) assert.equal(execute(near).action, null, near);
 });

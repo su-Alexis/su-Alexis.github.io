@@ -235,3 +235,99 @@
 .console.is-interactive .console-body {
   padding-bottom: var(--space-4);
 }
+
+/* ---------- Fork bomb easter egg (ui/fork-bomb.js) ----------
+   html.fork-bomb: the site destabilises while the bomb spreads (jitter, colour-channel
+   split, slicing). Kept below three flashes a second and without large full-screen
+   brightness swings, so it stays safe for photosensitive visitors. html.fork-bomb-critical
+   intensifies it just before the crash. .bsod is the blue stop screen. Motion-safe only
+   for the glitch; the stop screen itself is static apart from its counter. */
+@media (prefers-reduced-motion: no-preference) {
+  .fork-bomb .site {
+    animation: fork-jitter 0.45s steps(2, end) infinite;
+  }
+
+  .fork-bomb .module,
+  .fork-bomb .topbar {
+    animation: fork-split 0.7s steps(3, end) infinite;
+  }
+
+  .fork-bomb-critical .site {
+    animation-duration: 0.35s;
+    filter: saturate(1.6) hue-rotate(-12deg);
+  }
+
+  .fork-bomb-critical .module {
+    animation: fork-slice 0.5s steps(2, end) infinite;
+  }
+}
+
+@keyframes fork-jitter {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-3px, 1px) skewX(-0.6deg); }
+  100% { transform: translate(2px, -1px); }
+}
+
+@keyframes fork-split {
+  0%, 100% { box-shadow: none; text-shadow: none; }
+  33% { text-shadow: 2px 0 rgba(224, 108, 108, 0.75), -2px 0 rgba(79, 209, 224, 0.75); }
+  66% { box-shadow: 3px 0 0 rgba(224, 108, 108, 0.35), -3px 0 0 rgba(79, 209, 224, 0.35); }
+}
+
+@keyframes fork-slice {
+  0% { clip-path: inset(0 0 0 0); transform: none; }
+  50% { clip-path: inset(18% 0 34% 0); transform: translateX(6px); }
+  100% { clip-path: inset(0 0 0 0); transform: none; }
+}
+
+.bsod {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  overflow: auto;
+  padding: 6vh 10vw;
+  background: #0078d7;
+  color: #fff;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.bsod-inner {
+  max-width: 52rem;
+}
+
+.bsod-inner p {
+  margin: 0 0 1.2rem;
+}
+
+.bsod-face {
+  font-size: clamp(5rem, 14vw, 10rem);
+  line-height: 1;
+}
+
+.bsod-title {
+  max-width: 44rem;
+  font-size: clamp(1.25rem, 2.6vw, 1.9rem);
+  line-height: 1.35;
+}
+
+.bsod-progress {
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+}
+
+.bsod-details {
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.bsod-details p {
+  margin-bottom: 0.4rem;
+}
+
+.bsod-hint {
+  margin-top: 2rem;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}

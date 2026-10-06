@@ -52,5 +52,7 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'hello', usage: 'hello world', description: 'say hello', hidden: true, args: Object.freeze({ min: 0, max: 1, oneOf: 'greeting', caseless: true }) }),
   // Easter egg: typing "31337" runs this (alias in command-engine.js). Hidden from help.
   Object.freeze({ name: 'leet', usage: '31337', description: 'toggle the matrix', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
+  // Easter egg: the bash fork bomb ":(){ :|:& };:" runs this (matched in command-engine.js).
+  Object.freeze({ name: 'forkbomb', usage: ':(){ :|:& };:', description: 'crash the machine', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'reboot', usage: 'reboot', description: 'restart the machine and replay the boot', args: Object.freeze({ min: 0, max: 0 }) }),
 ]);

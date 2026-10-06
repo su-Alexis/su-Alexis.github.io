@@ -13,6 +13,11 @@ import { LIMITS, TERMINAL_USER, SHELL_IDS } from '../core/constants.js';
 const META = new Map(COMMANDS.map((command) => [command.name, command]));
 // "31337" starts with a digit, so the command-name grammar cannot express it directly.
 const ALIASES = Object.freeze({ '?': 'help', 31337: 'leet' });
+// Easter egg: the classic bash fork bomb. Matched exactly (whitespace ignored, so the
+// usual spacing variants work) and only ever mapped to the fixed "forkbomb" command;
+// nothing in it is parsed or run. Canonical form is what the shell echoes and keeps.
+const FORK_BOMB = ':(){:|:&};:';
+const FORK_BOMB_ECHO = ':(){ :|:& };:';
 
 // "open" targets: home modules (anchors on the home page), the home and projects pages,
 // and each project page. "projects" opens the Projects hub, as in the Stages plan.
@@ -146,6 +151,8 @@ const HANDLERS = new Map([
     : { lines: [ok('hello_world: opening a fresh shell...')], action: Object.freeze({ type: 'hello' }) })],
   // Easter egg: the UI toggles the matrix rain and prints whether it is on or off.
   ['leet', () => ({ lines: [], action: Object.freeze({ type: 'matrix' }) })],
+  // Easter egg: the fork bomb crashes the simulated machine (ui/fork-bomb.js), then reboots.
+  ['forkbomb', () => ({ lines: [], action: Object.freeze({ type: 'forkbomb' }) })],
   ['spawn', () => ({ lines: [ok('spawning a new shell...')], action: Object.freeze({ type: 'spawn' }) })],
   ['exit', (args, context) => (context.shell === 'tty1'
     ? { lines: [err("exit: tty1 is the login shell. Use 'reboot' to restart the machine.")] }
@@ -162,8 +169,10 @@ export function execute(raw, context = {}) {
   const page = pickKnown(context && context.page, PAGE_IDS, 'home');
   const shell = pickKnown(context && context.shell, SHELL_IDS, 'tty1');
   // Symbol aliases that the ASCII command-name grammar cannot express.
-  const alias = typeof raw === 'string' && Object.hasOwn(ALIASES, raw.trim()) ? raw.trim() : null;
-  const parsed = parseCommand(alias ? ALIASES[alias] : raw);
+  const forkBomb = typeof raw === 'string' && raw.length <= 64 && raw.replace(/\s+/g, '') === FORK_BOMB;
+  const alias = forkBomb ? FORK_BOMB_ECHO
+    : typeof raw === 'string' && Object.hasOwn(ALIASES, raw.trim()) ? raw.trim() : null;
+  const parsed = parseCommand(forkBomb ? 'forkbomb' : alias ? ALIASES[alias] : raw);
   if (!parsed.ok) {
     if (parsed.reason === 'empty') return { lines: [], action: null, recognized: false, valid: false, echo: null };
     return { lines: [err(PARSE_ERRORS[parsed.reason] || PARSE_ERRORS.invalid)], action: null, recognized: false, valid: false, echo: null };
@@ -172,7 +181,8 @@ export function execute(raw, context = {}) {
   const { name, args } = parsed.value;
   const meta = META.get(name);
   const handler = HANDLERS.get(name);
-  if (!meta || !handler) {
+  // "forkbomb" is internal: only the fork bomb syntax itself reaches it.
+  if (!meta || !handler || (name === 'forkbomb' && !forkBomb)) {
     return { lines: [err(PARSE_ERRORS['invalid-command'])], action: null, recognized: false, valid: false, echo: null };
   }
 
