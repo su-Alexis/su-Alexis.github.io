@@ -216,3 +216,15 @@ test('the fork bomb is a hidden easter egg matched exactly', () => {
   assert.doesNotMatch(texts(execute('help')), /forkbomb|:\(\)/);
   for (const near of [':(){ :|: };:', ':(){ :|:& }', 'forkbomb', ':(){ :|:& };: ; ls']) assert.equal(execute(near).action, null, near);
 });
+
+test('eggs is a hidden command that lists every other easter egg', () => {
+  const result = execute('eggs');
+  assert.equal(result.valid, true);
+  assert.equal(result.action, null);
+  const text = texts(result);
+  for (const command of COMMANDS.filter((c) => c.hidden && c.name !== 'eggs')) assert.ok(text.includes(command.usage), command.name);
+  for (const command of COMMANDS.filter((c) => !c.hidden)) assert.ok(!text.includes(`  ${command.usage} `), command.name);
+  assert.doesNotMatch(texts(execute('help')), /eggs/);
+  assert.equal(complete('eg'), null);
+  assert.equal(execute('eggs now').valid, false);
+});

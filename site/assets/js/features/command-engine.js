@@ -31,6 +31,9 @@ for (const project of PROJECTS) TARGETS.set(project.id, Object.freeze({ page: pr
 
 const ARG_SETS = new Map([['targets', [...TARGETS.keys()]], ['greeting', ['world']]]);
 const VISIBLE = COMMANDS.filter((command) => !command.hidden);
+// Easter eggs listed by the hidden "eggs" command; read from the metadata so new eggs
+// show up automatically.
+const EGGS = COMMANDS.filter((command) => command.hidden && command.name !== 'eggs');
 
 // ---------- Simulated directory tree for cd, pwd and ls ----------
 // Directories are exactly the pages' working directories ("~", "~/projects", ...).
@@ -153,6 +156,14 @@ const HANDLERS = new Map([
   ['leet', () => ({ lines: [], action: Object.freeze({ type: 'matrix' }) })],
   // Easter egg: the fork bomb crashes the simulated machine (ui/fork-bomb.js), then reboots.
   ['forkbomb', () => ({ lines: [], action: Object.freeze({ type: 'forkbomb' }) })],
+  // Hidden: lists the easter eggs (owner request). Usage strings are fixed metadata.
+  ['eggs', () => ({
+    lines: [
+      ok('easter eggs hidden on this machine:'),
+      ...EGGS.map((command) => out(`  ${pad(command.usage, 16)}${command.description}`)),
+      out("(you didn't hear it from me)"),
+    ],
+  })],
   ['spawn', () => ({ lines: [ok('spawning a new shell...')], action: Object.freeze({ type: 'spawn' }) })],
   ['exit', (args, context) => (context.shell === 'tty1'
     ? { lines: [err("exit: tty1 is the login shell. Use 'reboot' to restart the machine.")] }
