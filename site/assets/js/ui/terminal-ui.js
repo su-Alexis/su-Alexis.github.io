@@ -18,7 +18,7 @@ import { sessionStore, readJson, writeJson, removeKey } from '../core/storage.js
 import { restoreTerminalState, appendLines, clampWindow, defaultShell, nextShellId, fitToBudget } from '../core/state.js';
 import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WINDOW, SESSION_KEYS, SHELL_IDS } from '../core/constants.js';
 import { PAGES, PAGE_IDS } from '../data/commands.js';
-import { pickKnown } from '../utils/validate.js';
+import { pickKnown, isPlainObject, ownField } from '../utils/validate.js';
 import { playHello } from './hello-animation.js';
 import { resumeMatrix, matrixActive } from './matrix-rain.js';
 import { resumeBackground, setBackground, currentBackground, toggleMatrixBackground } from './backgrounds.js';
@@ -116,6 +116,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.root);
     removeKey(store, SESSION_KEYS.sudoAt);
     removeKey(store, SESSION_KEYS.noScreensaver);
+    removeKey(store, SESSION_KEYS.btop);
   }
   // The machine's boot time, for uptime and neofetch: set once per machine start.
   const bootedAt = (() => {
@@ -236,6 +237,11 @@ export function mountTerminal(primaryRoot) {
   let cspPid = 333;
   let nextPid = 4000 + Math.floor(Math.random() * 400);
   let btop = null; // { pid, shellId, quit }
+  let forkSince = 0;
+  let leaving = false;
+  const mountedAt = performance.now();
+  const LOAD_LINE = /^load --module [a-z0-9-]{1,32}$/;
+  const BTOP_SAMPLES = 240;
   const BG_PROCESS = Object.freeze({ hex_float: 'hexfloat', synthwave: 'synthwave', starfield: 'starfield', circuit: 'circuit' });
   const est = (base, spread) => Math.round(Math.max(0, base + (Math.random() - 0.5) * spread) * 10) / 10;
 
@@ -265,7 +271,36 @@ export function mountTerminal(primaryRoot) {
     const scramble = scrambleProcess();
     if (scramble) list.push({ pid: 2301, user: TERMINAL_USER, name: 'statusd', cmd: `statusd --tags ${scramble.tags}`, tty: '?', cpu: est(0.4 * scramble.tags, 0.3), mem: 0.2, kind: 'scramble' });
     if (btop) list.push({ pid: btop.pid, user: TERMINAL_USER, name: 'btop', cmd: 'btop', tty: btop.shellId, cpu: est(1.2, 0.6), mem: 0.8, kind: 'btop' });
+    // A fork bomb in progress: bash forks multiplying until they take the whole CPU.
+    if (html.classList.contains('fork-bomb')) {
+      if (!forkSince) forkSince = performance.now();
+      const forks = Math.min(40, 2 + Math.floor((performance.now() - forkSince) / 70));
+      for (let i = 0; i < forks; i += 1) {
+        list.push({ pid: 5000 + i * 3, user: TERMINAL_USER, name: 'bash', cmd: ':(){ :|:& };:', tty: '?', cpu: Math.round((99 / forks) * 10) / 10, mem: 0.6, kind: 'fork' });
+      }
+    } else {
+      forkSince = 0;
+    }
+    // A page loading: one loader per module the console is loading, busy until the boot
+    // sequence ends. The module names come from our own load log, checked first.
+    if (html.classList.contains('boot-run')) {
+      const loads = [...document.querySelectorAll('#terminal .console-log .typed')]
+        .map((node) => node.textContent.trim()).filter((text) => LOAD_LINE.test(text)).slice(0, 12);
+      loads.forEach((cmd, i) => {
+        list.push({ pid: 3000 + i, user: TERMINAL_USER, name: 'load', cmd, tty: 'tty1', cpu: est(70 / loads.length, 6), mem: 1.2, kind: 'load' });
+      });
+    } else if (html.classList.contains('page-cached') && performance.now() - mountedAt < 2500) {
+      // A cached page only resumes: a brief, light blip instead of a load.
+      list.push({ pid: 3000, user: TERMINAL_USER, name: 'resume', cmd: `resume ${cwd} (cached)`, tty: 'tty1', cpu: est(3, 2), mem: 0.4, kind: 'load' });
+    }
     return list;
+  }
+
+  // Pages already loaded this session (layers/layer1.js keeps the list): the page cache.
+  function cacheInfo() {
+    const visited = readJson(store, SESSION_KEYS.visited);
+    const pages = Array.isArray(visited) ? Math.min(32, visited.filter((p) => typeof p === 'string' && p.length <= 256).length) : 0;
+    return { pages, mib: pages * 23 + (pages ? 9 : 0) };
   }
 
   // What the engine and btop see: the table without the internal fields.
@@ -333,25 +368,54 @@ export function mountTerminal(primaryRoot) {
   }
 
   // btop opens in a big new shell window (like hello world), or here when all are open.
-  function openBtop(from) {
+  // restore: { shell, pid, samples } to carry a running btop over from the last page.
+  function openBtop(from, restore = null) {
     if (btop) {
       from.print([{ kind: 'err', text: 'btop: already running. Press q in its window to quit it.' }]);
       return;
     }
-    const fresh = spawn(from, { quiet: true });
-    const host = fresh || from;
-    if (fresh) fresh.resize(Math.min(1000, window.innerWidth - 40), Math.min(680, window.innerHeight - 110));
-    const pid = nextPid;
-    nextPid += 1;
+    let host = from;
+    if (!restore) {
+      const fresh = spawn(from, { quiet: true });
+      if (fresh) {
+        fresh.resize(Math.min(1000, window.innerWidth - 40), Math.min(680, window.innerHeight - 110));
+        host = fresh;
+      }
+    }
+    const pid = restore ? restore.pid : nextPid;
+    if (!restore) nextPid += 1;
     btop = { pid, shellId: host.id, quit: () => {} };
+    const remember = (samples) => {
+      if (btop) writeJson(store, SESSION_KEYS.btop, { v: 1, shell: host.id, pid, samples: samples.slice(-BTOP_SAMPLES).map((n) => Math.round(n * 1000) / 1000) });
+    };
+    remember(restore ? restore.samples : []);
     const handle = runBtop({
       shell: host,
       processes: publicTable,
       kill: (target, signal) => signalProcess(target, signal),
       uptime: () => (Date.now() - bootedAt) / 1000,
-      onExit: () => { btop = null; },
+      cache: cacheInfo,
+      samples: restore ? restore.samples : [],
+      onSample: remember,
+      onExit: () => {
+        btop = null;
+        // Leaving the page also stops btop; only a real quit forgets it.
+        if (!leaving) removeKey(store, SESSION_KEYS.btop);
+      },
     });
     if (btop) btop.quit = handle.quit;
+  }
+
+  // A running btop from the last page, read back as untrusted and rebuilt field by field.
+  function savedBtop() {
+    const saved = readJson(store, SESSION_KEYS.btop);
+    if (!isPlainObject(saved) || ownField(saved, 'v') !== 1) return null;
+    const shell = ownField(saved, 'shell');
+    const pid = ownField(saved, 'pid');
+    const samples = ownField(saved, 'samples');
+    if (!SHELL_IDS.includes(shell) || !shells.has(shell) || !Number.isInteger(pid) || pid < 1 || pid > 9999999) return null;
+    if (!Array.isArray(samples) || samples.length > BTOP_SAMPLES) return null;
+    return { shell, pid, samples: samples.filter((n) => typeof n === 'number' && Number.isFinite(n)).map((n) => Math.min(1, Math.max(0, n))) };
   }
 
   function showUser() {
@@ -409,6 +473,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.root);
     removeKey(store, SESSION_KEYS.sudoAt);
     removeKey(store, SESSION_KEYS.noScreensaver);
+    removeKey(store, SESSION_KEYS.btop);
     for (const shell of shells.values()) shell.disable();
     window.setTimeout(() => {
       try {
@@ -424,7 +489,10 @@ export function mountTerminal(primaryRoot) {
   }
 
   // Links that leave the page save first, so nothing typed just before is lost.
-  const onPageHide = () => writeNow();
+  const onPageHide = () => {
+    leaving = true;
+    writeNow();
+  };
   window.addEventListener('pagehide', onPageHide);
 
   // ---------- Window chrome for spawned shells ----------
@@ -1118,6 +1186,12 @@ export function mountTerminal(primaryRoot) {
     // page, so they read as the same windows carried over, not new ones.
     if (shellState.id !== 'tty1') shell.ready();
   }
+
+  // btop was running on the last page: it keeps running in the same shell, same PID,
+  // with its CPU graph carried over (owner request: every shell works across pages).
+  const runningBtop = savedBtop();
+  if (runningBtop) openBtop(shells.get(runningBtop.shell), runningBtop);
+  else removeKey(store, SESSION_KEYS.btop);
 
   const ready = () => {
     if (isReady) return;

@@ -86,6 +86,9 @@ export const SESSION_KEYS = Object.freeze({
   sudoAt: `${STORAGE_PREFIX}sudo-at`,
   // The screensaver was killed (btop or kill): it stays off until a refresh or reboot.
   noScreensaver: `${STORAGE_PREFIX}no-screensaver`,
+  // btop is running: { v: 1, shell, pid, samples }, so it keeps running in the same shell
+  // on the next page with its graph intact (ui/terminal-ui.js). Cleared on quit and reset.
+  btop: `${STORAGE_PREFIX}btop`,
 });
 
 // Hosts that reviewed external links may point to (https only). Doctrine section 12.

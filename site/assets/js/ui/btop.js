@@ -114,10 +114,12 @@ function beside(left, right) {
 // shell: the shell api to draw in (screen, grab, metrics, alive, focus).
 // processes(): the live process table [{ pid, user, name, cmd, tty, cpu, mem }].
 // kill(pid, signal): applies a signal; returns an error message or null.
-// uptime(): seconds since boot. onExit(): called once btop has quit.
-export function runBtop({ shell, processes, kill, uptime, onExit = () => {} }) {
+// uptime(): seconds since boot. cache(): { pages, mib }, the pages already loaded.
+// samples: CPU history carried over from the last page; onSample(samples) after each
+// tick, so the caller can carry it to the next one. onExit(): once btop has quit.
+export function runBtop({ shell, processes, kill, uptime, cache = () => ({ pages: 0, mib: 0 }), samples: history = [], onSample = () => {}, onExit = () => {} }) {
   const screen = shell.screen();
-  const samples = [];
+  const samples = history.slice(-400);
   let selectedPid = null;
   let scroll = 0;
   let confirm = null; // { pid, name, signal }
@@ -174,19 +176,26 @@ export function runBtop({ shell, processes, kill, uptime, onExit = () => {} }) {
     if (!narrow) {
       const memWidth = Math.floor(width * 0.45);
       const netWidth = width - memWidth;
-      const used = clamp(0.24 + procs.length * 0.011 + total * 0.2, 0, 0.95);
-      const [memOn, memOff] = meter(used, Math.max(4, memWidth - 26));
+      const used = clamp(0.24 + procs.length * 0.011 + total * 0.2, 0, 0.9);
+      // Pages loaded once stay in the page cache, so revisits resume instead of loading.
+      const { pages, mib } = cache();
+      const cached = clamp(mib / 1024, 0, 0.98 - used);
+      const bar = Math.max(4, memWidth - 26);
+      const [memOn, memOff] = meter(used, bar);
+      const [cacheOn, cacheOff] = meter(cached, bar);
       const mem = [
         boxTop('mem', '', memWidth),
         boxRow([['b-key', 'Total  '], ['', '1.00 GiB']], memWidth),
         boxRow([['b-key', 'Used   '], ['b-warn', memOn], ['b-dim', memOff], ['', ` ${Math.round(used * 1024)} MiB`]], memWidth),
-        boxRow([['b-key', 'Free   '], ['', `${Math.round((1 - used) * 1024)} MiB`]], memWidth),
+        boxRow([['b-key', 'Cached '], ['b-ok', cacheOn], ['b-dim', cacheOff], ['', ` ${Math.round(cached * 1024)} MiB, ${pages} page${pages === 1 ? '' : 's'}`]], memWidth),
+        boxRow([['b-key', 'Free   '], ['', `${Math.round((1 - used - cached) * 1024)} MiB`]], memWidth),
         boxBottom(memWidth),
       ];
       const net = [
         boxTop('net', 'lo', netWidth),
         boxRow([['b-ok', '▲ '], ['b-key', 'up     '], ['', '0 B/s']], netWidth),
         boxRow([['b-err', '▼ '], ['b-key', 'down   '], ['', '0 B/s']], netWidth),
+        boxRow([['b-key', 'total  '], ['', '0 B, 0 connections']], netWidth),
         boxRow([['b-key', 'policy '], ['b-dim', "connect-src 'none'"]], netWidth),
         boxBottom(netWidth),
       ];
@@ -240,6 +249,7 @@ export function runBtop({ shell, processes, kill, uptime, onExit = () => {} }) {
     // A slow frame rate means the machine is busy, whatever the estimates say.
     samples.push(clamp(busy + Math.max(0, 55 - fps) / 60, 0, 1));
     if (samples.length > 400) samples.shift();
+    onSample(samples);
     render();
   }
 
@@ -294,7 +304,7 @@ export function runBtop({ shell, processes, kill, uptime, onExit = () => {} }) {
   const onHide = () => quit();
   window.addEventListener('pagehide', onHide);
   frameLoop = window.requestAnimationFrame(countFrame);
-  samples.push(clamp(processes().reduce((n, p) => n + p.cpu, 0) / 100, 0, 1));
+  if (!samples.length) samples.push(clamp(processes().reduce((n, p) => n + p.cpu, 0) / 100, 0, 1));
   render();
 
   function quit() {
