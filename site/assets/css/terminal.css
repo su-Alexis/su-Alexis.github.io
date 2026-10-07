@@ -362,3 +362,61 @@
   80% { transform: scale(0.02, 0.004); filter: brightness(6) saturate(0); opacity: 1; }
   100% { transform: scale(0, 0.004); filter: brightness(6) saturate(0); opacity: 0; }
 }
+
+/* ---------- neofetch and git log lines (ui/terminal-ui.js renderLine) ----------
+   A leading column (the waffle logo, or the commit hash) in the brand color; neofetch
+   labels ("OS:") in the accent. Kept on one line so the logo stays aligned. */
+.term-fetch,
+.term-git {
+  white-space: pre;
+}
+
+.term-lead {
+  color: var(--color-brand);
+}
+
+.term-key {
+  color: var(--color-accent);
+}
+
+/* ---------- sudo rm -rf easter egg (ui/rm-rf.js) ----------
+   Elements fall off the page one by one (rm-gone, tilted left or right), then fly back
+   (rm-back). Classes only; nothing is removed. Reduced motion fades instead. */
+.site .rm-gone {
+  pointer-events: none;
+  animation: rm-fall 1.1s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+.rm-tilt-left {
+  --rm-tilt: -9deg;
+}
+
+.rm-tilt-right {
+  --rm-tilt: 7deg;
+}
+
+.site .rm-back {
+  animation: rm-rise 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes rm-fall {
+  0% { transform: none; }
+  18% { transform: translateY(-14px) rotate(calc(var(--rm-tilt, 6deg) * -0.25)); }
+  100% { transform: translateY(130vh) rotate(var(--rm-tilt, 6deg)); }
+}
+
+@keyframes rm-rise {
+  from { transform: translateY(130vh) rotate(var(--rm-tilt, 6deg)); }
+  to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site .rm-gone {
+    animation: none;
+    opacity: 0;
+  }
+
+  .site .rm-back {
+    animation: none;
+  }
+}

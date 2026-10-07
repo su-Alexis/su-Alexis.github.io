@@ -5,7 +5,8 @@
 import { LIMITS, TERMINAL_STATE_VERSION, TERMINAL_WINDOW, SHELL_IDS } from './constants.js';
 import { isPlainObject, ownField, hasControlChars } from '../utils/validate.js';
 
-export const LINE_KINDS = Object.freeze(['cmd', 'out', 'ok', 'err', 'art']);
+// fetch (neofetch) and git (git log) lines render a leading column in the brand color.
+export const LINE_KINDS = Object.freeze(['cmd', 'out', 'ok', 'err', 'art', 'fetch', 'git']);
 const KIND_SET = new Set(LINE_KINDS);
 const SHELL_SET = new Set(SHELL_IDS);
 

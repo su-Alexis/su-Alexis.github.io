@@ -14,6 +14,17 @@ export function sessionStore() {
   }
 }
 
+// Per-browser storage, for the few things that should outlive a reboot (doctrine section 8,
+// "puzzle progress"): today only the easter egg hunt (ui/hunt.js).
+export function localStore() {
+  try {
+    const store = window.localStorage;
+    return store && typeof store.getItem === 'function' ? store : null;
+  } catch {
+    return null;
+  }
+}
+
 function isAppKey(key) {
   return typeof key === 'string' && key.startsWith(STORAGE_PREFIX) && key.length <= 64;
 }

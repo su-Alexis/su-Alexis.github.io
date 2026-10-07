@@ -55,3 +55,31 @@
     --gutter: 1.5rem;
   }
 }
+
+/* ---------- Color themes (ui/theme.js, the "theme" command) ----------
+   One class on <html> recolors the accent site-wide and the console text like CRT
+   phosphor. cyan, the default above, adds no class. Status colors outside the console
+   keep their meaning (green is still ACTIVE). */
+:root.theme-amber {
+  --color-accent: #ffb347;
+  --color-focus: #ffb347;
+  --glow-accent: 0 0 10px rgba(255, 179, 71, 0.18);
+}
+
+.theme-amber .console {
+  --color-text: #ffd08a;
+  --color-text-muted: #c9944a;
+  --color-ok: #ffb347;
+}
+
+:root.theme-green {
+  --color-accent: #4ff08a;
+  --color-focus: #4ff08a;
+  --glow-accent: 0 0 10px rgba(79, 240, 138, 0.18);
+}
+
+.theme-green .console {
+  --color-text: #b8ffcf;
+  --color-text-muted: #5fbf7d;
+  --color-ok: #4ff08a;
+}

@@ -6,9 +6,10 @@
 // the DOM, the network, storage, or browser navigation; the UI applies actions.
 // Error messages never repeat what the visitor typed.
 
-import { parseCommand, knownId, pickKnown } from '../utils/validate.js';
-import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS } from '../data/commands.js';
-import { LIMITS, TERMINAL_USER, SHELL_IDS } from '../core/constants.js';
+import { parseCommand, knownId, pickKnown, hasControlChars } from '../utils/validate.js';
+import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS, THEMES, THEME_IDS, EGGS, EGG_IDS } from '../data/commands.js';
+import { FILES, MANUAL, CHANGELOG, NEOFETCH_LOGO, CERT_ROWS } from '../data/shell-text.js';
+import { LIMITS, TERMINAL_USER, TERMINAL_HOST, SHELL_IDS } from '../core/constants.js';
 
 const META = new Map(COMMANDS.map((command) => [command.name, command]));
 // "31337" starts with a digit, so the command-name grammar cannot express it directly.
@@ -29,13 +30,21 @@ for (const module of MODULES) {
 for (const id of ['home', 'projects', 'writeups']) TARGETS.set(id, Object.freeze({ page: id, anchor: null, label: PAGES[id].cwd }));
 for (const project of PROJECTS) TARGETS.set(project.id, Object.freeze({ page: project.page, anchor: null, label: PAGES[project.page].cwd }));
 
-const ARG_SETS = new Map([['targets', [...TARGETS.keys()]], ['greeting', ['world']], ['backgrounds', BACKGROUND_IDS]]);
 const VISIBLE = COMMANDS.filter((command) => !command.hidden);
+// Every file name on any page; "cat" then checks the file is in the current directory.
+const FILE_NAMES = [...new Set(Object.values(FILES).flatMap((files) => Object.keys(files)))];
+const ARG_SETS = new Map([
+  ['targets', [...TARGETS.keys()]], ['greeting', ['world']], ['backgrounds', BACKGROUND_IDS],
+  ['themes', THEME_IDS], ['hunt', ['reset']], ['git', ['log']], ['files', FILE_NAMES],
+  ['manpages', VISIBLE.map((command) => command.name)],
+]);
 // help's usage column fits the longest visible usage.
 const HELP_WIDTH = Math.max(...VISIBLE.map((command) => command.usage.length)) + 2;
-// Easter eggs listed by the hidden "eggs" command; read from the metadata so new eggs
-// show up automatically.
-const EGGS = COMMANDS.filter((command) => command.hidden && command.name !== 'eggs');
+// "sudo rm -rf" is matched against fixed flags and targets only (doctrine section 7).
+const RM_FLAGS = new Set(['-rf', '-fr', '-Rf', '-fR', '-rF', '-RF']);
+const RM_TARGETS = new Set(['/', '/*', '*', '~', '~/', '.', '--no-preserve-root']);
+// neofetch: the logo column width; "fetch" lines are split here when rendered.
+export const FETCH_COLUMN = NEOFETCH_LOGO[0].length;
 
 // ---------- Simulated directory tree for cd, pwd and ls ----------
 // Directories are exactly the pages' working directories ("~", "~/projects", ...).
@@ -97,6 +106,40 @@ function pad(text, width) {
   return text.length >= width ? `${text} ` : text + ' '.repeat(width - text.length);
 }
 
+// "4 min", "1:07" (hours:minutes) or "2 days, 3:15", like uptime(1).
+function formatUptime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const clock = `${hours % 24}:${String(minutes % 60).padStart(2, '0')}`;
+  const days = Math.floor(hours / 24);
+  return days ? `${days} day${days === 1 ? '' : 's'}, ${clock}` : clock;
+}
+
+// Context values come from the UI and storage, so each is validated here (doctrine section 4).
+function cleanHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(-LIMITS.terminalLines)
+    .filter((text) => typeof text === 'string' && text.length > 0 && text.length <= LIMITS.terminalLineLength && !hasControlChars(text));
+}
+
+function cleanFound(value) {
+  if (!Array.isArray(value) || value.length > EGG_IDS.length) return [];
+  return [...new Set(value.filter((id) => knownId(id, EGG_IDS).ok))];
+}
+
+const ONE_YEAR_S = 365 * 24 * 3600;
+function cleanSeconds(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= ONE_YEAR_S ? Math.floor(value) : 0;
+}
+
+// What a rejected argument says, per argument set. Never repeats the argument.
+const ARG_ERRORS = Object.freeze({
+  targets: "unknown target. Try 'ls', or 'open home'.",
+  files: "no such file here. Try 'ls'.",
+  manpages: "no manual entry for that. Try 'man man'.",
+});
+
 const HANDLERS = new Map([
   ['help', () => ({
     lines: [
@@ -108,19 +151,22 @@ const HANDLERS = new Map([
     const cwd = PAGES[context.page].cwd;
     const dirs = childDirs(cwd).map((path) => `${segments(path).pop()}/`);
     const dirLines = dirs.length ? [out(`  ${dirs.join('  ')}`)] : [];
+    const files = Object.hasOwn(FILES, context.page) ? Object.keys(FILES[context.page]) : [];
+    const fileLine = files.length ? [out(`files:  ${files.join('  ')}   (try 'cat ${files[0]}')`)] : [];
     if (context.page === 'home') {
-      return { lines: [...dirLines, out('modules:'), ...MODULES.map((module) => out(`  ${pad(module.id, 16)}${module.title}`))] };
+      return { lines: [...dirLines, ...fileLine, out('modules:'), ...MODULES.map((module) => out(`  ${pad(module.id, 16)}${module.title}`))] };
     }
     if (context.page === 'writeups') {
-      return { lines: [out('writeups:'), out('  (none published yet)'), out("type 'cd ..' or 'open home'")] };
+      return { lines: [...fileLine, out('writeups:'), out('  (none published yet)'), out("type 'cd ..' or 'open home'")] };
     }
-    // Every project detail page has the same three modules.
+    // Every project detail page has the same three modules, and a README.md.
     if (PROJECTS.some((project) => project.page === context.page)) {
-      return { lines: [out('  overview  notes  screenshots'), out("type 'cd ..' for all projects")] };
+      return { lines: [out('  overview  notes  screenshots'), ...fileLine, out("type 'cd ..' for all projects")] };
     }
     return {
       lines: [
         ...dirLines,
+        ...fileLine,
         out('projects:'),
         ...PROJECTS.map((project) => out(`  ${pad(project.id, 16)}${project.title}`)),
         out("type 'cd <name>' to open one, or 'cd ..' to go back"),
@@ -159,23 +205,129 @@ const HANDLERS = new Map([
       ],
     }
     : { lines: [ok(`background: switching to ${id}`)], action: Object.freeze({ type: 'background', id }) })],
+  ['theme', ([id], context) => (id === undefined
+    ? {
+      lines: [
+        out('themes:'),
+        ...THEMES.map((theme) => out(`  ${theme.id === context.theme ? '*' : ' '} ${pad(theme.id, 12)}${theme.description}`)),
+        out("type 'theme <name>' to switch"),
+      ],
+    }
+    : { lines: [ok(`theme: switching to ${id}`)], action: Object.freeze({ type: 'theme', id }) })],
   ['whoami', () => ({ lines: [out(TERMINAL_USER)] })],
   ['clear', () => ({ lines: [], action: Object.freeze({ type: 'clear' }) })],
-  // Easter egg: "hello world" opens a new shell and plays an ASCII animation there.
+
+  // ---------- Read-only commands over authored text (data/shell-text.js) ----------
+  ['cat', ([name], context) => {
+    const files = Object.hasOwn(FILES, context.page) ? FILES[context.page] : {};
+    if (!Object.hasOwn(files, name)) return { lines: [err("cat: no such file here. Try 'ls'.")], invalid: true };
+    // Blank lines hold a space so they keep their height when rendered.
+    return { lines: files[name].map(([kind, text]) => line(kind, text || ' ')) };
+  }],
+  ['neofetch', (args, context) => {
+    const earned = CERT_ROWS.filter((cert) => cert.status === 'CERTIFIED').length;
+    const info = [
+      `${TERMINAL_USER}@${TERMINAL_HOST}`,
+      '-'.repeat(TERMINAL_USER.length + TERMINAL_HOST.length + 1),
+      'OS: wafflesOS x86_64 (simulated)',
+      'Host: remote hypervisor',
+      'Kernel: 6.1.0-waffle',
+      `Uptime: ${formatUptime(context.uptime)}`,
+      `Packages: ${PROJECTS.length} projects`,
+      `Shell: wsh (${context.shell})`,
+      `Theme: ${context.theme}`,
+      `Background: ${context.background}`,
+      `Certs: ${earned} earned, ${CERT_ROWS.length - earned} on the way`,
+      'Security: CSP strict, trackers 0',
+    ];
+    return { lines: NEOFETCH_LOGO.map((art, i) => line('fetch', art + (info[i] || ''))) };
+  }],
+  ['uptime', (args, context) => {
+    const clock = new Date(context.now);
+    const time = [clock.getHours(), clock.getMinutes(), clock.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':');
+    return { lines: [out(` ${time} up ${formatUptime(context.uptime)},  1 user,  load average: 0.08, 0.03, 0.01`)] };
+  }],
+  // context.history: this shell's stored command lines (validated before they reach here).
+  ['history', (args, context) => {
+    const all = [...context.history, 'history'];
+    const start = Math.max(0, all.length - LIMITS.terminalHistory);
+    return { lines: all.slice(start).map((command, i) => out(`${String(start + i + 1).padStart(5)}  ${command}`)) };
+  }],
+  ['man', ([name]) => {
+    if (name === undefined) return { lines: [err('What manual page do you want?'), out("For example, try 'man man'.")] };
+    const meta = META.get(name);
+    const title = `${name.toUpperCase()}(1)`;
+    return {
+      lines: [
+        ok(`${title.padEnd(22)}${'wafflesOS Manual'.padEnd(22)}${title}`),
+        ok('NAME'),
+        out(`    ${meta.usage.split(' ')[0].replace(/,$/, '')} - ${meta.description}`),
+        ok('SYNOPSIS'),
+        out(`    ${meta.usage}`),
+        ok('DESCRIPTION'),
+        // One paragraph, so it wraps to the window instead of at fixed columns.
+        out(`    ${MANUAL[name].join(' ')}`),
+      ],
+    };
+  }],
+  ['git', () => ({
+    lines: CHANGELOG.map(([hash, message], i) => line('git', `${hash} ${i === 0 ? '(HEAD -> main) ' : ''}${message}`)),
+  })],
+  ['hunt', ([arg], context) => {
+    if (arg === 'reset') return { lines: [ok('hunt: progress reset. happy hunting.')], action: Object.freeze({ type: 'hunt-reset' }) };
+    const found = new Set(context.found);
+    const lines = [ok(`egg hunt: ${found.size}/${EGGS.length} found`)];
+    for (const egg of EGGS) {
+      lines.push(found.has(egg.id)
+        ? line('ok', `  [x] ${pad(egg.label, 16)}${egg.description}`)
+        : out(`  [ ] ${pad('???', 16)}hint: ${egg.hint}`));
+    }
+    if (found.size === EGGS.length) lines.push(ok('every egg found. you are a legend.'));
+    else if (found.size > 0) lines.push(out("type 'hunt reset' to hide them again"));
+    return { lines };
+  }],
+
+  // ---------- Easter eggs (egg: the id ui/hunt.js marks as found) ----------
+  // "hello world" opens a new shell and plays an ASCII animation there.
   ['hello', (args) => (args.length === 0
     ? { lines: [out(`hello, ${TERMINAL_USER}. (psst: try 'hello world')`)] }
-    : { lines: [ok('hello_world: opening a fresh shell...')], action: Object.freeze({ type: 'hello' }) })],
-  // Easter egg: the UI toggles the matrix rain and prints whether it is on or off.
-  ['leet', () => ({ lines: [], action: Object.freeze({ type: 'matrix' }) })],
-  // Easter egg: the fork bomb crashes the simulated machine (ui/fork-bomb.js), then reboots.
-  ['forkbomb', () => ({ lines: [], action: Object.freeze({ type: 'forkbomb' }) })],
-  // Hidden: lists the easter eggs (owner request). Usage strings are fixed metadata.
+    : { lines: [ok('hello_world: opening a fresh shell...')], action: Object.freeze({ type: 'hello' }), egg: 'hello' })],
+  // The UI toggles the matrix rain and prints whether it is on or off.
+  ['leet', () => ({ lines: [], action: Object.freeze({ type: 'matrix' }), egg: 'matrix' })],
+  // The fork bomb crashes the simulated machine (ui/fork-bomb.js), then reboots.
+  ['forkbomb', () => ({ lines: [], action: Object.freeze({ type: 'forkbomb' }), egg: 'forkbomb' })],
+  // Lists every egg but itself, spoilers and all (owner request).
   ['eggs', () => ({
     lines: [
       ok('easter eggs hidden on this machine:'),
-      ...EGGS.map((command) => out(`  ${pad(command.usage, 16)}${command.description}`)),
+      ...EGGS.filter((egg) => egg.id !== 'eggs').map((egg) => out(`  ${pad(egg.label, 16)}${egg.description}`)),
       out("(you didn't hear it from me)"),
     ],
+    egg: 'eggs',
+  })],
+  // Free arguments: compared with fixed values only. The stored echo never contains them.
+  ['sudo', (args) => {
+    if (args.length === 0) return { lines: [out('usage: sudo <command>')], echo: 'sudo' };
+    const [command, flags, ...targets] = args;
+    if (command === 'rm' && RM_FLAGS.has(flags) && targets.every((target) => RM_TARGETS.has(target))) {
+      return {
+        lines: [],
+        action: Object.freeze({ type: 'rmrf' }),
+        egg: 'rmrf',
+        echo: ['sudo rm -rf', ...targets].join(' '),
+      };
+    }
+    return {
+      lines: [
+        err(`[sudo] ${TERMINAL_USER} is not in the sudoers file. This incident will be reported.`),
+        out('(reported to /dev/null. some commands are more dangerous than others...)'),
+      ],
+      echo: 'sudo (arguments not kept)',
+    };
+  }],
+  ['rm', (args) => ({
+    lines: [err('rm: cannot remove: Permission denied'), out('(you would need more privileges for that)')],
+    echo: args.length ? 'rm (arguments not kept)' : 'rm',
   })],
   ['spawn', () => ({ lines: [ok('spawning a new shell...')], action: Object.freeze({ type: 'spawn' }) })],
   ['exit', (args, context) => (context.shell === 'tty1'
@@ -217,21 +369,34 @@ export function execute(raw, context = {}) {
     const allowed = ARG_SETS.get(meta.args.oneOf);
     const check = meta.args.caseless ? (arg) => arg.toLowerCase() : (arg) => arg;
     if (!args.every((arg) => knownId(check(arg), allowed).ok)) {
-      const hint = meta.args.oneOf === 'targets' ? "Try 'ls', or 'open home'." : `Try '${meta.usage}'.`;
-      return { lines: [err(`${name}: unknown target. ${hint}`)], action: null, recognized: true, valid: false, echo: null };
+      const message = Object.hasOwn(ARG_ERRORS, meta.args.oneOf) ? ARG_ERRORS[meta.args.oneOf] : `unknown target. Try '${meta.usage}'.`;
+      return { lines: [err(`${name}: ${message}`)], action: null, recognized: true, valid: false, echo: null };
     }
   }
 
-  const oldpwd = context && typeof context.oldpwd === 'string' && DIRS.has(context.oldpwd) ? context.oldpwd : null;
-  const background = pickKnown(context && context.background, BACKGROUND_IDS, 'default');
-  const result = handler(args, { page, shell, oldpwd, background });
+  const ctx = context || {};
+  const handlerContext = {
+    page,
+    shell,
+    oldpwd: typeof ctx.oldpwd === 'string' && DIRS.has(ctx.oldpwd) ? ctx.oldpwd : null,
+    background: pickKnown(ctx.background, BACKGROUND_IDS, 'default'),
+    theme: pickKnown(ctx.theme, THEME_IDS, 'cyan'),
+    found: cleanFound(ctx.found),
+    history: cleanHistory(ctx.history),
+    uptime: cleanSeconds(ctx.uptime),
+    now: typeof ctx.now === 'number' && Number.isFinite(ctx.now) ? ctx.now : Date.now(),
+  };
+  const result = handler(args, handlerContext);
   if (result.invalid) return { lines: result.lines, action: null, recognized: true, valid: false, echo: null };
   return {
     lines: result.lines,
     action: result.action || null,
     recognized: true,
     valid: true,
-    echo: alias || [name, ...args].join(' '),
+    // Commands with free arguments set their own echo, which never contains them.
+    echo: result.echo || alias || [name, ...args].join(' '),
+    // An easter egg id for ui/hunt.js to mark as found, or null.
+    egg: result.egg || null,
   };
 }
 
@@ -250,6 +415,13 @@ export function complete(raw, context = {}) {
     if (!parent) return null;
     const names = childDirs(parent).map((path) => segments(path).pop()).filter((name) => name.startsWith(partial));
     return names.length === 1 ? `cd ${base}${names[0]}/` : null;
+  }
+  // cat completes only the files in the current directory.
+  const catMatch = raw.match(/^cat ([A-Za-z0-9._-]*)$/);
+  if (catMatch) {
+    const page = pickKnown(context && context.page, PAGE_IDS, 'home');
+    const names = Object.hasOwn(FILES, page) ? Object.keys(FILES[page]).filter((name) => name.startsWith(catMatch[1])) : [];
+    return names.length === 1 ? `cat ${names[0]}` : null;
   }
   if (!/^[a-z_ -]*$/.test(raw)) return null;
   const parts = raw.split(' ');

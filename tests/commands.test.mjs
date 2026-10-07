@@ -10,8 +10,9 @@ const texts = (result) => result.lines.map((l) => l.text).join('\n');
 test('every command in the metadata has a handler and runs', () => {
   for (const command of COMMANDS) {
     // The fork bomb is only reachable through its own syntax (its usage string).
+    const sample = { open: MODULES[0].id, cat: 'about.txt', git: 'log' };
     const raw = command.name === 'forkbomb' ? command.usage
-      : command.args.min > 0 ? `${command.name} ${MODULES[0].id}` : command.name;
+      : command.args.min > 0 ? `${command.name} ${sample[command.name]}` : command.name;
     const result = execute(raw);
     assert.equal(result.recognized, true, command.name);
     assert.equal(result.valid, true, command.name);
@@ -24,7 +25,7 @@ test('help lists exactly the allowlisted commands', () => {
 });
 
 test('inherited and unknown names never dispatch', () => {
-  for (const raw of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'eval', 'rm', 'sudo', 'ls2', 'nmap']) {
+  for (const raw of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'eval', 'ls2', 'nmap', 'chmod', 'su']) {
     const result = execute(raw);
     assert.equal(result.recognized, false, raw);
     assert.equal(result.action, null, raw);
@@ -84,7 +85,8 @@ test('hostile input is rejected or rendered as inert text', () => {
 
 test('output lines are bounded', () => {
   for (const command of COMMANDS) {
-    for (const entry of execute(command.args.min > 0 ? `${command.name} ${MODULES[0].id}` : command.name).lines) {
+    const sample = { open: MODULES[0].id, cat: 'about.txt', git: 'log' };
+    for (const entry of execute(command.args.min > 0 ? `${command.name} ${sample[command.name]}` : command.name).lines) {
       assert.ok(entry.text.length <= LIMITS.terminalLineLength);
     }
   }
@@ -217,13 +219,14 @@ test('the fork bomb is a hidden easter egg matched exactly', () => {
   for (const near of [':(){ :|: };:', ':(){ :|:& }', 'forkbomb', ':(){ :|:& };: ; ls']) assert.equal(execute(near).action, null, near);
 });
 
-test('eggs is a hidden command that lists every other easter egg', () => {
+test('eggs is a hidden command that lists every other easter egg', async () => {
+  const { EGGS } = await import('../site/assets/js/data/commands.js');
   const result = execute('eggs');
   assert.equal(result.valid, true);
   assert.equal(result.action, null);
+  assert.equal(result.egg, 'eggs');
   const text = texts(result);
-  for (const command of COMMANDS.filter((c) => c.hidden && c.name !== 'eggs')) assert.ok(text.includes(command.usage), command.name);
-  for (const command of COMMANDS.filter((c) => !c.hidden)) assert.ok(!text.includes(`  ${command.usage} `), command.name);
+  for (const egg of EGGS.filter((e) => e.id !== 'eggs')) assert.ok(text.includes(egg.label), egg.id);
   assert.doesNotMatch(texts(execute('help')), /eggs/);
   assert.equal(complete('eg'), null);
   assert.equal(execute('eggs now').valid, false);

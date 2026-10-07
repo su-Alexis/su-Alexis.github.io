@@ -13,7 +13,7 @@
 //   stored as a fixed placeholder, and raw command history stays in memory.
 
 import { el, byId } from '../utils/dom.js';
-import { execute, complete } from '../features/command-engine.js';
+import { execute, complete, FETCH_COLUMN } from '../features/command-engine.js';
 import { sessionStore, readJson, writeJson, removeKey } from '../core/storage.js';
 import { restoreTerminalState, appendLines, clampWindow, defaultShell, nextShellId, fitToBudget } from '../core/state.js';
 import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WINDOW, SESSION_KEYS } from '../core/constants.js';
@@ -23,6 +23,9 @@ import { playHello } from './hello-animation.js';
 import { resumeMatrix } from './matrix-rain.js';
 import { resumeBackground, setBackground, currentBackground, toggleMatrixBackground } from './backgrounds.js';
 import { runForkBomb } from './fork-bomb.js';
+import { runRmRf } from './rm-rf.js';
+import { foundEggs, recordEgg, resetHunt } from './hunt.js';
+import { resumeTheme, setTheme, currentTheme } from './theme.js';
 
 const NOT_KEPT = '(input not kept)';
 
@@ -98,7 +101,19 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.hintShown);
     removeKey(store, SESSION_KEYS.matrix);
     removeKey(store, SESSION_KEYS.background);
+    removeKey(store, SESSION_KEYS.theme);
+    removeKey(store, SESSION_KEYS.bootedAt);
   }
+  // The machine's boot time, for uptime and neofetch: set once per machine start.
+  const bootedAt = (() => {
+    const now = Date.now();
+    const stored = readJson(store, SESSION_KEYS.bootedAt);
+    if (typeof stored === 'number' && Number.isFinite(stored) && stored <= now && stored > now - 365 * 864e5) return stored;
+    writeJson(store, SESSION_KEYS.bootedAt, now);
+    return now;
+  })();
+  // The color theme picked with "theme", applied before first paint.
+  resumeTheme();
   // Bring the 31337 rain back if it was on when the visitor left the last page.
   resumeMatrix({ reducedMotion: document.documentElement.classList.contains('reduced-motion') });
   // And the background picked with "background" (paused under the rain, if that is on).
@@ -220,6 +235,8 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.hintShown);
     removeKey(store, SESSION_KEYS.matrix);
     removeKey(store, SESSION_KEYS.background);
+    removeKey(store, SESSION_KEYS.theme);
+    removeKey(store, SESSION_KEYS.bootedAt);
     for (const shell of shells.values()) shell.disable();
     window.setTimeout(() => {
       try {
@@ -313,6 +330,17 @@ export function mountTerminal(primaryRoot) {
 
     function renderLine(entry) {
       if (entry.kind === 'cmd') return el('p', { className: 'term-line term-cmd' }, [...prompt(entry.cwd || cwd), el('span', { text: entry.text })]);
+      // neofetch and git log: a leading column in the brand color (the logo, or a commit
+      // hash), then the rest; a short neofetch label before its colon gets the accent.
+      if (entry.kind === 'fetch' || entry.kind === 'git') {
+        const split = entry.kind === 'fetch' ? FETCH_COLUMN : 7;
+        const rest = entry.text.slice(split);
+        const colon = entry.kind === 'fetch' ? rest.indexOf(':') : -1;
+        const tail = colon > 0 && colon < 16
+          ? [el('span', { className: 'term-key', text: rest.slice(0, colon + 1) }), rest.slice(colon + 1)]
+          : [rest];
+        return el('p', { className: `term-line term-${entry.kind}` }, [el('span', { className: 'term-lead', text: entry.text.slice(0, split) }), ...tail]);
+      }
       return el('p', { className: `term-line term-${entry.kind}`, text: entry.text });
     }
 
@@ -498,7 +526,18 @@ export function mountTerminal(primaryRoot) {
     // ---------- Commands ----------
 
     function run(raw) {
-      const result = execute(raw, { page, shell: id, oldpwd: state.oldpwd, background: currentBackground() });
+      const result = execute(raw, {
+        page,
+        shell: id,
+        oldpwd: state.oldpwd,
+        background: currentBackground(),
+        theme: currentTheme(),
+        found: foundEggs(),
+        // This shell's stored command lines: already validated, never raw input.
+        history: shellState.transcript.filter((entry) => entry.kind === 'cmd' && entry.text).map((entry) => entry.text),
+        uptime: (Date.now() - bootedAt) / 1000,
+        now: Date.now(),
+      });
       if (raw.trim().length === 0 && result.lines.length === 0) {
         print([{ kind: 'cmd', text: '', cwd }]);
         return;
@@ -522,6 +561,10 @@ export function mountTerminal(primaryRoot) {
       shellState.transcript = appendLines(shellState.transcript, [{ kind: 'cmd', text: result.valid ? result.echo : NOT_KEPT, cwd }, ...result.lines]);
       save();
 
+      // An easter egg found for the first time: say so (ui/hunt.js).
+      const found = result.egg ? recordEgg(result.egg) : null;
+      if (found) print([found]);
+
       const action = result.action;
       if (!action) return;
       if (action.type === 'goto') goto(action);
@@ -533,6 +576,9 @@ export function mountTerminal(primaryRoot) {
         const lines = setBackground(action.id, { reducedMotion });
         if (lines.length) print(lines);
       }
+      else if (action.type === 'theme') setTheme(action.id);
+      else if (action.type === 'hunt-reset') resetHunt();
+      else if (action.type === 'rmrf') runRmRf({ shell: api });
       else if (action.type === 'forkbomb') {
         runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
       }

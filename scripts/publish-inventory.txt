@@ -88,3 +88,7 @@ assets/js/ui/shot-viewer.js
 assets/js/ui/fork-bomb.js
 assets/js/ui/backgrounds.js
 assets/js/ui/hex-float.js
+assets/js/ui/hunt.js
+assets/js/ui/theme.js
+assets/js/ui/rm-rf.js
+assets/js/data/shell-text.js

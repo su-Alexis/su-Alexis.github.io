@@ -34,6 +34,10 @@ export const STORAGE_KEYS = Object.freeze({
   state: `${STORAGE_PREFIX}state`,
 });
 export const STORAGE_VERSION = 1;
+// localStorage: easter eggs found, as { v: HUNT_VERSION, found: [egg ids] } (ui/hunt.js).
+// It outlives refresh and reboot on purpose; "hunt reset" clears it.
+export const HUNT_STORAGE_KEY = `${STORAGE_PREFIX}hunt`;
+export const HUNT_VERSION = 1;
 
 // Terminal window and transcript, kept per tab so the console follows the visitor
 // between pages. Only validated output is stored; raw typed input never is.
@@ -70,6 +74,10 @@ export const SESSION_KEYS = Object.freeze({
   // The background picked with the "background" command, when it is not the default.
   // Same lifetime as the matrix flag (ui/backgrounds.js, ui/terminal-ui.js).
   background: `${STORAGE_PREFIX}background`,
+  // The color theme picked with "theme" (ui/theme.js), when it is not the default.
+  theme: `${STORAGE_PREFIX}theme`,
+  // When this machine booted (ms since the epoch), for uptime and neofetch.
+  bootedAt: `${STORAGE_PREFIX}booted-at`,
 });
 
 // Hosts that reviewed external links may point to (https only). Doctrine section 12.

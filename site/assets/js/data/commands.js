@@ -42,19 +42,53 @@ export const PROJECTS = Object.freeze([
 export const BACKGROUNDS = Object.freeze([
   Object.freeze({ id: 'default', description: 'the plain grid' }),
   Object.freeze({ id: 'hex_float', description: 'neon wireframe hexagons drifting up' }),
+  Object.freeze({ id: 'synthwave', description: 'a retro grid racing toward a neon sun' }),
+  Object.freeze({ id: 'starfield', description: 'flying through the stars' }),
+  Object.freeze({ id: 'circuit', description: 'circuit traces with pulses running through them' }),
 ]);
 export const BACKGROUND_IDS = Object.freeze(BACKGROUNDS.map((background) => background.id));
 
+// Console color themes for the "theme" command (ui/theme.js, theme.css). cyan is the
+// site's own look; the others recolor the accent and the console text like old CRT phosphor.
+export const THEMES = Object.freeze([
+  Object.freeze({ id: 'cyan', description: 'the default look' }),
+  Object.freeze({ id: 'amber', description: 'amber phosphor, like an old VT220' }),
+  Object.freeze({ id: 'green', description: 'green phosphor, classic hacker green' }),
+]);
+export const THEME_IDS = Object.freeze(THEMES.map((theme) => theme.id));
+
+// Easter eggs, in the order "hunt" lists them. Found eggs are remembered per browser
+// (ui/hunt.js). label is how to trigger it, shown once found and by "eggs"; hint is
+// what "hunt" shows while it is still hidden.
+export const EGGS = Object.freeze([
+  Object.freeze({ id: 'hello', label: 'hello world', description: 'say hello', hint: "every programmer's first words" }),
+  Object.freeze({ id: 'matrix', label: '31337', description: 'toggle the matrix', hint: 'speak leet, in digits' }),
+  Object.freeze({ id: 'forkbomb', label: ':(){ :|:& };:', description: 'crash the machine', hint: 'a function that calls itself, twice, forever' }),
+  Object.freeze({ id: 'rmrf', label: 'sudo rm -rf /', description: 'delete everything (not really)', hint: 'the most dangerous command there is, with privileges' }),
+  Object.freeze({ id: 'screensaver', label: '(stay idle)', description: 'the screensaver', hint: 'step away from the keyboard for a couple of minutes' }),
+  Object.freeze({ id: 'eggs', label: 'eggs', description: 'list the easter eggs', hint: 'just ask for the eggs' }),
+]);
+export const EGG_IDS = Object.freeze(EGGS.map((egg) => egg.id));
+
 // args.min / args.max bound the argument count; args.oneOf names a fixed value set.
+// free: arguments are free text the handler only compares, never echoes or stores.
 export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'help', usage: 'help, ?', description: 'list available commands', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'ls', usage: 'ls', description: 'list what is here', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'cd', usage: 'cd [dir]', description: 'change directory (~, .., -, paths)', args: Object.freeze({ min: 0, max: 1 }) }),
   Object.freeze({ name: 'pwd', usage: 'pwd', description: 'print the working directory', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'cat', usage: 'cat <file>', description: 'print a file (see ls)', args: Object.freeze({ min: 1, max: 1, oneOf: 'files' }) }),
   Object.freeze({ name: 'open', usage: 'open <target>', description: 'open a module, page or project', args: Object.freeze({ min: 1, max: 1, oneOf: 'targets' }) }),
   Object.freeze({ name: 'whoami', usage: 'whoami', description: 'print the current user', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'neofetch', usage: 'neofetch', description: 'show system information', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'uptime', usage: 'uptime', description: 'how long the machine has been up', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'history', usage: 'history', description: 'list the commands run in this shell', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'man', usage: 'man <command>', description: 'read the manual for a command', args: Object.freeze({ min: 0, max: 1, oneOf: 'manpages' }) }),
+  Object.freeze({ name: 'git', usage: 'git log', description: "show this site's history", args: Object.freeze({ min: 1, max: 1, oneOf: 'git' }) }),
   Object.freeze({ name: 'clear', usage: 'clear', description: 'clear this shell', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'background', usage: 'background [name]', description: 'list or switch page backgrounds', args: Object.freeze({ min: 0, max: 1, oneOf: 'backgrounds' }) }),
+  Object.freeze({ name: 'theme', usage: 'theme [name]', description: 'list or switch color themes', args: Object.freeze({ min: 0, max: 1, oneOf: 'themes' }) }),
+  Object.freeze({ name: 'hunt', usage: 'hunt [reset]', description: 'track your easter egg hunt', args: Object.freeze({ min: 0, max: 1, oneOf: 'hunt' }) }),
   Object.freeze({ name: 'spawn', usage: 'spawn', description: 'open a new shell window', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'exit', usage: 'exit', description: 'close this shell window', args: Object.freeze({ min: 0, max: 0 }) }),
   // Easter egg: hidden from help and Tab completion.
@@ -63,7 +97,12 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'leet', usage: '31337', description: 'toggle the matrix', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
   // Easter egg: the bash fork bomb ":(){ :|:& };:" runs this (matched in command-engine.js).
   Object.freeze({ name: 'forkbomb', usage: ':(){ :|:& };:', description: 'crash the machine', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
-  // Hidden index of the easter eggs above: lists every hidden command except itself.
+  // Hidden index of the easter eggs (EGGS above), spoilers included.
   Object.freeze({ name: 'eggs', usage: 'eggs', description: 'list the easter eggs', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
+  // Hidden: "sudo rm -rf" is the doctrine's cosmetic breakdown egg; any other sudo is
+  // refused. rm alone is refused too, with a nudge. Their free arguments are only compared
+  // against fixed values, never echoed or stored.
+  Object.freeze({ name: 'sudo', usage: 'sudo rm -rf /', description: 'delete everything (not really)', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
+  Object.freeze({ name: 'rm', usage: 'rm <file>', description: 'remove files', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'reboot', usage: 'reboot', description: 'restart the machine and replay the boot', args: Object.freeze({ min: 0, max: 0 }) }),
 ]);
