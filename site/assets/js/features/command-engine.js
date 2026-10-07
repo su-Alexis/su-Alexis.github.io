@@ -8,7 +8,7 @@
 
 import { parseCommand, knownId, pickKnown, hasControlChars } from '../utils/validate.js';
 import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS, THEMES, THEME_IDS, EGGS, EGG_IDS } from '../data/commands.js';
-import { FILES, MANUAL, CHANGELOG, NEOFETCH_LOGO, CERT_ROWS } from '../data/shell-text.js';
+import { FILES, MANUAL, CHANGELOG, CERT_ROWS } from '../data/shell-text.js';
 import { LIMITS, TERMINAL_USER, TERMINAL_HOST, SHELL_IDS } from '../core/constants.js';
 
 const META = new Map(COMMANDS.map((command) => [command.name, command]));
@@ -45,8 +45,6 @@ const RM_FLAGS = new Set(['-rf', '-fr', '-Rf', '-fR', '-rF', '-RF']);
 const RM_TARGETS = new Set(['/', '/*', '*', '~', '~/', '.', '--no-preserve-root']);
 // "sudo su" and friends: become root without running anything else.
 const ROOT_SHELLS = new Set(['su', '-i', '-s', 'bash', 'sh']);
-// neofetch: the logo column width; "fetch" lines are split here when rendered.
-export const FETCH_COLUMN = NEOFETCH_LOGO[0].length;
 
 // ---------- Simulated directory tree for cd, pwd and ls ----------
 // Directories are exactly the pages' working directories ("~", "~/projects", ...).
@@ -259,7 +257,9 @@ const HANDLERS = new Map([
       `Certs: ${earned} earned, ${CERT_ROWS.length - earned} on the way`,
       'Security: CSP strict, trackers 0',
     ];
-    return { lines: NEOFETCH_LOGO.map((art, i) => line('fetch', art + (info[i] || ''))) };
+    // The logo is the wafflesOS image, like a riced terminal's neofetch (owner request):
+    // a "logo" line the console renders as that image, with the info beside it.
+    return { lines: [line('logo', ''), ...info.map((text) => line('fetch', text))] };
   }],
   ['uptime', (args, context) => {
     const clock = new Date(context.now);

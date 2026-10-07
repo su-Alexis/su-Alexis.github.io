@@ -364,11 +364,41 @@
 }
 
 /* ---------- neofetch and git log lines (ui/terminal-ui.js renderLine) ----------
-   A leading column (the waffle logo, or the commit hash) in the brand color; neofetch
-   labels ("OS:") in the accent. Kept on one line so the logo stays aligned. */
-.term-fetch,
+   neofetch: the wafflesOS logo image floats left, the info lines sit beside it, and the
+   next ordinary line clears below it. git log: the commit hash in the brand color. */
+.term-output {
+  display: flow-root;
+  --logo-w: min(11lh, 38%);
+}
+
+.term-logo {
+  float: left;
+  width: var(--logo-w);
+  margin: 0.15lh 0 0.5lh;
+}
+
+/* Indented by the logo's width rather than wrapping round it, so an info line that runs
+   past the bottom of the image still lines up with the rest. */
+.term-logo ~ .term-fetch {
+  margin-left: calc(var(--logo-w) + 2ch);
+}
+
+.term-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.term-logo ~ .term-line:not(.term-fetch) {
+  clear: left;
+}
+
+.term-fetch {
+  overflow-wrap: anywhere;
+}
+
 .term-git {
-  white-space: pre;
+  white-space: pre-wrap;
 }
 
 .term-lead {

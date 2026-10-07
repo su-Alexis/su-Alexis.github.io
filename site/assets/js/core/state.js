@@ -5,8 +5,9 @@
 import { LIMITS, TERMINAL_STATE_VERSION, TERMINAL_WINDOW, SHELL_IDS } from './constants.js';
 import { isPlainObject, ownField, hasControlChars } from '../utils/validate.js';
 
-// fetch (neofetch) and git (git log) lines render a leading column in the brand color.
-export const LINE_KINDS = Object.freeze(['cmd', 'out', 'ok', 'err', 'art', 'fetch', 'git']);
+// fetch (neofetch info) and git (git log) lines get extra coloring when rendered; logo is
+// neofetch's wafflesOS image (its text is unused).
+export const LINE_KINDS = Object.freeze(['cmd', 'out', 'ok', 'err', 'art', 'fetch', 'git', 'logo']);
 const KIND_SET = new Set(LINE_KINDS);
 const SHELL_SET = new Set(SHELL_IDS);
 

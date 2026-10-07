@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execute, complete } from '../site/assets/js/features/command-engine.js';
 import { COMMANDS, EGGS, PROJECTS, PAGES, THEME_IDS } from '../site/assets/js/data/commands.js';
-import { FILES, MANUAL, NEOFETCH_LOGO, CERT_ROWS, PROJECT_READMES } from '../site/assets/js/data/shell-text.js';
+import { FILES, MANUAL, CERT_ROWS, PROJECT_READMES } from '../site/assets/js/data/shell-text.js';
 import { LIMITS } from '../site/assets/js/core/constants.js';
 
 const texts = (result) => result.lines.map((l) => l.text).join('\n');
@@ -70,8 +70,10 @@ test('every visible command has a man page; hidden ones do not', () => {
   assert.match(texts(execute('man')), /What manual page/);
 });
 
-test('neofetch lines up its logo and reports the context it is given', () => {
-  assert.ok(NEOFETCH_LOGO.every((row) => row.length === NEOFETCH_LOGO[0].length));
+test('neofetch shows the logo image and reports the context it is given', () => {
+  const lines = execute('neofetch').lines;
+  assert.deepEqual({ ...lines[0] }, { kind: 'logo', text: '' }, 'the logo is a line kind, not text');
+  assert.ok(lines.slice(1).every((l) => l.kind === 'fetch'));
   const text = texts(execute('neofetch', { theme: 'amber', background: 'hex_float', uptime: 125, shell: 'tty2' }));
   assert.match(text, /Theme: amber/);
   assert.match(text, /Background: hex_float/);

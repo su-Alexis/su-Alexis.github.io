@@ -13,7 +13,7 @@
 //   stored as a fixed placeholder, and raw command history stays in memory.
 
 import { el, byId } from '../utils/dom.js';
-import { execute, complete, FETCH_COLUMN } from '../features/command-engine.js';
+import { execute, complete } from '../features/command-engine.js';
 import { sessionStore, readJson, writeJson, removeKey } from '../core/storage.js';
 import { restoreTerminalState, appendLines, clampWindow, defaultShell, nextShellId, fitToBudget } from '../core/state.js';
 import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WINDOW, SESSION_KEYS } from '../core/constants.js';
@@ -362,16 +362,24 @@ export function mountTerminal(primaryRoot) {
 
     function renderLine(entry) {
       if (entry.kind === 'cmd') return el('p', { className: 'term-line term-cmd' }, [...prompt(entry.cwd || cwd, entry.root === true), el('span', { text: entry.text })]);
-      // neofetch and git log: a leading column in the brand color (the logo, or a commit
-      // hash), then the rest; a short neofetch label before its colon gets the accent.
-      if (entry.kind === 'fetch' || entry.kind === 'git') {
-        const split = entry.kind === 'fetch' ? FETCH_COLUMN : 7;
-        const rest = entry.text.slice(split);
-        const colon = entry.kind === 'fetch' ? rest.indexOf(':') : -1;
-        const tail = colon > 0 && colon < 16
-          ? [el('span', { className: 'term-key', text: rest.slice(0, colon + 1) }), rest.slice(colon + 1)]
-          : [rest];
-        return el('p', { className: `term-line term-${entry.kind}` }, [el('span', { className: 'term-lead', text: entry.text.slice(0, split) }), ...tail]);
+      // neofetch's logo: the wafflesOS image (terminal.css floats it beside the info). The
+      // path is fixed and built from this page's reviewed depth, never from stored text.
+      if (entry.kind === 'logo') {
+        return el('p', { className: 'term-line term-logo', attrs: { 'aria-hidden': 'true' } }, [
+          el('img', { attrs: { src: `${'../'.repeat(PAGES[page].depth)}assets/media/icons/logo-512.png`, alt: '' } }),
+        ]);
+      }
+      // neofetch info: a short label before its colon gets the accent; lines without one
+      // (user@host and its underline) take the brand color.
+      if (entry.kind === 'fetch') {
+        const colon = entry.text.indexOf(':');
+        return el('p', { className: 'term-line term-fetch' }, colon > 0 && colon < 16
+          ? [el('span', { className: 'term-key', text: entry.text.slice(0, colon + 1) }), entry.text.slice(colon + 1)]
+          : [el('span', { className: 'term-lead', text: entry.text })]);
+      }
+      // git log: the commit hash in the brand color.
+      if (entry.kind === 'git') {
+        return el('p', { className: 'term-line term-git' }, [el('span', { className: 'term-lead', text: entry.text.slice(0, 7) }), entry.text.slice(7)]);
       }
       return el('p', { className: `term-line term-${entry.kind}`, text: entry.text });
     }

@@ -1,6 +1,7 @@
-// Authored text for the console's read-only commands: "cat" files, "man" pages,
-// "git log" and the "neofetch" logo. Plain text only; the console renders it with
-// textContent. Used by features/command-engine.js.
+// Authored text for the console's read-only commands: "cat" files, "man" pages
+// and "git log". Plain text only; the console renders it with
+// textContent. Used by features/command-engine.js. (neofetch shows the logo image instead
+// of ASCII art: ui/terminal-ui.js, the "logo" line kind.)
 //
 // The files restate what the pages already say, nothing more (owner rule: never invent
 // qualifications). tests/shell-text.test.mjs checks the certifications and project
@@ -204,25 +205,3 @@ export const CHANGELOG = Object.freeze([
   ['1a8d6c3', 'feat: BIOS boot sequence and the hypervisor shell'],
   ['0f00d1e', 'init: strict CSP, no trackers, static by design'],
 ].map((entry) => Object.freeze(entry)));
-
-// ---------- neofetch logo ----------
-// A waffle, face on: a rounded square of grid cells. Flat edges only, so it lines up in
-// any monospace font (the earlier isometric one drifted). Every line is padded to the
-// same width (FETCH_COLUMN in the engine) so the info column lines up.
-
-// Plain strings: a raw template cannot end in a backslash.
-const GRID_ROW = '| |___|___|___|___|___| |';
-export const NEOFETCH_LOGO = Object.freeze([
-  ' .---------------------.',
-  '/  ___ ___ ___ ___ ___  \\',
-  GRID_ROW,
-  GRID_ROW,
-  GRID_ROW,
-  GRID_ROW,
-  GRID_ROW,
-  '\\                       /',
-  " '---------------------'",
-  '',
-  '        wafflesOS',
-  '',
-].map((row) => row.padEnd(29)));
