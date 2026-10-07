@@ -618,12 +618,17 @@ body {
   background: var(--color-bar);
 }
 
+/* Each card screenshot gets its own compositing layer (will-change; it also animates on
+   hover), and decodes before it paints (decoding="sync" in the markup). Without both,
+   Chrome could re-decode the scaled image whenever something else in the card repainted
+   (the scrambling [ ACTIVE ] tag every frame), and the image flickered until a scroll. */
 .project-shot img {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
   object-position: top left;
   transition: transform 0.3s ease;
+  will-change: transform;
 }
 
 .project-shot:hover img {
