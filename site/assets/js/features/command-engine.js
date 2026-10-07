@@ -7,7 +7,7 @@
 // Error messages never repeat what the visitor typed.
 
 import { parseCommand, knownId, pickKnown, hasControlChars, isPlainObject, ownField } from '../utils/validate.js';
-import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS, THEMES, THEME_IDS, EGGS, EGG_IDS } from '../data/commands.js';
+import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS, THEMES, THEME_IDS, EGGS, EGG_IDS, GUESTS } from '../data/commands.js';
 import { FILES, MANUAL, CHANGELOG, CERT_ROWS } from '../data/shell-text.js';
 import { LIMITS, TERMINAL_USER, TERMINAL_HOST, SHELL_IDS } from '../core/constants.js';
 
@@ -504,6 +504,27 @@ const HANDLERS = new Map([
     }
     const echo = ['kill', ...(signal === 'TERM' ? [] : [`-${SIGNAL_NUMBER[signal]}`]), ...rest.map(Number)].join(' ');
     return { lines, action: pids.length ? Object.freeze({ type: 'kill', signal, pids: Object.freeze(pids) }) : null, echo };
+  }],
+  // vm: the Layer 2 teaser. A fixed, read-only listing; it starts nothing. Its free
+  // arguments are only compared with fixed words and guest ids, never echoed.
+  ['vm', ([sub, guest]) => {
+    if (sub === undefined || (sub === 'list' && guest === undefined)) {
+      return {
+        lines: [
+          out(`hypervisord: ${GUESTS.length} guests defined, 0 running`),
+          out('  GUEST     OS                     STATE'),
+          ...GUESTS.map((g) => out(`  ${pad(g.id, 10)}${pad(g.os, 23)}not provisioned`)),
+          ok('no guests provisioned yet. they arrive with Layer 2.'),
+        ],
+        echo: sub ? 'vm list' : 'vm',
+      };
+    }
+    if (sub === 'start' && guest !== undefined) {
+      const known = GUESTS.find((g) => g.id === guest);
+      if (!known) return { lines: [err("vm: no such guest. Try 'vm list'.")], echo: 'vm start (arguments not kept)' };
+      return { lines: [err(`vm: ${known.id}: not provisioned yet. Check back after Layer 2.`)], echo: `vm start ${known.id}` };
+    }
+    return { lines: [out('usage: vm [list|start <guest>]')], echo: 'vm (arguments not kept)' };
   }],
   // btop, and top/htop which open it too: a live process monitor (ui/btop.js).
   ['btop', () => ({ lines: [], action: Object.freeze({ type: 'btop' }) })],

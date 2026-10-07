@@ -322,3 +322,23 @@ test('every command answers --help (and ?, /?; -h only where Linux has it)', () 
   assert.equal(execute('ls -h').valid, false, 'ls -h is not help on Linux');
   assert.equal(execute('ls --help now').valid, false, 'help with more arguments is not help');
 });
+
+test('vm lists the planned guests and starts nothing (Layer 2 teaser)', async () => {
+  const { GUESTS } = await import('../site/assets/js/data/commands.js');
+  const { OS_IDS } = await import('../site/assets/js/core/constants.js');
+  assert.deepEqual(GUESTS.map((g) => g.id), [...OS_IDS], 'guests match the planned OS ids');
+  for (const raw of ['vm', 'vm list']) {
+    const result = execute(raw);
+    assert.equal(result.action, null);
+    assert.match(texts(result), /not provisioned/);
+  }
+  assert.match(texts(execute('vm start parrot')), /parrot: not provisioned yet/);
+  assert.equal(execute('vm start parrot').action, null);
+  const secret = 'hunter2' + 'vm';
+  for (const raw of [`vm start ${secret}`, `vm ${secret}`, `vm list ${secret}`]) {
+    const result = execute(raw);
+    assert.equal(result.action, null, raw);
+    assert.ok(!texts(result).includes(secret) && !result.echo.includes(secret), raw);
+  }
+  assert.match(texts(execute('help')), /vm \[list\|start <guest>\]/);
+});
