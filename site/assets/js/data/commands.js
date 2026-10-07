@@ -110,7 +110,7 @@ export const COMMANDS = Object.freeze([
   // command as root, or opens a root shell (a cosmetic label). As root, "rm -rf /" is the
   // doctrine's breakdown egg. Their free
   // arguments are only compared against fixed values, never echoed or stored.
-  Object.freeze({ name: 'sudo', usage: 'sudo <command>', description: 'delete everything (not really)', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
+  Object.freeze({ name: 'sudo', usage: 'sudo <command>', description: 'run a command as root', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'su', usage: 'su [-] [root] [-c <command>]', description: 'become root', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'rm', usage: 'rm <file>', description: 'remove files', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'reboot', usage: 'reboot', description: 'restart the machine and replay the boot', args: Object.freeze({ min: 0, max: 0 }) }),

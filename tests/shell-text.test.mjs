@@ -306,3 +306,19 @@ test('btop, top and htop open the monitor; its graphs keep their size', async ()
   }
   assert.equal(brailleGraph([], 3, 2).join(''), String.fromCharCode(0x2800).repeat(6), 'empty is blank');
 });
+
+test('every command answers --help (and ?, /?; -h only where Linux has it)', () => {
+  for (const command of COMMANDS) {
+    if (command.name === 'forkbomb' || command.name === 'leet') continue;
+    for (const flag of ['--help', '?', '/?']) {
+      const result = execute(`${command.name} ${flag}`);
+      assert.equal(result.valid, true, `${command.name} ${flag}`);
+      assert.equal(result.action, null, `${command.name} ${flag} runs nothing`);
+      assert.equal(texts(result).split('\n')[0], `Usage: ${command.usage}`, command.name);
+      assert.equal(result.echo, `${command.name} ${flag}`);
+    }
+  }
+  assert.equal(execute('sudo -h').valid, true);
+  assert.equal(execute('ls -h').valid, false, 'ls -h is not help on Linux');
+  assert.equal(execute('ls --help now').valid, false, 'help with more arguments is not help');
+});

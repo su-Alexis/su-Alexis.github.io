@@ -193,6 +193,35 @@ const PID_ARG = /^[0-9]{1,7}$/;
 
 const psTime = (proc) => (proc.cpu > 3 ? '00:00:01' : '00:00:00');
 
+// ---------- --help for every command ----------
+// Linux convention: <command> --help (many also take -h; man <command> has the full page).
+// The site also accepts ? and /? as a friendly extra. -h is help only where it is on Linux.
+const HELP_FLAGS = new Set(['--help', '?', '/?', '-?']);
+const SHORT_HELP = new Set(['sudo', 'su', 'btop', 'top', 'htop', 'man', 'neofetch', 'git', 'background', 'theme', 'hunt', 'help']);
+// Help for commands without a man page (the hidden ones).
+const HIDDEN_HELP = Object.freeze({
+  sudo: 'Runs one command as root after asking for your password. sudo su, sudo -i and sudo -s open a root shell; sudo -k forgets the password.',
+  su: "Becomes root after asking for root's password, or runs one command as root with -c.",
+  rm: 'Removes files. You would need more privileges than a visitor has.',
+  hello: "Says hello. Try 'hello world'.",
+  eggs: 'Lists the easter eggs, spoilers and all.',
+  top: 'Opens btop, the process monitor.',
+  htop: 'Opens btop, the process monitor.',
+});
+
+function helpFor(name, meta, flag) {
+  const text = Object.hasOwn(MANUAL, name) ? MANUAL[name].join(' ') : HIDDEN_HELP[name];
+  return {
+    lines: [ok(`Usage: ${meta.usage}`), out(`  ${meta.description}.`), ...(text ? [out(`  ${text}`)] : []),
+      ...(Object.hasOwn(MANUAL, name) ? [out(`  See also: man ${name}`)] : [])],
+    action: null,
+    recognized: true,
+    valid: true,
+    echo: `${name} ${flag}`,
+    egg: null,
+  };
+}
+
 // What a rejected argument says, per argument set. Never repeats the argument.
 const ARG_ERRORS = Object.freeze({
   targets: "unknown target. Try 'ls', or 'open home'.",
@@ -515,6 +544,11 @@ export function execute(raw, context = {}) {
   // "forkbomb" is internal: only the fork bomb syntax itself reaches it.
   if (!meta || !handler || (name === 'forkbomb' && !forkBomb)) {
     return { lines: [err(PARSE_ERRORS['invalid-command'])], action: null, recognized: false, valid: false, echo: null };
+  }
+
+  // <command> --help (or -h where Linux has it, or the site's ? and /?).
+  if (args.length === 1 && name !== 'forkbomb' && name !== 'leet' && (HELP_FLAGS.has(args[0]) || (args[0] === '-h' && SHORT_HELP.has(name)))) {
+    return helpFor(name, meta, args[0]);
   }
 
   if (args.length < meta.args.min || args.length > meta.args.max) {

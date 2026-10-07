@@ -14,6 +14,13 @@
 // rendered through the shell's screen() with el() (doctrine sections 5 and 9).
 
 const TICK_MS = 1000;
+// The CPU reading follows the load but not in a straight line: it rises quickly, winds
+// down over a few seconds (a share of the gap each tick), and wanders a little, with
+// the odd burst from background work, like a real idle machine.
+const RISE = 0.75;
+const FALL = 0.42;
+const WANDER = 0.035;
+const BURST_CHANCE = 0.08;
 const MESSAGE_MS = 2500;
 const SIGNAL_NAMES = Object.freeze({ TERM: 'SIGTERM', KILL: 'SIGKILL' });
 
@@ -128,6 +135,8 @@ export function runBtop({ shell, processes, kill, uptime, cache = () => ({ pages
   let frameLoop = 0;
   let lastTick = performance.now();
   let fps = 60;
+  let shown = samples.length ? samples[samples.length - 1] : 0; // the smoothed CPU reading
+  let drift = 0; // slow random walk on top of it
   let stopped = false;
 
   const countFrame = () => {
@@ -147,7 +156,8 @@ export function runBtop({ shell, processes, kill, uptime, cache = () => ({ pages
     const narrow = width < 64;
     const procs = sorted();
     if (!procs.some((p) => p.pid === selectedPid)) selectedPid = procs.length ? procs[0].pid : null;
-    const total = clamp(procs.reduce((n, p) => n + p.cpu, 0) / 100, 0, 1);
+    // The latest sample, wander and bursts included, so the meter moves like the graph.
+    const total = samples.length ? samples[samples.length - 1] : shown;
     const clock = new Date();
     const time = [clock.getHours(), clock.getMinutes(), clock.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':');
     const out = [];
@@ -245,9 +255,13 @@ export function runBtop({ shell, processes, kill, uptime, cache = () => ({ pages
     fps = clamp((frames * 1000) / Math.max(1, now - lastTick), 0, 240);
     frames = 0;
     lastTick = now;
-    const busy = processes().reduce((n, p) => n + p.cpu, 0) / 100;
-    // A slow frame rate means the machine is busy, whatever the estimates say.
-    samples.push(clamp(busy + Math.max(0, 55 - fps) / 60, 0, 1));
+    // What is running now; a slow frame rate means the machine is busy whatever the
+    // estimates say.
+    const target = clamp(processes().reduce((n, p) => n + p.cpu, 0) / 100 + Math.max(0, 55 - fps) / 60, 0, 1);
+    drift = clamp(drift * 0.6 + (Math.random() - 0.5) * WANDER * 2, -0.04, 0.05);
+    const burst = Math.random() < BURST_CHANCE ? 0.04 + Math.random() * 0.1 : 0;
+    shown += (target - shown) * (target > shown ? RISE : FALL);
+    samples.push(clamp(shown + drift + burst, target >= 0.99 ? 0.97 : 0, 1));
     if (samples.length > 400) samples.shift();
     onSample(samples);
     render();
