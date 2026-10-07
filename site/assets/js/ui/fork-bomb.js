@@ -60,9 +60,8 @@ function stopScreen(still, stopCode = 'FORK_BOMB_DETECTED', advice = 'stop runni
   return percent;
 }
 
-// Switches the screen off like a CRT, then reboots (the end of every crash, and a
-// graceful shutdown on its own). Also used by "kill" on the hypervisor (ui/terminal-ui.js).
-export function powerOffAndReboot({ reboot, reducedMotion = false }) {
+// Switches the screen off like a CRT, then reboots: how crashAndReboot ends.
+function powerOffAndReboot({ reboot, reducedMotion = false }) {
   if (!document.querySelector('.bsod')) stopScreen(true);
   const html = document.documentElement;
   html.classList.remove('fork-bomb', 'fork-bomb-critical');

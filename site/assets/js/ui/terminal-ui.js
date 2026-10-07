@@ -22,7 +22,7 @@ import { pickKnown } from '../utils/validate.js';
 import { playHello } from './hello-animation.js';
 import { resumeMatrix, matrixActive } from './matrix-rain.js';
 import { resumeBackground, setBackground, currentBackground, toggleMatrixBackground } from './backgrounds.js';
-import { runForkBomb, crashAndReboot, powerOffAndReboot } from './fork-bomb.js';
+import { runForkBomb, crashAndReboot } from './fork-bomb.js';
 import { runBtop } from './btop.js';
 import { scrambleProcess, killStatusScramble } from './status-scramble.js';
 import { runRmRf } from './rm-rf.js';
@@ -231,7 +231,7 @@ export function mountTerminal(primaryRoot) {
   // does what it says. Linux rules apply: init and kernel threads ignore signals; only
   // root may signal root's processes; interactive bash ignores SIGTERM but not SIGKILL;
   // a killed system daemon (cspd) is respawned with a new PID. Killing the hypervisor
-  // shuts the machine down (SIGTERM) or crashes it (SIGKILL), then it reboots.
+  // shuts the machine down cleanly (SIGTERM) or crashes it (SIGKILL); either way it reboots.
   // CPU and memory figures are estimates; ui/btop.js measures the frame rate itself.
   let cspPid = 333;
   let nextPid = 4000 + Math.floor(Math.random() * 400);
@@ -283,9 +283,17 @@ export function mountTerminal(primaryRoot) {
         if (signal === 'KILL') {
           crashAndReboot({ stopCode: 'HYPERVISOR_KILLED', advice: 'let the hypervisor shut down on its own instead of SIGKILLing it', reboot: home, reducedMotion });
         } else {
+          // A clean shutdown: the usual messages, then the machine restarts (no crash).
           const primary = shells.get('tty1');
-          if (primary) primary.print([{ kind: 'out', text: 'hypervisord: caught SIGTERM, shutting down wafflesOS...' }]);
-          window.setTimeout(() => powerOffAndReboot({ reboot: home, reducedMotion }), 900);
+          if (primary) {
+            primary.print([
+              { kind: 'out', text: 'hypervisord: caught SIGTERM, shutting down wafflesOS...' },
+              { kind: 'ok', text: '[  OK  ] Stopped target Graphical Interface.' },
+              { kind: 'ok', text: '[  OK  ] Stopped wafflesOS shells.' },
+              { kind: 'ok', text: '[  OK  ] Reached target System Reboot.' },
+            ]);
+          }
+          window.setTimeout(home, reducedMotion ? 300 : 1400);
         }
         break;
       case 'csp':
