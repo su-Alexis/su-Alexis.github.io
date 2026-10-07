@@ -25,7 +25,7 @@ test('help lists exactly the allowlisted commands', () => {
 });
 
 test('inherited and unknown names never dispatch', () => {
-  for (const raw of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'eval', 'ls2', 'nmap', 'chmod', 'su']) {
+  for (const raw of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'eval', 'ls2', 'nmap', 'chmod', 'passwd']) {
     const result = execute(raw);
     assert.equal(result.recognized, false, raw);
     assert.equal(result.action, null, raw);

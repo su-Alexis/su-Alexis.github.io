@@ -328,7 +328,7 @@ export function mountTerminal(primaryRoot) {
     const promptBox = el('span', { className: 'term-prompt' }, prompt(cwd, isRoot));
     const inputLine = el('div', { className: 'term-input-line' }, [promptBox, el('span', { className: 'term-mirror', attrs: { 'aria-hidden': 'true' } }, [before, cursor, after]), input]);
     function refreshPrompt() {
-      promptBox.replaceChildren(...(pendingSudo ? [`[sudo] password for ${TERMINAL_USER}: `] : prompt(cwd, isRoot)));
+      promptBox.replaceChildren(...(pendingSudo ? [`${passwordPrompt(pendingSudo.via)} `] : prompt(cwd, isRoot)));
     }
 
     const minimizeButton = el('button', { className: 'console-button', text: '_', attrs: { 'aria-label': `Minimize ${id}`, title: 'Minimize' } });
@@ -626,7 +626,7 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'theme') setTheme(action.id);
       else if (action.type === 'hunt-reset') resetHunt();
       else if (action.type === 'rmrf') runRmRf({ shell: api });
-      else if (action.type === 'sudo') sudo(action.inner);
+      else if (action.type === 'sudo') sudo(action.inner, action.via === 'su' ? 'su' : 'sudo');
       else if (action.type === 'unroot') setRoot(false);
       else if (action.type === 'forkbomb') {
         runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
@@ -634,7 +634,7 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'exit') window.setTimeout(() => close(id), 300);
     }
 
-    // ---------- sudo (owner request; groundwork for Layer 2) ----------
+    // ---------- sudo and su (owner request; groundwork for Layer 2) ----------
     // Root already: run the command at once. Otherwise the prompt turns into
     // "[sudo] password for visitor:" and the next line typed is the password. Like real
     // sudo it is never shown, and it is never stored, kept in history or logged: only
@@ -643,13 +643,18 @@ export function mountTerminal(primaryRoot) {
     // whoami, rm). A wrong one prints "incorrect password" and the prompt returns.
     // Escape or Ctrl+C cancels.
 
-    function sudo(inner) {
+    function sudo(inner, via) {
       if (isRoot) return runAsRoot(inner);
-      pendingSudo = { inner };
+      pendingSudo = { inner, via };
       root.classList.add('is-secret');
       refreshPrompt();
       updateMirror();
       return undefined;
+    }
+
+    // sudo asks for the visitor's password; su asks for root's, the way each really does.
+    function passwordPrompt(via) {
+      return via === 'su' ? 'Password:' : `[sudo] password for ${TERMINAL_USER}:`;
     }
 
     function endPassword() {
@@ -659,15 +664,15 @@ export function mountTerminal(primaryRoot) {
     }
 
     async function submitPassword(raw) {
-      const { inner } = pendingSudo;
+      const { inner, via } = pendingSudo;
       endPassword();
-      print([{ kind: 'out', text: `[sudo] password for ${TERMINAL_USER}:` }]);
+      print([{ kind: 'out', text: passwordPrompt(via) }]);
       api.setBusy(true);
       const accepted = await matchesPuzzle(raw, PUZZLES.root.sha256);
       api.setBusy(false);
       api.focus();
       if (!accepted) {
-        print([{ kind: 'err', text: 'sudo: incorrect password' }]);
+        print([{ kind: 'err', text: `${via}: incorrect password` }]);
         return;
       }
       setRoot(true);
@@ -701,8 +706,9 @@ export function mountTerminal(primaryRoot) {
         } else if (event.key === 'Escape' || (event.key === 'c' && event.ctrlKey)) {
           event.preventDefault();
           input.value = '';
+          const { via } = pendingSudo;
           endPassword();
-          print([{ kind: 'out', text: `[sudo] password for ${TERMINAL_USER}:` }, { kind: 'err', text: 'sudo: a password is required' }]);
+          print([{ kind: 'out', text: passwordPrompt(via) }, { kind: 'err', text: `${via}: a password is required` }]);
         } else if (event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
           // No completion or history while typing a password.
           event.preventDefault();

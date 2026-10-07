@@ -135,6 +135,23 @@ function cleanSeconds(value) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= ONE_YEAR_S ? Math.floor(value) : 0;
 }
 
+// sudo and su: the command that would run as root, checked by this same engine. Returns
+// its validated echo, or 'unknown'. Nesting (sudo sudo, su su) is not followed.
+function asRoot(args, context) {
+  if (args.length === 0) return null;
+  if (args[0] === 'sudo' || args[0] === 'su') return 'unknown';
+  const inner = execute(args.join(' '), { ...context, root: true });
+  return inner.valid ? inner.echo : 'unknown';
+}
+
+// The action for sudo/su. inner: null (a root shell), 'unknown', or a validated echo.
+// The UI prompts for the password unless the visitor is root already. The stored echo
+// is built from the validated echo or fixed words only; free arguments never reach it.
+function elevate(via, inner, shellEcho) {
+  const echo = shellEcho || (inner === 'unknown' ? `${via} (arguments not kept)` : `${via} ${inner}`);
+  return { lines: [], action: Object.freeze({ type: 'sudo', via, inner }), echo };
+}
+
 // What a rejected argument says, per argument set. Never repeats the argument.
 const ARG_ERRORS = Object.freeze({
   targets: "unknown target. Try 'ls', or 'open home'.",
@@ -312,16 +329,22 @@ const HANDLERS = new Map([
   // only). The command after sudo is run through this same engine as root once the
   // password is accepted: action.inner is that command's validated echo, null for a root
   // shell (sudo su / -i / bash), or 'unknown'. Free arguments never reach the echo.
+  // Bare "sudo" prompts too (owner request; real sudo would print its usage instead).
   ['sudo', (args, context) => {
-    if (args.length === 0) return { lines: [out('usage: sudo <command>')], echo: 'sudo' };
-    if (ROOT_SHELLS.has(args[0]) && args.length <= 2 && (args.length === 1 || args[1] === '-')) {
-      return { lines: [], action: Object.freeze({ type: 'sudo', inner: null }), echo: `sudo ${args.join(' ')}` };
+    if (args.length === 0 || (ROOT_SHELLS.has(args[0]) && args.length <= 2 && (args.length === 1 || args[1] === '-'))) {
+      return elevate('sudo', null, ['sudo', ...args].join(' '));
     }
-    const inner = args[0] === 'sudo' ? null : execute(args.join(' '), { ...context, root: true });
-    if (!inner || !inner.valid) {
-      return { lines: [], action: Object.freeze({ type: 'sudo', inner: 'unknown' }), echo: 'sudo (arguments not kept)' };
+    return elevate('sudo', asRoot(args, context), null);
+  }],
+  // su does what sudo does (owner request), with su's own "Password:" prompt: bare su,
+  // "su -" and "su root" give a root shell; "su -c <command>" or "su <command>" run it.
+  ['su', (args, context) => {
+    if (args.length === 0 || (args.length <= 2 && args.every((arg) => arg === '-' || arg === 'root'))) {
+      return elevate('su', null, ['su', ...args].join(' '));
     }
-    return { lines: [], action: Object.freeze({ type: 'sudo', inner: inner.echo }), echo: `sudo ${inner.echo}` };
+    const dashC = args[0] === '-c';
+    const inner = asRoot(dashC ? args.slice(1) : args, context);
+    return elevate('su', inner, dashC && inner && inner !== 'unknown' ? `su -c ${inner}` : null);
   }],
   // Free arguments, compared with fixed values only. Only root gets the breakdown.
   ['rm', (args, context) => {

@@ -140,13 +140,28 @@ test('easter eggs report which egg they are', () => {
 });
 
 test('sudo asks for the password and names the command to run as root', () => {
-  assert.deepEqual({ ...execute('sudo rm -rf /').action }, { type: 'sudo', inner: 'rm -rf /' });
-  assert.deepEqual({ ...execute('sudo whoami').action }, { type: 'sudo', inner: 'whoami' });
-  for (const raw of ['sudo su', 'sudo -i', 'sudo bash', 'sudo su -']) assert.deepEqual({ ...execute(raw).action }, { type: 'sudo', inner: null }, raw);
+  assert.deepEqual({ ...execute('sudo rm -rf /').action }, { type: 'sudo', via: 'sudo', inner: 'rm -rf /' });
+  assert.deepEqual({ ...execute('sudo whoami').action }, { type: 'sudo', via: 'sudo', inner: 'whoami' });
+  // Bare sudo prompts too (owner request), opening a root shell like sudo -i.
+  for (const raw of ['sudo', 'sudo su', 'sudo -i', 'sudo bash', 'sudo su -']) {
+    assert.deepEqual({ ...execute(raw).action }, { type: 'sudo', via: 'sudo', inner: null }, raw);
+  }
   for (const raw of ['sudo nmap', 'sudo sudo ls', 'sudo su root now']) assert.equal(execute(raw).action.inner, 'unknown', raw);
-  assert.match(texts(execute('sudo')), /usage: sudo <command>/);
+  assert.equal(execute('sudo whoami').action.via, 'sudo');
   assert.doesNotMatch(texts(execute('help')), /sudo|rm </);
   assert.equal(complete('su'), null);
+});
+
+test('su does what sudo does, with its own prompt', () => {
+  for (const raw of ['su', 'su -', 'su root', 'su - root', 'su -c']) {
+    assert.deepEqual({ ...execute(raw).action }, { type: 'sudo', via: 'su', inner: null }, raw);
+  }
+  const dashC = execute('su -c whoami');
+  assert.deepEqual({ ...dashC.action }, { type: 'sudo', via: 'su', inner: 'whoami' });
+  assert.equal(dashC.echo, 'su -c whoami');
+  assert.deepEqual({ ...execute('su rm -rf /').action }, { type: 'sudo', via: 'su', inner: 'rm -rf /' });
+  for (const raw of ['su nmap', 'su su', 'su sudo ls', 'su -c nmap']) assert.equal(execute(raw).action.inner, 'unknown', raw);
+  assert.doesNotMatch(texts(execute('help')), /\bsu\b/);
 });
 
 test('as root: whoami, the prompt name in neofetch, exit drops root, rm -rf breaks the page', () => {
@@ -164,7 +179,7 @@ test('as root: whoami, the prompt name in neofetch, exit drops root, rm -rf brea
 
 test('free sudo and rm arguments are never echoed, kept or passed on', () => {
   const secret = 'hunter2' + 'pw';
-  for (const raw of [`sudo ${secret}`, `sudo rm -rf /home/${secret}`, `sudo cat ${secret}`, `rm -rf ${secret}`, `rm ${secret}`]) {
+  for (const raw of [`sudo ${secret}`, `sudo rm -rf /home/${secret}`, `sudo cat ${secret}`, `su ${secret}`, `su -c ${secret}`, `su - ${secret}`, `rm -rf ${secret}`, `rm ${secret}`]) {
     for (const root of [false, true]) {
       const result = execute(raw, { root });
       assert.ok(!texts(result).includes(secret), raw);
