@@ -171,6 +171,11 @@ body {
   color: var(--color-ok);
 }
 
+/* Root (the right sudo password; cosmetic): red, as root prompts usually are. */
+.console-user.is-root {
+  color: var(--color-error);
+}
+
 .ok {
   color: var(--color-ok);
 }

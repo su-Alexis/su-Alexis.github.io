@@ -78,6 +78,9 @@ export const SESSION_KEYS = Object.freeze({
   theme: `${STORAGE_PREFIX}theme`,
   // When this machine booted (ms since the epoch), for uptime and neofetch.
   bootedAt: `${STORAGE_PREFIX}booted-at`,
+  // The visitor gave sudo the right password: the shells show root (cosmetic only).
+  // Cleared on refresh and reboot like the rest of the machine session.
+  root: `${STORAGE_PREFIX}root`,
 });
 
 // Hosts that reviewed external links may point to (https only). Doctrine section 12.

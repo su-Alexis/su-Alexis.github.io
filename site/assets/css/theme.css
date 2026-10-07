@@ -83,3 +83,15 @@
   --color-text-muted: #5fbf7d;
   --color-ok: #4ff08a;
 }
+
+:root.theme-purple {
+  --color-accent: #b98cff;
+  --color-focus: #b98cff;
+  --glow-accent: 0 0 10px rgba(185, 140, 255, 0.2);
+}
+
+.theme-purple .console {
+  --color-text: #e6d9ff;
+  --color-text-muted: #a48fd0;
+  --color-ok: #c9a6ff;
+}

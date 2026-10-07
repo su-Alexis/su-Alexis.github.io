@@ -133,24 +133,61 @@ test('easter eggs report which egg they are', () => {
   assert.equal(execute('hello').egg, null);
   assert.equal(execute('31337').egg, 'matrix');
   assert.equal(execute(':(){ :|:& };:').egg, 'forkbomb');
-  assert.equal(execute('sudo rm -rf /').egg, 'rmrf');
+  // The breakdown only runs as root; sudo itself asks for the password first.
+  assert.equal(execute('sudo rm -rf /').egg, null);
+  assert.equal(execute('rm -rf /', { root: true }).egg, 'rmrf');
   assert.equal(execute('help').egg, null);
 });
 
-test('sudo rm -rf is matched against fixed flags and targets; other sudo is refused', () => {
-  for (const raw of ['sudo rm -rf /', 'sudo rm -rf', 'sudo rm -fr /*', 'sudo rm -rf --no-preserve-root /', 'SUDO rm -rf ~']) {
-    const result = execute(raw);
-    assert.deepEqual({ ...result.action }, { type: 'rmrf' }, raw);
-    assert.match(result.echo, /^sudo rm -rf/, raw);
-  }
-  const secret = 'hunter2' + 'pw';
-  for (const raw of [`sudo ${secret}`, `sudo rm -rf /home/${secret}`, 'sudo rm /', `rm -rf ${secret}`, `rm ${secret}`]) {
-    const result = execute(raw);
-    assert.equal(result.action, null, raw);
-    assert.ok(!texts(result).includes(secret), raw);
-    assert.ok(!result.echo.includes(secret), `${raw}: echo never keeps free arguments`);
-  }
-  assert.match(texts(execute('sudo ls')), /not in the sudoers file/);
+test('sudo asks for the password and names the command to run as root', () => {
+  assert.deepEqual({ ...execute('sudo rm -rf /').action }, { type: 'sudo', inner: 'rm -rf /' });
+  assert.deepEqual({ ...execute('sudo whoami').action }, { type: 'sudo', inner: 'whoami' });
+  for (const raw of ['sudo su', 'sudo -i', 'sudo bash', 'sudo su -']) assert.deepEqual({ ...execute(raw).action }, { type: 'sudo', inner: null }, raw);
+  for (const raw of ['sudo nmap', 'sudo sudo ls', 'sudo su root now']) assert.equal(execute(raw).action.inner, 'unknown', raw);
+  assert.match(texts(execute('sudo')), /usage: sudo <command>/);
   assert.doesNotMatch(texts(execute('help')), /sudo|rm </);
   assert.equal(complete('su'), null);
+});
+
+test('as root: whoami, the prompt name in neofetch, exit drops root, rm -rf breaks the page', () => {
+  assert.equal(texts(execute('whoami', { root: true })), 'root');
+  assert.equal(texts(execute('whoami', { root: 'yes' })), 'visitor', 'only the literal true counts');
+  assert.match(texts(execute('neofetch', { root: true })), /root@portfolio/);
+  assert.deepEqual({ ...execute('exit', { root: true }).action }, { type: 'unroot' });
+  for (const raw of ['rm -rf /', 'rm -rf', 'rm -fr /*', 'rm -rf --no-preserve-root /', 'rm -rf ~']) {
+    const result = execute(raw, { root: true });
+    assert.deepEqual({ ...result.action }, { type: 'rmrf' }, raw);
+    assert.match(result.echo, /^rm -rf/, raw);
+  }
+  assert.equal(execute('rm -rf /').action, null, 'not without root');
+});
+
+test('free sudo and rm arguments are never echoed, kept or passed on', () => {
+  const secret = 'hunter2' + 'pw';
+  for (const raw of [`sudo ${secret}`, `sudo rm -rf /home/${secret}`, `sudo cat ${secret}`, `rm -rf ${secret}`, `rm ${secret}`]) {
+    for (const root of [false, true]) {
+      const result = execute(raw, { root });
+      assert.ok(!texts(result).includes(secret), raw);
+      assert.ok(!result.echo.includes(secret), `${raw}: echo never keeps free arguments`);
+      assert.ok(!JSON.stringify(result.action).includes(secret), `${raw}: action never carries them`);
+    }
+  }
+});
+
+test('puzzle answers are checked by digest, fail closed, and bound their input', async () => {
+  const { matchesPuzzle } = await import('../site/assets/js/features/puzzles.js');
+  const { PUZZLES } = await import('../site/assets/js/data/puzzles.js');
+  const { createHash } = await import('node:crypto');
+  assert.match(PUZZLES.root.sha256, /^[0-9a-f]{64}$/);
+  // A stand-in answer, so the real one never appears in this public repository.
+  const answer = 'Test-Answer!42';
+  const digest = createHash('sha256').update(answer).digest('hex');
+  assert.equal(await matchesPuzzle(answer, digest), true);
+  assert.equal(await matchesPuzzle(`  ${answer}  `, digest), true, 'outer spaces are trimmed');
+  assert.equal(await matchesPuzzle(answer.toLowerCase(), digest), false, 'case matters');
+  assert.equal(await matchesPuzzle('wrong', digest), false);
+  assert.equal(await matchesPuzzle(answer, 'not-a-digest'), false);
+  assert.equal(await matchesPuzzle('x'.repeat(10000), digest), false);
+  assert.equal(await matchesPuzzle(`${answer}\u0000`, digest), false);
+  assert.equal(await matchesPuzzle(42, digest), false);
 });

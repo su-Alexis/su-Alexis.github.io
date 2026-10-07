@@ -27,6 +27,8 @@ import { runRmRf } from './rm-rf.js';
 import { foundEggs, recordEgg, resetHunt } from './hunt.js';
 import { resumeTheme, setTheme, currentTheme } from './theme.js';
 import { startScreensaver } from './screensaver.js';
+import { matchesPuzzle } from '../features/puzzles.js';
+import { PUZZLES } from '../data/puzzles.js';
 
 const NOT_KEPT = '(input not kept)';
 
@@ -104,6 +106,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.background);
     removeKey(store, SESSION_KEYS.theme);
     removeKey(store, SESSION_KEYS.bootedAt);
+    removeKey(store, SESSION_KEYS.root);
   }
   // The machine's boot time, for uptime and neofetch: set once per machine start.
   const bootedAt = (() => {
@@ -115,6 +118,8 @@ export function mountTerminal(primaryRoot) {
   })();
   // The color theme picked with "theme", applied before first paint.
   resumeTheme();
+  // Root (the right sudo password, cosmetic only), shared by every shell this session.
+  let isRoot = readJson(store, SESSION_KEYS.root) === true;
   // Bring the 31337 rain back if it was on when the visitor left the last page.
   resumeMatrix({ reducedMotion: document.documentElement.classList.contains('reduced-motion') });
   // And the background picked with "background" (paused under the rain, if that is on).
@@ -191,6 +196,21 @@ export function mountTerminal(primaryRoot) {
     playHello(fresh || from, { reducedMotion });
   }
 
+  // Root on or off for every shell: the prompts, the top bar's user chip, and the session
+  // flag that carries it to the next page. Cosmetic only; it grants nothing.
+  function setRoot(value) {
+    isRoot = value === true;
+    if (isRoot) writeJson(store, SESSION_KEYS.root, true);
+    else removeKey(store, SESSION_KEYS.root);
+    for (const shell of shells.values()) shell.refreshPrompt();
+    showUser();
+  }
+
+  function showUser() {
+    const chips = document.querySelectorAll('.topbar .status li');
+    if (chips.length >= 3) chips[2].textContent = `User ${isRoot ? 'root' : TERMINAL_USER}`;
+  }
+
   function close(id) {
     const shell = shells.get(id);
     if (!shell || id === 'tty1') return;
@@ -238,6 +258,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.background);
     removeKey(store, SESSION_KEYS.theme);
     removeKey(store, SESSION_KEYS.bootedAt);
+    removeKey(store, SESSION_KEYS.root);
     for (const shell of shells.values()) shell.disable();
     window.setTimeout(() => {
       try {
@@ -286,7 +307,12 @@ export function mountTerminal(primaryRoot) {
       cleanups.push(() => target.removeEventListener(type, handler, options));
     };
 
-    const prompt = (where = cwd) => [el('span', { className: 'console-user', text: `${TERMINAL_USER}@${TERMINAL_HOST}` }), `:${where}$ `];
+    const prompt = (where = cwd, asRoot = false) => [
+      el('span', { className: asRoot ? 'console-user is-root' : 'console-user', text: `${asRoot ? 'root' : TERMINAL_USER}@${TERMINAL_HOST}` }),
+      `:${where}${asRoot ? '#' : '$'} `,
+    ];
+    // Set while sudo waits for its password (see the sudo section below).
+    let pendingSudo;
     const output = el('div', { className: 'term-output', attrs: { role: 'log', 'aria-live': 'polite', 'aria-label': `Console output ${id}` } });
     const before = el('span', { className: 'term-text' });
     const cursor = el('span', { className: 'term-cursor', attrs: { 'aria-hidden': 'true' } });
@@ -298,7 +324,12 @@ export function mountTerminal(primaryRoot) {
         enterkeyhint: 'enter', maxlength: String(LIMITS.commandRaw), 'aria-label': `Console command on ${id}. Type help for commands.`,
       },
     });
-    const inputLine = el('div', { className: 'term-input-line' }, [...prompt(), el('span', { className: 'term-mirror', attrs: { 'aria-hidden': 'true' } }, [before, cursor, after]), input]);
+    // The live prompt sits in its own span so it can change (root, or sudo's password prompt).
+    const promptBox = el('span', { className: 'term-prompt' }, prompt(cwd, isRoot));
+    const inputLine = el('div', { className: 'term-input-line' }, [promptBox, el('span', { className: 'term-mirror', attrs: { 'aria-hidden': 'true' } }, [before, cursor, after]), input]);
+    function refreshPrompt() {
+      promptBox.replaceChildren(...(pendingSudo ? [`[sudo] password for ${TERMINAL_USER}: `] : prompt(cwd, isRoot)));
+    }
 
     const minimizeButton = el('button', { className: 'console-button', text: '_', attrs: { 'aria-label': `Minimize ${id}`, title: 'Minimize' } });
     const secondButton = primary
@@ -330,7 +361,7 @@ export function mountTerminal(primaryRoot) {
     // ---------- Rendering ----------
 
     function renderLine(entry) {
-      if (entry.kind === 'cmd') return el('p', { className: 'term-line term-cmd' }, [...prompt(entry.cwd || cwd), el('span', { text: entry.text })]);
+      if (entry.kind === 'cmd') return el('p', { className: 'term-line term-cmd' }, [...prompt(entry.cwd || cwd, entry.root === true), el('span', { text: entry.text })]);
       // neofetch and git log: a leading column in the brand color (the logo, or a commit
       // hash), then the rest; a short neofetch label before its colon gets the accent.
       if (entry.kind === 'fetch' || entry.kind === 'git') {
@@ -354,7 +385,8 @@ export function mountTerminal(primaryRoot) {
     }
 
     function updateMirror() {
-      const value = input.value;
+      // sudo's password is never shown, not even as dots, like the real thing.
+      const value = pendingSudo ? '' : input.value;
       const caret = typeof input.selectionStart === 'number' ? input.selectionStart : value.length;
       before.textContent = value.slice(0, caret);
       after.textContent = value.slice(caret);
@@ -526,8 +558,8 @@ export function mountTerminal(primaryRoot) {
 
     // ---------- Commands ----------
 
-    function run(raw) {
-      const result = execute(raw, {
+    function context() {
+      return {
         page,
         shell: id,
         oldpwd: state.oldpwd,
@@ -538,9 +570,14 @@ export function mountTerminal(primaryRoot) {
         history: shellState.transcript.filter((entry) => entry.kind === 'cmd' && entry.text).map((entry) => entry.text),
         uptime: (Date.now() - bootedAt) / 1000,
         now: Date.now(),
-      });
+        root: isRoot,
+      };
+    }
+
+    function run(raw) {
+      const result = execute(raw, context());
       if (raw.trim().length === 0 && result.lines.length === 0) {
-        print([{ kind: 'cmd', text: '', cwd }]);
+        print([cmdLine('')]);
         return;
       }
 
@@ -558,10 +595,19 @@ export function mountTerminal(primaryRoot) {
 
       // Shown as typed in this page view; kept only in its validated form, so text that
       // is not a command (a password typed by accident, say) never reaches storage.
-      show([{ kind: 'cmd', text: raw.slice(0, LIMITS.terminalLineLength), cwd }, ...result.lines]);
-      shellState.transcript = appendLines(shellState.transcript, [{ kind: 'cmd', text: result.valid ? result.echo : NOT_KEPT, cwd }, ...result.lines]);
+      show([cmdLine(raw.slice(0, LIMITS.terminalLineLength)), ...result.lines]);
+      shellState.transcript = appendLines(shellState.transcript, [cmdLine(result.valid ? result.echo : NOT_KEPT), ...result.lines]);
       save();
+      apply(result);
+    }
 
+    // A command line as the prompt showed it: the directory, and root's prompt if root.
+    function cmdLine(text) {
+      return isRoot ? { kind: 'cmd', text, cwd, root: true } : { kind: 'cmd', text, cwd };
+    }
+
+    // Applies a result's easter egg and action (its lines are already printed).
+    function apply(result) {
       // An easter egg found for the first time: say so (ui/hunt.js).
       const found = result.egg ? recordEgg(result.egg) : null;
       if (found) print([found]);
@@ -580,13 +626,90 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'theme') setTheme(action.id);
       else if (action.type === 'hunt-reset') resetHunt();
       else if (action.type === 'rmrf') runRmRf({ shell: api });
+      else if (action.type === 'sudo') sudo(action.inner);
+      else if (action.type === 'unroot') setRoot(false);
       else if (action.type === 'forkbomb') {
         runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
       }
       else if (action.type === 'exit') window.setTimeout(() => close(id), 300);
     }
 
+    // ---------- sudo (owner request; groundwork for Layer 2) ----------
+    // Root already: run the command at once. Otherwise the prompt turns into
+    // "[sudo] password for visitor:" and the next line typed is the password. Like real
+    // sudo it is never shown, and it is never stored, kept in history or logged: only
+    // features/puzzles.js sees it, to compare its SHA-256 with data/puzzles.js. The right
+    // one makes the visitor root everywhere until a refresh or reboot (cosmetic: prompt,
+    // whoami, rm). A wrong one prints "incorrect password" and the prompt returns.
+    // Escape or Ctrl+C cancels.
+
+    function sudo(inner) {
+      if (isRoot) return runAsRoot(inner);
+      pendingSudo = { inner };
+      root.classList.add('is-secret');
+      refreshPrompt();
+      updateMirror();
+      return undefined;
+    }
+
+    function endPassword() {
+      pendingSudo = undefined;
+      root.classList.remove('is-secret');
+      refreshPrompt();
+    }
+
+    async function submitPassword(raw) {
+      const { inner } = pendingSudo;
+      endPassword();
+      print([{ kind: 'out', text: `[sudo] password for ${TERMINAL_USER}:` }]);
+      api.setBusy(true);
+      const accepted = await matchesPuzzle(raw, PUZZLES.root.sha256);
+      api.setBusy(false);
+      api.focus();
+      if (!accepted) {
+        print([{ kind: 'err', text: 'sudo: incorrect password' }]);
+        return;
+      }
+      setRoot(true);
+      print([{ kind: 'ok', text: '[ ok ] access granted. you are root now. with great power...' }]);
+      runAsRoot(inner);
+    }
+
+    function runAsRoot(inner) {
+      if (inner === null) return;
+      if (inner === 'unknown') {
+        print([{ kind: 'err', text: 'sudo: command not found' }]);
+        return;
+      }
+      // inner is the engine's own validated echo of the command, never raw input.
+      const result = execute(inner, context());
+      if (result.action && result.action.type === 'clear') {
+        run('clear');
+        return;
+      }
+      print(result.lines);
+      apply(result);
+    }
+
     listen(input, 'keydown', (event) => {
+      if (pendingSudo) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          const raw = input.value;
+          input.value = '';
+          submitPassword(raw);
+        } else if (event.key === 'Escape' || (event.key === 'c' && event.ctrlKey)) {
+          event.preventDefault();
+          input.value = '';
+          endPassword();
+          print([{ kind: 'out', text: `[sudo] password for ${TERMINAL_USER}:` }, { kind: 'err', text: 'sudo: a password is required' }]);
+        } else if (event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          // No completion or history while typing a password.
+          event.preventDefault();
+        }
+        window.requestAnimationFrame(updateMirror);
+        return;
+      }
       if (event.key === 'Enter') {
         event.preventDefault();
         const raw = input.value;
@@ -644,6 +767,7 @@ export function mountTerminal(primaryRoot) {
     const api = {
       root,
       print,
+      refreshPrompt,
       alive: () => alive,
       live(kind) {
         const node = liveNode(el('p', { className: `term-line term-${kind}` }));
@@ -712,6 +836,9 @@ export function mountTerminal(primaryRoot) {
   }
 
   // ---------- Start ----------
+
+  // Root carried over from an earlier page shows in the top bar too.
+  if (isRoot) showUser();
 
   for (const shellState of state.shells) {
     const shell = createShell(shellState, shellState.id === 'tty1' ? primaryRoot : buildWindow(shellState.id));

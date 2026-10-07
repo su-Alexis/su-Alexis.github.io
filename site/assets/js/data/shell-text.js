@@ -172,7 +172,7 @@ export const MANUAL = Object.freeze({
   git: ['git log shows how this site was built, newest change first.'],
   clear: ['Clears this shell. Ctrl+L does the same.'],
   background: ['With no name, lists the page backgrounds and marks the current one. With a', 'name, switches to it. Your pick follows you between pages until a refresh.'],
-  theme: ['With no name, lists the color themes and marks the current one. With a name,', 'switches to it: cyan, amber or green phosphor. Lasts until a refresh.'],
+  theme: ['With no name, lists the color themes and marks the current one. With a name,', 'switches to it: cyan, amber, green or purple. Lasts until a refresh.'],
   hunt: ['Shows the easter eggs you have found, with hints for the rest. Progress is', 'kept in this browser, even across reboots. hunt reset hides them again.'],
   spawn: ['Opens another shell window, up to three in all. Each one keeps its own', 'history as you move between pages.'],
   exit: ['Closes a spawned shell. tty1 is the login shell and stays open.'],
@@ -206,20 +206,23 @@ export const CHANGELOG = Object.freeze([
 ].map((entry) => Object.freeze(entry)));
 
 // ---------- neofetch logo ----------
-// A waffle, isometric. Every line is padded to the same width (FETCH_COLUMN in the
-// engine) so the info column lines up.
+// A waffle, face on: a rounded square of grid cells. Flat edges only, so it lines up in
+// any monospace font (the earlier isometric one drifted). Every line is padded to the
+// same width (FETCH_COLUMN in the engine) so the info column lines up.
 
+// Plain strings: a raw template cannot end in a backslash.
+const GRID_ROW = '| |___|___|___|___|___| |';
 export const NEOFETCH_LOGO = Object.freeze([
-  String.raw`      ______________     `,
-  String.raw`     /  _   _   _  /|    `,
-  String.raw`    / |_| |_| |_| / |    `,
-  String.raw`   /  _   _   _  /  |    `,
-  String.raw`  / |_| |_| |_| /   |    `,
-  String.raw` /  _   _   _  /    /    `,
-  String.raw`/_____________/    /     `,
-  String.raw`|  _   _   _  |   /      `,
-  String.raw`| |_| |_| |_| |  /       `,
-  String.raw`|  waffles OS | /        `,
-  String.raw`|_____________|/         `,
-  String.raw`                         `,
-]);
+  ' .---------------------.',
+  '/  ___ ___ ___ ___ ___  \\',
+  GRID_ROW,
+  GRID_ROW,
+  GRID_ROW,
+  GRID_ROW,
+  GRID_ROW,
+  '\\                       /',
+  " '---------------------'",
+  '',
+  '        wafflesOS',
+  '',
+].map((row) => row.padEnd(29)));

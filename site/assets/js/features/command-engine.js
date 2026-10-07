@@ -43,6 +43,8 @@ const HELP_WIDTH = Math.max(...VISIBLE.map((command) => command.usage.length)) +
 // "sudo rm -rf" is matched against fixed flags and targets only (doctrine section 7).
 const RM_FLAGS = new Set(['-rf', '-fr', '-Rf', '-fR', '-rF', '-RF']);
 const RM_TARGETS = new Set(['/', '/*', '*', '~', '~/', '.', '--no-preserve-root']);
+// "sudo su" and friends: become root without running anything else.
+const ROOT_SHELLS = new Set(['su', '-i', '-s', 'bash', 'sh']);
 // neofetch: the logo column width; "fetch" lines are split here when rendered.
 export const FETCH_COLUMN = NEOFETCH_LOGO[0].length;
 
@@ -214,7 +216,7 @@ const HANDLERS = new Map([
       ],
     }
     : { lines: [ok(`theme: switching to ${id}`)], action: Object.freeze({ type: 'theme', id }) })],
-  ['whoami', () => ({ lines: [out(TERMINAL_USER)] })],
+  ['whoami', (args, context) => ({ lines: [out(context.root ? 'root' : TERMINAL_USER)] })],
   ['clear', () => ({ lines: [], action: Object.freeze({ type: 'clear' }) })],
 
   // ---------- Read-only commands over authored text (data/shell-text.js) ----------
@@ -227,8 +229,8 @@ const HANDLERS = new Map([
   ['neofetch', (args, context) => {
     const earned = CERT_ROWS.filter((cert) => cert.status === 'CERTIFIED').length;
     const info = [
-      `${TERMINAL_USER}@${TERMINAL_HOST}`,
-      '-'.repeat(TERMINAL_USER.length + TERMINAL_HOST.length + 1),
+      `${context.root ? 'root' : TERMINAL_USER}@${TERMINAL_HOST}`,
+      '-'.repeat((context.root ? 4 : TERMINAL_USER.length) + TERMINAL_HOST.length + 1),
       'OS: wafflesOS x86_64 (simulated)',
       'Host: remote hypervisor',
       'Kernel: 6.1.0-waffle',
@@ -305,34 +307,43 @@ const HANDLERS = new Map([
     ],
     egg: 'eggs',
   })],
-  // Free arguments: compared with fixed values only. The stored echo never contains them.
-  ['sudo', (args) => {
+  // sudo asks for a password (the UI prompts and checks it, features/puzzles.js); the
+  // right one makes the visitor root, a cosmetic label (doctrine: whoami is presentation
+  // only). The command after sudo is run through this same engine as root once the
+  // password is accepted: action.inner is that command's validated echo, null for a root
+  // shell (sudo su / -i / bash), or 'unknown'. Free arguments never reach the echo.
+  ['sudo', (args, context) => {
     if (args.length === 0) return { lines: [out('usage: sudo <command>')], echo: 'sudo' };
-    const [command, flags, ...targets] = args;
-    if (command === 'rm' && RM_FLAGS.has(flags) && targets.every((target) => RM_TARGETS.has(target))) {
-      return {
-        lines: [],
-        action: Object.freeze({ type: 'rmrf' }),
-        egg: 'rmrf',
-        echo: ['sudo rm -rf', ...targets].join(' '),
-      };
+    if (ROOT_SHELLS.has(args[0]) && args.length <= 2 && (args.length === 1 || args[1] === '-')) {
+      return { lines: [], action: Object.freeze({ type: 'sudo', inner: null }), echo: `sudo ${args.join(' ')}` };
+    }
+    const inner = args[0] === 'sudo' ? null : execute(args.join(' '), { ...context, root: true });
+    if (!inner || !inner.valid) {
+      return { lines: [], action: Object.freeze({ type: 'sudo', inner: 'unknown' }), echo: 'sudo (arguments not kept)' };
+    }
+    return { lines: [], action: Object.freeze({ type: 'sudo', inner: inner.echo }), echo: `sudo ${inner.echo}` };
+  }],
+  // Free arguments, compared with fixed values only. Only root gets the breakdown.
+  ['rm', (args, context) => {
+    const [flags, ...targets] = args;
+    if (context.root && RM_FLAGS.has(flags) && targets.every((target) => RM_TARGETS.has(target))) {
+      return { lines: [], action: Object.freeze({ type: 'rmrf' }), egg: 'rmrf', echo: ['rm -rf', ...targets].join(' ') };
     }
     return {
-      lines: [
-        err(`[sudo] ${TERMINAL_USER} is not in the sudoers file. This incident will be reported.`),
-        out('(reported to /dev/null. some commands are more dangerous than others...)'),
-      ],
-      echo: 'sudo (arguments not kept)',
+      lines: context.root
+        ? [err('rm: cannot remove: No such file or directory')]
+        : [err('rm: cannot remove: Permission denied'), out('(you would need more privileges for that)')],
+      echo: args.length ? 'rm (arguments not kept)' : 'rm',
     };
   }],
-  ['rm', (args) => ({
-    lines: [err('rm: cannot remove: Permission denied'), out('(you would need more privileges for that)')],
-    echo: args.length ? 'rm (arguments not kept)' : 'rm',
-  })],
   ['spawn', () => ({ lines: [ok('spawning a new shell...')], action: Object.freeze({ type: 'spawn' }) })],
-  ['exit', (args, context) => (context.shell === 'tty1'
-    ? { lines: [err("exit: tty1 is the login shell. Use 'reboot' to restart the machine.")] }
-    : { lines: [ok('logout')], action: Object.freeze({ type: 'exit' }) })],
+  // As root, exit leaves the root shell first, as it would after "sudo su".
+  ['exit', (args, context) => {
+    if (context.root) return { lines: [ok('logout (back to visitor)')], action: Object.freeze({ type: 'unroot' }) };
+    return context.shell === 'tty1'
+      ? { lines: [err("exit: tty1 is the login shell. Use 'reboot' to restart the machine.")] }
+      : { lines: [ok('logout')], action: Object.freeze({ type: 'exit' }) };
+  }],
   ['reboot', () => ({ lines: [ok('rebooting...')], action: Object.freeze({ type: 'reboot' }) })],
 ]);
 
@@ -385,6 +396,8 @@ export function execute(raw, context = {}) {
     history: cleanHistory(ctx.history),
     uptime: cleanSeconds(ctx.uptime),
     now: typeof ctx.now === 'number' && Number.isFinite(ctx.now) ? ctx.now : Date.now(),
+    // Cosmetic only: changes the prompt, whoami and what rm does to the page.
+    root: ctx.root === true,
   };
   const result = handler(args, handlerContext);
   if (result.invalid) return { lines: result.lines, action: null, recognized: true, valid: false, echo: null };

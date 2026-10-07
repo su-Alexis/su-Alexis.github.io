@@ -54,6 +54,7 @@ export const THEMES = Object.freeze([
   Object.freeze({ id: 'cyan', description: 'the default look' }),
   Object.freeze({ id: 'amber', description: 'amber phosphor, like an old VT220' }),
   Object.freeze({ id: 'green', description: 'green phosphor, classic hacker green' }),
+  Object.freeze({ id: 'purple', description: 'neon violet, straight out of cyberspace' }),
 ]);
 export const THEME_IDS = Object.freeze(THEMES.map((theme) => theme.id));
 
@@ -64,7 +65,7 @@ export const EGGS = Object.freeze([
   Object.freeze({ id: 'hello', label: 'hello world', description: 'say hello', hint: "every programmer's first words" }),
   Object.freeze({ id: 'matrix', label: '31337', description: 'toggle the matrix', hint: 'speak leet, in digits' }),
   Object.freeze({ id: 'forkbomb', label: ':(){ :|:& };:', description: 'crash the machine', hint: 'a function that calls itself, twice, forever' }),
-  Object.freeze({ id: 'rmrf', label: 'sudo rm -rf /', description: 'delete everything (not really)', hint: 'the most dangerous command there is, with privileges' }),
+  Object.freeze({ id: 'rmrf', label: 'sudo rm -rf /', description: 'delete everything (not really)', hint: 'the most dangerous command there is, as root (sudo knows the way)' }),
   Object.freeze({ id: 'screensaver', label: '(stay idle)', description: 'the screensaver', hint: 'step away from the keyboard for a couple of minutes' }),
   Object.freeze({ id: 'eggs', label: 'eggs', description: 'list the easter eggs', hint: 'just ask for the eggs' }),
 ]);
@@ -99,10 +100,10 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'forkbomb', usage: ':(){ :|:& };:', description: 'crash the machine', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
   // Hidden index of the easter eggs (EGGS above), spoilers included.
   Object.freeze({ name: 'eggs', usage: 'eggs', description: 'list the easter eggs', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
-  // Hidden: "sudo rm -rf" is the doctrine's cosmetic breakdown egg; any other sudo is
-  // refused. rm alone is refused too, with a nudge. Their free arguments are only compared
-  // against fixed values, never echoed or stored.
-  Object.freeze({ name: 'sudo', usage: 'sudo rm -rf /', description: 'delete everything (not really)', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
+  // Hidden: sudo asks for a password and, with the right one, makes the visitor root (a
+  // cosmetic label). As root, "rm -rf /" is the doctrine's breakdown egg. Their free
+  // arguments are only compared against fixed values, never echoed or stored.
+  Object.freeze({ name: 'sudo', usage: 'sudo <command>', description: 'delete everything (not really)', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'rm', usage: 'rm <file>', description: 'remove files', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'reboot', usage: 'reboot', description: 'restart the machine and replay the boot', args: Object.freeze({ min: 0, max: 0 }) }),
 ]);

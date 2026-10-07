@@ -39,12 +39,17 @@ function isLine(entry) {
   const text = ownField(entry, 'text');
   const cwd = ownField(entry, 'cwd');
   if (cwd !== undefined && (kind !== 'cmd' || typeof cwd !== 'string' || !CWD.test(cwd))) return false;
+  // root: a command typed at root's prompt. Only ever the literal true, on cmd lines.
+  const root = ownField(entry, 'root');
+  if (root !== undefined && (kind !== 'cmd' || root !== true)) return false;
   return KIND_SET.has(kind) && typeof text === 'string' && text.length <= LIMITS.terminalLineLength && !hasControlChars(text);
 }
 
 function copyLine(entry) {
   const cwd = ownField(entry, 'cwd');
-  return cwd === undefined ? { kind: entry.kind, text: entry.text } : { kind: entry.kind, text: entry.text, cwd };
+  const line = cwd === undefined ? { kind: entry.kind, text: entry.text } : { kind: entry.kind, text: entry.text, cwd };
+  if (ownField(entry, 'root') === true) line.root = true;
+  return line;
 }
 
 function finiteIn(value, min, max, fallback) {
