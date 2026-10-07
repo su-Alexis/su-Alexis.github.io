@@ -45,6 +45,13 @@ const RM_FLAGS = new Set(['-rf', '-fr', '-Rf', '-fR', '-rF', '-RF']);
 const RM_TARGETS = new Set(['/', '/*', '*', '~', '~/', '.', '--no-preserve-root']);
 // "sudo su" and friends: become root without running anything else.
 const ROOT_SHELLS = new Set(['su', '-i', '-s', 'bash', 'sh']);
+// su's login flags; they make no difference in a simulation without environments.
+const SU_LOGIN = new Set(['-', '-l', '--login']);
+const SUDO_USAGE = Object.freeze([
+  'usage: sudo -h | -K | -k | -V',
+  'usage: sudo [-i | -s] [<command>]',
+]);
+const SU_USAGE = 'usage: su [-|-l] [root] [-c <command>]';
 
 // ---------- Simulated directory tree for cd, pwd and ls ----------
 // Directories are exactly the pages' working directories ("~", "~/projects", ...).
@@ -142,8 +149,9 @@ function asRoot(args, context) {
   return inner.valid ? inner.echo : 'unknown';
 }
 
-// The action for sudo/su. inner: null (a root shell), 'unknown', or a validated echo.
-// The UI prompts for the password unless the visitor is root already. The stored echo
+// The action for sudo/su. inner: null (open a root shell), 'unknown', or the validated
+// echo of one command to run as root. The UI asks for the password unless the shell is
+// root already, or sudo still remembers it (ui/terminal-ui.js). The stored echo
 // is built from the validated echo or fixed words only; free arguments never reach it.
 function elevate(via, inner, shellEcho) {
   const echo = shellEcho || (inner === 'unknown' ? `${via} (arguments not kept)` : `${via} ${inner}`);
@@ -329,22 +337,36 @@ const HANDLERS = new Map([
   // only). The command after sudo is run through this same engine as root once the
   // password is accepted: action.inner is that command's validated echo, null for a root
   // shell (sudo su / -i / bash), or 'unknown'. Free arguments never reach the echo.
-  // Bare "sudo" prompts too (owner request; real sudo would print its usage instead).
+  // sudo, as on Linux: bare sudo prints its usage; sudo <command> asks for the visitor's
+  // password and runs that one command as root, leaving the shell as it was; sudo su,
+  // sudo -i and sudo -s open a root shell. sudo -k forgets the remembered password.
   ['sudo', (args, context) => {
-    if (args.length === 0 || (ROOT_SHELLS.has(args[0]) && args.length <= 2 && (args.length === 1 || args[1] === '-'))) {
+    if (args.length === 0) return { lines: SUDO_USAGE.map(out), echo: 'sudo' };
+    if (args.length === 1 && (args[0] === '-k' || args[0] === '-K')) {
+      return { lines: [], action: Object.freeze({ type: 'sudo-forget' }), echo: `sudo ${args[0]}` };
+    }
+    if (ROOT_SHELLS.has(args[0]) && args.length <= 2 && (args.length === 1 || args[1] === '-')) {
       return elevate('sudo', null, ['sudo', ...args].join(' '));
     }
     return elevate('sudo', asRoot(args, context), null);
   }],
-  // su does what sudo does (owner request), with su's own "Password:" prompt: bare su,
-  // "su -" and "su root" give a root shell; "su -c <command>" or "su <command>" run it.
+  // su, as on Linux: asks for root's password (Password:) and opens a root shell; with
+  // -c it runs just that command as root. su [-|-l|--login] [root] [-c <command>]. The
+  // only user on this machine besides the visitor is root.
   ['su', (args, context) => {
-    if (args.length === 0 || (args.length <= 2 && args.every((arg) => arg === '-' || arg === 'root'))) {
-      return elevate('su', null, ['su', ...args].join(' '));
+    let i = 0;
+    while (i < args.length && SU_LOGIN.has(args[i])) i += 1;
+    const words = args.slice(0, i);
+    if (i < args.length && args[i] !== '-c') {
+      if (args[i] !== 'root') return { lines: [err('su: user does not exist')], echo: 'su (arguments not kept)' };
+      words.push('root');
+      i += 1;
     }
-    const dashC = args[0] === '-c';
-    const inner = asRoot(dashC ? args.slice(1) : args, context);
-    return elevate('su', inner, dashC && inner && inner !== 'unknown' ? `su -c ${inner}` : null);
+    if (i === args.length) return elevate('su', null, ['su', ...words].join(' '));
+    if (args[i] !== '-c') return { lines: [out(SU_USAGE)], echo: 'su (arguments not kept)' };
+    if (i + 1 === args.length) return { lines: [err("su: option requires an argument -- 'c'"), out(SU_USAGE)], echo: 'su -c' };
+    const inner = asRoot(args.slice(i + 1), context);
+    return elevate('su', inner, inner === 'unknown' ? null : ['su', ...words, '-c', inner].join(' '));
   }],
   // Free arguments, compared with fixed values only. Only root gets the breakdown.
   ['rm', (args, context) => {
@@ -362,7 +384,7 @@ const HANDLERS = new Map([
   ['spawn', () => ({ lines: [ok('spawning a new shell...')], action: Object.freeze({ type: 'spawn' }) })],
   // As root, exit leaves the root shell first, as it would after "sudo su".
   ['exit', (args, context) => {
-    if (context.root) return { lines: [ok('logout (back to visitor)')], action: Object.freeze({ type: 'unroot' }) };
+    if (context.root) return { lines: [out('logout')], action: Object.freeze({ type: 'unroot' }) };
     return context.shell === 'tty1'
       ? { lines: [err("exit: tty1 is the login shell. Use 'reboot' to restart the machine.")] }
       : { lines: [ok('logout')], action: Object.freeze({ type: 'exit' }) };

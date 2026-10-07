@@ -38,6 +38,11 @@ const LOG_COMMAND = /^[a-z0-9 ./~_-]{1,64}$/;
 const TYPE = Object.freeze({ cmd: 24, out: 8, outStep: 4, afterCmd: 140, afterOut: 50 });
 const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
 const BAR_FULL = '#'.repeat(20);
+// sudo, as on Linux: three password tries, a pause after a wrong one (PAM's fail delay),
+// and the password remembered for a while after it is accepted.
+const SUDO_TRIES = 3;
+const FAIL_DELAY_MS = 1200;
+const SUDO_REMEMBER_MS = 15 * 60 * 1000;
 
 function isReload() {
   try {
@@ -107,6 +112,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.theme);
     removeKey(store, SESSION_KEYS.bootedAt);
     removeKey(store, SESSION_KEYS.root);
+    removeKey(store, SESSION_KEYS.sudoAt);
   }
   // The machine's boot time, for uptime and neofetch: set once per machine start.
   const bootedAt = (() => {
@@ -206,6 +212,17 @@ export function mountTerminal(primaryRoot) {
     showUser();
   }
 
+  // sudo remembers an accepted password for a while, across shells and pages.
+  function sudoRemembered() {
+    const at = readJson(store, SESSION_KEYS.sudoAt);
+    const now = Date.now();
+    return typeof at === 'number' && Number.isFinite(at) && at <= now && now - at < SUDO_REMEMBER_MS;
+  }
+
+  function rememberSudo() {
+    writeJson(store, SESSION_KEYS.sudoAt, Date.now());
+  }
+
   function showUser() {
     const chips = document.querySelectorAll('.topbar .status li');
     if (chips.length >= 3) chips[2].textContent = `User ${isRoot ? 'root' : TERMINAL_USER}`;
@@ -259,6 +276,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.theme);
     removeKey(store, SESSION_KEYS.bootedAt);
     removeKey(store, SESSION_KEYS.root);
+    removeKey(store, SESSION_KEYS.sudoAt);
     for (const shell of shells.values()) shell.disable();
     window.setTimeout(() => {
       try {
@@ -636,6 +654,7 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'rmrf') runRmRf({ shell: api });
       else if (action.type === 'sudo') sudo(action.inner, action.via === 'su' ? 'su' : 'sudo');
       else if (action.type === 'unroot') setRoot(false);
+      else if (action.type === 'sudo-forget') removeKey(store, SESSION_KEYS.sudoAt);
       else if (action.type === 'forkbomb') {
         runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
       }
@@ -643,21 +662,29 @@ export function mountTerminal(primaryRoot) {
     }
 
     // ---------- sudo and su (owner request; groundwork for Layer 2) ----------
-    // Root already: run the command at once. Otherwise the prompt turns into
-    // "[sudo] password for visitor:" and the next line typed is the password. Like real
-    // sudo it is never shown, and it is never stored, kept in history or logged: only
-    // features/puzzles.js sees it, to compare its SHA-256 with data/puzzles.js. The right
-    // one makes the visitor root everywhere until a refresh or reboot (cosmetic: prompt,
-    // whoami, rm). A wrong one prints "incorrect password" and the prompt returns.
-    // Escape or Ctrl+C cancels.
+    // They behave as on Linux. sudo <command> asks for the visitor's password and runs
+    // that one command as root; the shell stays the visitor's, and for a while sudo
+    // remembers the password (SUDO_REMEMBER_MS). sudo su, sudo -i and sudo -s open a root
+    // shell. su asks for root's password ("Password:") and opens a root shell, or with -c
+    // runs one command. In a root shell nothing asks again; exit leaves it.
+    // The password is never shown, stored, kept in history or logged: only
+    // features/puzzles.js sees it, to compare its SHA-256 with data/puzzles.js. A wrong one
+    // waits a moment, as PAM does; sudo then allows three tries in all, su just fails.
+    // Escape or Ctrl+C cancels. Root is cosmetic: the prompt, whoami, and what rm does.
 
     function sudo(inner, via) {
-      if (isRoot) return runAsRoot(inner);
-      pendingSudo = { inner, via };
+      if (isRoot || (via === 'sudo' && sudoRemembered())) {
+        elevated(inner, via);
+        return;
+      }
+      askPassword({ inner, via, tries: 0 });
+    }
+
+    function askPassword(pending) {
+      pendingSudo = pending;
       root.classList.add('is-secret');
       refreshPrompt();
       updateMirror();
-      return undefined;
     }
 
     // sudo asks for the visitor's password; su asks for root's, the way each really does.
@@ -672,30 +699,45 @@ export function mountTerminal(primaryRoot) {
     }
 
     async function submitPassword(raw) {
-      const { inner, via } = pendingSudo;
+      const pending = pendingSudo;
       endPassword();
-      print([{ kind: 'out', text: passwordPrompt(via) }]);
+      print([{ kind: 'out', text: passwordPrompt(pending.via) }]);
       api.setBusy(true);
       const accepted = await matchesPuzzle(raw, PUZZLES.root.sha256);
+      if (!accepted) await wait(FAIL_DELAY_MS);
       api.setBusy(false);
       api.focus();
-      if (!accepted) {
-        print([{ kind: 'err', text: `${via}: incorrect password` }]);
+      if (accepted) {
+        elevated(pending.inner, pending.via);
         return;
       }
-      setRoot(true);
-      print([{ kind: 'ok', text: '[ ok ] access granted. you are root now. with great power...' }]);
-      runAsRoot(inner);
+      if (pending.via === 'su') {
+        print([{ kind: 'err', text: 'su: Authentication failure' }]);
+        return;
+      }
+      const tries = pending.tries + 1;
+      if (tries < SUDO_TRIES) {
+        print([{ kind: 'out', text: 'Sorry, try again.' }]);
+        askPassword({ ...pending, tries });
+        return;
+      }
+      print([{ kind: 'err', text: `sudo: ${SUDO_TRIES} incorrect password attempts` }]);
     }
 
-    function runAsRoot(inner) {
-      if (inner === null) return;
+    // The password was accepted (or was not needed): open a root shell, or run the one
+    // command as root.
+    function elevated(inner, via) {
+      if (via === 'sudo' && !isRoot) rememberSudo();
+      if (inner === null) {
+        if (!isRoot) setRoot(true);
+        return;
+      }
       if (inner === 'unknown') {
-        print([{ kind: 'err', text: 'sudo: command not found' }]);
+        print([{ kind: 'err', text: `${via === 'su' ? 'bash' : 'sudo'}: command not found` }]);
         return;
       }
       // inner is the engine's own validated echo of the command, never raw input.
-      const result = execute(inner, context());
+      const result = execute(inner, { ...context(), root: true });
       if (result.action && result.action.type === 'clear') {
         run('clear');
         return;
@@ -716,7 +758,7 @@ export function mountTerminal(primaryRoot) {
           input.value = '';
           const { via } = pendingSudo;
           endPassword();
-          print([{ kind: 'out', text: passwordPrompt(via) }, { kind: 'err', text: `${via}: a password is required` }]);
+          print([{ kind: 'out', text: `${passwordPrompt(via)} ^C` }]);
         } else if (event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
           // No completion or history while typing a password.
           event.preventDefault();

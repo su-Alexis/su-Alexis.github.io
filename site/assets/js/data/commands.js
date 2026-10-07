@@ -100,11 +100,12 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'forkbomb', usage: ':(){ :|:& };:', description: 'crash the machine', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
   // Hidden index of the easter eggs (EGGS above), spoilers included.
   Object.freeze({ name: 'eggs', usage: 'eggs', description: 'list the easter eggs', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
-  // Hidden: sudo asks for a password and, with the right one, makes the visitor root (a
-  // cosmetic label). As root, "rm -rf /" is the doctrine's breakdown egg. Their free
+  // Hidden: sudo and su behave as on Linux (owner request): the right password runs a
+  // command as root, or opens a root shell (a cosmetic label). As root, "rm -rf /" is the
+  // doctrine's breakdown egg. Their free
   // arguments are only compared against fixed values, never echoed or stored.
   Object.freeze({ name: 'sudo', usage: 'sudo <command>', description: 'delete everything (not really)', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
-  Object.freeze({ name: 'su', usage: 'su [-c <command>]', description: 'become root', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
+  Object.freeze({ name: 'su', usage: 'su [-] [root] [-c <command>]', description: 'become root', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'rm', usage: 'rm <file>', description: 'remove files', hidden: true, args: Object.freeze({ min: 0, max: 8, free: true }) }),
   Object.freeze({ name: 'reboot', usage: 'reboot', description: 'restart the machine and replay the boot', args: Object.freeze({ min: 0, max: 0 }) }),
 ]);

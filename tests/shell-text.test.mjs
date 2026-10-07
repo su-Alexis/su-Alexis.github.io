@@ -141,28 +141,42 @@ test('easter eggs report which egg they are', () => {
   assert.equal(execute('help').egg, null);
 });
 
-test('sudo asks for the password and names the command to run as root', () => {
+test('sudo behaves as on Linux: usage, one command as root, or a root shell', () => {
+  // Bare sudo prints its usage and asks for nothing.
+  const bare = execute('sudo');
+  assert.equal(bare.action, null);
+  assert.match(texts(bare), /^usage: sudo/);
+  // sudo <command>: one command as root.
   assert.deepEqual({ ...execute('sudo rm -rf /').action }, { type: 'sudo', via: 'sudo', inner: 'rm -rf /' });
   assert.deepEqual({ ...execute('sudo whoami').action }, { type: 'sudo', via: 'sudo', inner: 'whoami' });
-  // Bare sudo prompts too (owner request), opening a root shell like sudo -i.
-  for (const raw of ['sudo', 'sudo su', 'sudo -i', 'sudo bash', 'sudo su -']) {
+  // sudo su, -i, -s: a root shell.
+  for (const raw of ['sudo su', 'sudo -i', 'sudo -s', 'sudo bash', 'sudo su -']) {
     assert.deepEqual({ ...execute(raw).action }, { type: 'sudo', via: 'sudo', inner: null }, raw);
   }
   for (const raw of ['sudo nmap', 'sudo sudo ls', 'sudo su root now']) assert.equal(execute(raw).action.inner, 'unknown', raw);
-  assert.equal(execute('sudo whoami').action.via, 'sudo');
+  for (const raw of ['sudo -k', 'sudo -K']) assert.deepEqual({ ...execute(raw).action }, { type: 'sudo-forget' }, raw);
   assert.doesNotMatch(texts(execute('help')), /sudo|rm </);
   assert.equal(complete('su'), null);
 });
 
-test('su does what sudo does, with its own prompt', () => {
-  for (const raw of ['su', 'su -', 'su root', 'su - root', 'su -c']) {
+test('su behaves as on Linux: a root shell, or one command with -c', () => {
+  for (const raw of ['su', 'su -', 'su -l', 'su root', 'su - root', 'su --login root']) {
     assert.deepEqual({ ...execute(raw).action }, { type: 'sudo', via: 'su', inner: null }, raw);
   }
-  const dashC = execute('su -c whoami');
-  assert.deepEqual({ ...dashC.action }, { type: 'sudo', via: 'su', inner: 'whoami' });
-  assert.equal(dashC.echo, 'su -c whoami');
-  assert.deepEqual({ ...execute('su rm -rf /').action }, { type: 'sudo', via: 'su', inner: 'rm -rf /' });
-  for (const raw of ['su nmap', 'su su', 'su sudo ls', 'su -c nmap']) assert.equal(execute(raw).action.inner, 'unknown', raw);
+  for (const raw of ['su -c whoami', 'su root -c whoami', 'su - root -c whoami']) {
+    const result = execute(raw);
+    assert.deepEqual({ ...result.action }, { type: 'sudo', via: 'su', inner: 'whoami' }, raw);
+    assert.equal(result.echo, raw);
+  }
+  assert.equal(execute('su -c nmap').action.inner, 'unknown');
+  // The first word after the options is a user name, as on Linux; only root exists.
+  for (const raw of ['su ls', 'su bob', 'su visitor']) {
+    const result = execute(raw);
+    assert.equal(result.action, null, raw);
+    assert.match(texts(result), /su: user does not exist/, raw);
+  }
+  assert.match(texts(execute('su -c')), /requires an argument/);
+  assert.equal(execute('su root extra').action, null);
   assert.doesNotMatch(texts(execute('help')), /\bsu\b/);
 });
 

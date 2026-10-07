@@ -81,6 +81,9 @@ export const SESSION_KEYS = Object.freeze({
   // The visitor gave sudo the right password: the shells show root (cosmetic only).
   // Cleared on refresh and reboot like the rest of the machine session.
   root: `${STORAGE_PREFIX}root`,
+  // When sudo last accepted the password (ms since the epoch): like real sudo it does not
+  // ask again for a while (SUDO_REMEMBER_MS in ui/terminal-ui.js). Cleared with the session.
+  sudoAt: `${STORAGE_PREFIX}sudo-at`,
 });
 
 // Hosts that reviewed external links may point to (https only). Doctrine section 12.
