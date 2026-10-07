@@ -27,6 +27,7 @@ const BUSY = ['boot-run', 'fork-bomb', 'power-off'];
 
 let started = false;
 let killed = false;
+let activate = null; // set by startScreensaver: starts it now, if it can run
 
 // For btop/ps/kill (ui/terminal-ui.js): the screensaver shows as a process until killed.
 // A kill keeps it off on every page until a refresh or reboot (SESSION_KEYS.noScreensaver).
@@ -34,11 +35,20 @@ export function screensaverRunning() {
   return started && !killed;
 }
 
+// The "screensaver" command (owner request): start it now instead of waiting. Returns an
+// error message, or null. A forced run does not count for the hunt: the egg is going idle.
+export function activateScreensaver() {
+  if (!started || !activate) return 'screensaver: not running on this page';
+  if (killed) return 'screensaver: not running (it was killed). A refresh or reboot starts it again.';
+  return activate();
+}
+
 export function killScreensaver() {
   killed = true;
   writeJson(sessionStore(), SESSION_KEYS.noScreensaver, true);
 }
 
+// onWake(forced): forced is true when the "screensaver" command started it.
 export function startScreensaver({ reducedMotion = false, onWake = () => {} } = {}) {
   if (started) return;
   started = true;
@@ -49,6 +59,7 @@ export function startScreensaver({ reducedMotion = false, onWake = () => {} } = 
   let overlay = null;
   let frame = 0;
   let phase = 'idle'; // idle | closing | asleep | waking
+  let forced = false;
 
   function schedule() {
     window.clearTimeout(timer);
@@ -174,7 +185,8 @@ export function startScreensaver({ reducedMotion = false, onWake = () => {} } = 
       phase = 'idle';
       last = performance.now();
       schedule();
-      onWake();
+      onWake(forced);
+      forced = false;
     };
     if (reducedMotion || !node) return done();
     node.classList.remove('is-closing', 'is-asleep');
@@ -204,5 +216,13 @@ export function startScreensaver({ reducedMotion = false, onWake = () => {} } = 
     if (phase === 'idle') schedule();
   });
   window.addEventListener('pagehide', () => window.clearTimeout(timer));
+  activate = () => {
+    if (phase !== 'idle') return 'screensaver: already running';
+    if (busy()) return 'screensaver: the machine is busy right now';
+    forced = true;
+    window.clearTimeout(timer);
+    sleep();
+    return null;
+  };
   schedule();
 }

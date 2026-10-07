@@ -526,6 +526,8 @@ const HANDLERS = new Map([
     }
     return { lines: [out('usage: vm [list|start <guest>]')], echo: 'vm (arguments not kept)' };
   }],
+  // Starts the idle screensaver at once (ui/screensaver.js).
+  ['screensaver', () => ({ lines: [], action: Object.freeze({ type: 'screensaver' }) })],
   // btop, and top/htop which open it too: a live process monitor (ui/btop.js).
   ['btop', () => ({ lines: [], action: Object.freeze({ type: 'btop' }) })],
   ['top', () => ({ lines: [], action: Object.freeze({ type: 'btop' }) })],

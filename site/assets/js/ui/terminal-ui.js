@@ -28,7 +28,7 @@ import { scrambleProcess, killStatusScramble } from './status-scramble.js';
 import { runRmRf } from './rm-rf.js';
 import { foundEggs, recordEgg, resetHunt } from './hunt.js';
 import { resumeTheme, setTheme, currentTheme } from './theme.js';
-import { startScreensaver, screensaverRunning, killScreensaver } from './screensaver.js';
+import { startScreensaver, screensaverRunning, killScreensaver, activateScreensaver } from './screensaver.js';
 import { matchesPuzzle } from '../features/puzzles.js';
 import { PUZZLES } from '../data/puzzles.js';
 
@@ -859,6 +859,13 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'unroot') setRoot(false);
       else if (action.type === 'sudo-forget') removeKey(store, SESSION_KEYS.sudoAt);
       else if (action.type === 'btop') openBtop(api);
+      else if (action.type === 'screensaver') {
+        // A moment's pause, so the key that ran the command does not wake it at once.
+        window.setTimeout(() => {
+          const error = activateScreensaver();
+          if (error) print([{ kind: 'err', text: error }]);
+        }, 250);
+      }
       else if (action.type === 'kill') {
         for (const pid of action.pids) {
           const error = signalProcess(pid, action.signal);
@@ -1203,7 +1210,8 @@ export function mountTerminal(primaryRoot) {
   // The idle screensaver is an easter egg too: waking from it counts for "hunt".
   startScreensaver({
     reducedMotion,
-    onWake: () => {
+    onWake: (forced) => {
+      if (forced) return; // the egg is going idle, not asking for it
       const found = recordEgg('screensaver');
       const primary = shells.get('tty1');
       if (found && primary) primary.print([found]);

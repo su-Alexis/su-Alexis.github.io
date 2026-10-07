@@ -99,6 +99,7 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'man', usage: 'man <command>', description: 'read the manual for a command', args: Object.freeze({ min: 0, max: 1, oneOf: 'manpages' }) }),
   Object.freeze({ name: 'git', usage: 'git log', description: "show this site's history", args: Object.freeze({ min: 1, max: 1, oneOf: 'git' }) }),
   Object.freeze({ name: 'clear', usage: 'clear', description: 'clear this shell', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'screensaver', usage: 'screensaver', description: 'start the screensaver now', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'background', usage: 'background [name]', description: 'list or switch page backgrounds', args: Object.freeze({ min: 0, max: 1, oneOf: 'backgrounds' }) }),
   Object.freeze({ name: 'theme', usage: 'theme [name]', description: 'list or switch color themes', args: Object.freeze({ min: 0, max: 1, oneOf: 'themes' }) }),
   Object.freeze({ name: 'hunt', usage: 'hunt [reset]', description: 'track your easter egg hunt', args: Object.freeze({ min: 0, max: 1, oneOf: 'hunt' }) }),
