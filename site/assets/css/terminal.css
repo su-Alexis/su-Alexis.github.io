@@ -420,3 +420,117 @@
     animation: none;
   }
 }
+
+/* ---------- Idle screensaver (ui/screensaver.js) ----------
+   Going to sleep (is-closing): black shutters close from the top and bottom onto a
+   bright line, which shrinks to a dot, like a CRT switching off. Asleep: the canvas
+   shows the bouncing logo. Waking (is-waking): the line flashes back across the
+   screen and the shutters open on the page. Reduced motion: no shutters or line. */
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  cursor: none;
+}
+
+.ss-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  opacity: 0;
+}
+
+.screensaver.is-asleep .ss-canvas {
+  opacity: 1;
+}
+
+.ss-shutter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: #000;
+}
+
+.ss-top {
+  top: 0;
+  transform: translateY(-100%);
+}
+
+.ss-bottom {
+  bottom: 0;
+  transform: translateY(100%);
+}
+
+.ss-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  margin-top: -1px;
+  background: #f4fbff;
+  opacity: 0;
+}
+
+/* Asleep: the canvas is black itself; the shutters step aside so the logo shows. */
+.is-asleep .ss-shutter {
+  display: none;
+}
+
+.is-closing .ss-top,
+.is-closing .ss-bottom {
+  animation: ss-close 0.32s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+.is-closing .ss-line {
+  animation: ss-line-off 0.42s ease-in 0.3s both;
+}
+
+.is-waking .ss-top {
+  animation: ss-open-top 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.28s both;
+}
+
+.is-waking .ss-bottom {
+  animation: ss-open-bottom 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.28s both;
+}
+
+.is-waking .ss-line {
+  animation: ss-line-on 0.65s ease-out both;
+}
+
+@keyframes ss-close {
+  to { transform: none; }
+}
+
+@keyframes ss-line-off {
+  0% { opacity: 1; transform: scaleX(1); }
+  75% { opacity: 1; transform: scaleX(0.008); }
+  100% { opacity: 0; transform: scaleX(0); }
+}
+
+@keyframes ss-line-on {
+  0% { opacity: 1; transform: scaleX(0.01); }
+  40% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1) scaleY(30); }
+}
+
+@keyframes ss-open-top {
+  from { transform: none; }
+  to { transform: translateY(-100%); }
+}
+
+@keyframes ss-open-bottom {
+  from { transform: none; }
+  to { transform: translateY(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screensaver .ss-shutter,
+  .screensaver .ss-line {
+    display: none;
+  }
+}

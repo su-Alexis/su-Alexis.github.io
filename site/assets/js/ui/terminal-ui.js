@@ -26,6 +26,7 @@ import { runForkBomb } from './fork-bomb.js';
 import { runRmRf } from './rm-rf.js';
 import { foundEggs, recordEgg, resetHunt } from './hunt.js';
 import { resumeTheme, setTheme, currentTheme } from './theme.js';
+import { startScreensaver } from './screensaver.js';
 
 const NOT_KEPT = '(input not kept)';
 
@@ -726,6 +727,16 @@ export function mountTerminal(primaryRoot) {
     const finePointer = Boolean(window.matchMedia) && window.matchMedia('(pointer: fine)').matches;
     if (finePointer) shells.get('tty1').focus();
   };
+  // The idle screensaver is an easter egg too: waking from it counts for "hunt".
+  startScreensaver({
+    reducedMotion,
+    onWake: () => {
+      const found = recordEgg('screensaver');
+      const primary = shells.get('tty1');
+      if (found && primary) primary.print([found]);
+    },
+  });
+
   if (html.classList.contains('boot-run')) {
     const observer = new MutationObserver(() => {
       if (!html.classList.contains('boot-run')) {

@@ -88,6 +88,11 @@ assets/js/ui/shot-viewer.js
 assets/js/ui/fork-bomb.js
 assets/js/ui/backgrounds.js
 assets/js/ui/hex-float.js
+assets/js/ui/canvas-bg.js
+assets/js/ui/bg-synthwave.js
+assets/js/ui/bg-starfield.js
+assets/js/ui/bg-circuit.js
+assets/js/ui/screensaver.js
 assets/js/ui/hunt.js
 assets/js/ui/theme.js
 assets/js/ui/rm-rf.js

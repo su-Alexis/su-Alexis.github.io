@@ -2,7 +2,8 @@
 // backgrounds in data/commands.js (BACKGROUNDS). Used by ui/terminal-ui.js on every page.
 //
 // One background is selected at a time. "default" draws nothing (the grid in layout.css);
-// "hex_float" runs ui/hex-float.js. The hidden 31337 matrix rain sits on top of all of
+// the others each run a scene on ui/canvas-bg.js (hex-float.js, bg-synthwave.js,
+// bg-starfield.js, bg-circuit.js). The hidden 31337 matrix rain sits on top of all of
 // them: while it is on, the selected background is paused (the rain covers the page and
 // drawing both would waste frames), and it comes back when the rain is turned off.
 // Picking a background while the rain is on turns the rain off.
@@ -16,9 +17,17 @@ import { SESSION_KEYS } from '../core/constants.js';
 import { BACKGROUND_IDS } from '../data/commands.js';
 import { pickKnown } from '../utils/validate.js';
 import { startHexFloat } from './hex-float.js';
+import { startSynthwave } from './bg-synthwave.js';
+import { startStarfield } from './bg-starfield.js';
+import { startCircuit } from './bg-circuit.js';
 import { toggleMatrix, matrixActive } from './matrix-rain.js';
 
-const RENDERERS = Object.freeze({ hex_float: startHexFloat });
+const RENDERERS = Object.freeze({
+  hex_float: startHexFloat,
+  synthwave: startSynthwave,
+  starfield: startStarfield,
+  circuit: startCircuit,
+});
 
 let selected = 'default';
 let renderer = null;
