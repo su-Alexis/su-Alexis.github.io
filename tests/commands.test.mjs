@@ -21,7 +21,12 @@ test('every command in the metadata has a handler and runs', () => {
 
 test('help lists exactly the allowlisted commands', () => {
   const text = texts(execute('help'));
-  for (const command of COMMANDS) assert.equal(text.includes(command.usage), !command.hidden, command.name);
+  // top and htop are hidden as commands but named in btop's help line on purpose.
+  const named = new Set(['top', 'htop']);
+  for (const command of COMMANDS) {
+    if (!named.has(command.name)) assert.equal(text.includes(command.usage), !command.hidden, command.name);
+  }
+  assert.match(text, /also top, htop/);
 });
 
 test('inherited and unknown names never dispatch', () => {

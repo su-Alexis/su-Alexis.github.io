@@ -230,3 +230,75 @@ test('puzzle answers are checked by digest, fail closed, and bound their input',
   assert.equal(await matchesPuzzle(answer, []), false);
   assert.equal(await matchesPuzzle(answer, ['bad', 7]), false);
 });
+
+// ---------- ps, kill and btop ----------
+const PROCS = [
+  { pid: 1, user: 'root', name: 'init', cmd: '/sbin/init', tty: '?', cpu: 0, mem: 0.4 },
+  { pid: 300, user: 'root', name: 'hypervisord', cmd: '/usr/sbin/hypervisord', tty: '?', cpu: 0.8, mem: 3.1 },
+  { pid: 1201, user: 'visitor', name: 'bash', cmd: '-bash', tty: 'tty1', cpu: 0.1, mem: 0.6 },
+  { pid: 1202, user: 'visitor', name: 'bash', cmd: '-bash', tty: 'tty2', cpu: 0.1, mem: 0.6 },
+  { pid: 2101, user: 'visitor', name: 'hexfloat', cmd: 'bgd --scene hex_float', tty: '?', cpu: 5, mem: 1.6 },
+];
+
+test('ps shows this shell, or every process with aux, -e and -ef', () => {
+  const mine = texts(execute('ps', { processes: PROCS, nextPid: 4100, shell: 'tty2' }));
+  assert.match(mine, /1202 tty2 .* bash/);
+  assert.match(mine, /4100 tty2 .* ps/);
+  assert.doesNotMatch(mine, /1201|init/);
+  const aux = texts(execute('ps aux', { processes: PROCS }));
+  for (const proc of PROCS) assert.ok(aux.includes(proc.cmd), proc.name);
+  assert.match(texts(execute('ps -ef', { processes: PROCS })), /^UID/);
+  assert.match(texts(execute('ps -e', { processes: PROCS })), /hypervisord/);
+  const secret = 'hunter2' + 'ps';
+  const bad = execute(`ps ${secret}`, { processes: PROCS });
+  assert.ok(!texts(bad).includes(secret) && !bad.echo.includes(secret));
+});
+
+test('ps drops malformed or hostile process entries', () => {
+  const hostile = [
+    ...PROCS,
+    { pid: 'x', user: 'root', name: 'a', cmd: 'a', tty: '?' },
+    { pid: 5, user: 'admin', name: 'a', cmd: 'a', tty: '?' },
+    { pid: 6, user: 'root', name: '<img src=x>', cmd: 'a', tty: '?' },
+    { pid: 7, user: 'root', name: 'ok', cmd: 'a\u0000b', tty: '?' },
+    { pid: 1, user: 'root', name: 'dupe', cmd: 'dupe', tty: '?' },
+    Object.create({ pid: 8, user: 'root', name: 'proto', cmd: 'p', tty: '?' }),
+  ];
+  const aux = texts(execute('ps aux', { processes: hostile }));
+  assert.doesNotMatch(aux, /admin|<img|dupe|proto/);
+  assert.equal(aux.split('\n').length, PROCS.length + 2, 'header, the table and ps itself');
+  assert.equal(execute('ps aux', { processes: Array(65).fill(PROCS[0]) }).lines.length, 2, 'oversized tables are dropped');
+});
+
+test('kill sends TERM by default and KILL with -9; only root may signal root', () => {
+  assert.deepEqual({ ...execute('kill 2101', { processes: PROCS }).action }, { type: 'kill', signal: 'TERM', pids: [2101] });
+  for (const raw of ['kill -9 2101', 'kill -KILL 2101', 'kill -SIGKILL 2101', 'kill -s KILL 2101']) {
+    assert.deepEqual({ ...execute(raw, { processes: PROCS }).action }, { type: 'kill', signal: 'KILL', pids: [2101] }, raw);
+  }
+  const denied = execute('kill 1', { processes: PROCS });
+  assert.equal(denied.action, null);
+  assert.match(texts(denied), /\(1\) - Operation not permitted/);
+  assert.deepEqual({ ...execute('kill -9 1', { processes: PROCS, root: true }).action }, { type: 'kill', signal: 'KILL', pids: [1] });
+  assert.match(texts(execute('kill 4242', { processes: PROCS })), /No such process/);
+  assert.match(texts(execute('kill')), /^kill: usage/);
+  assert.match(texts(execute('kill -l')), /SIGKILL/);
+  assert.match(texts(execute('kill -HUP 2101', { processes: PROCS })), /invalid signal/);
+  const secret = 'hunter2' + 'kill';
+  for (const raw of [`kill ${secret}`, `kill -${secret} 2101`, `kill -s ${secret} 2101`]) {
+    const result = execute(raw, { processes: PROCS });
+    assert.equal(result.action, null, raw);
+    assert.ok(!texts(result).includes(secret) && !result.echo.includes(secret), raw);
+  }
+});
+
+test('btop, top and htop open the monitor; its graphs keep their size', async () => {
+  for (const raw of ['btop', 'top', 'htop']) assert.deepEqual({ ...execute(raw).action }, { type: 'btop' }, raw);
+  assert.match(texts(execute('help')), /btop/);
+  const { brailleGraph, asciiGraph } = await import('../site/assets/js/ui/btop.js');
+  for (const graph of [brailleGraph, asciiGraph]) {
+    const rows = graph([0, 0.25, 0.5, 1, 2, -1, NaN], 12, 4);
+    assert.equal(rows.length, 4);
+    assert.ok(rows.every((row) => row.length === 12));
+  }
+  assert.equal(brailleGraph([], 3, 2).join(''), String.fromCharCode(0x2800).repeat(6), 'empty is blank');
+});

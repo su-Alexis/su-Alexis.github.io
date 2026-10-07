@@ -76,6 +76,18 @@ function paint(item, tick) {
   item.last = frame;
 }
 
+// The running scrambler, for btop/ps/kill (ui/terminal-ui.js): how many tags it drives,
+// and a kill that stops it and leaves every tag showing its word.
+let mounted = null;
+
+export function scrambleProcess() {
+  return mounted ? { tags: mounted.count } : null;
+}
+
+export function killStatusScramble() {
+  if (mounted) mounted.kill();
+}
+
 export function mountStatusScramble(root = document) {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const tags = [...root.querySelectorAll('.status-tag:not(.status-ongoing):not(.status-archived)')].slice(0, MAX_TAGS);
@@ -88,9 +100,27 @@ export function mountStatusScramble(root = document) {
   const start = () => { if (!timer && !document.hidden) timer = window.setInterval(step, TICK_MS); };
   const stop = () => { window.clearInterval(timer); timer = 0; };
 
+  let killed = false;
+  const onVisibility = () => (document.hidden ? stop() : start());
+  const onShow = () => { if (!killed) start(); };
   items.forEach((item) => paint(item, tick));
-  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('pagehide', stop);
-  window.addEventListener('pageshow', start); // back/forward cache restores the page
+  window.addEventListener('pageshow', onShow); // back/forward cache restores the page
   start();
+  mounted = {
+    count: items.length,
+    kill() {
+      killed = true;
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+      // Settle on the readable word, as if the decrypt had just finished.
+      for (const item of items) {
+        item.parts.done.textContent = item.word;
+        item.parts.head.textContent = '';
+        item.parts.rest.textContent = '';
+      }
+      mounted = null;
+    },
+  };
 }

@@ -564,3 +564,66 @@
     display: none;
   }
 }
+
+/* ---------- btop (ui/btop.js) ----------
+   Rows of box-drawing text, redrawn once a second. While it runs the prompt is hidden
+   but keeps focus (is-grabbed), so every key reaches btop. */
+.term-screen {
+  margin: 0;
+  white-space: pre;
+  line-height: 1.25;
+  cursor: default;
+  user-select: none;
+}
+
+.term-probe {
+  position: absolute;
+  visibility: hidden;
+}
+
+.btop-row {
+  min-height: 1.25em;
+}
+
+.b-line {
+  color: var(--color-accent);
+  opacity: 0.7;
+}
+
+.b-title {
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.b-key {
+  color: var(--color-accent);
+}
+
+.b-dim {
+  color: var(--color-text-faint);
+}
+
+.b-ok {
+  color: var(--color-ok);
+}
+
+.b-warn {
+  color: var(--color-warn);
+}
+
+.b-err {
+  color: var(--color-error);
+}
+
+.b-sel {
+  background: rgba(79, 209, 224, 0.22);
+  color: var(--color-heading);
+}
+
+.is-grabbed .term-input-line {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}

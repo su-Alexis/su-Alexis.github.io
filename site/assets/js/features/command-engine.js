@@ -6,7 +6,7 @@
 // the DOM, the network, storage, or browser navigation; the UI applies actions.
 // Error messages never repeat what the visitor typed.
 
-import { parseCommand, knownId, pickKnown, hasControlChars } from '../utils/validate.js';
+import { parseCommand, knownId, pickKnown, hasControlChars, isPlainObject, ownField } from '../utils/validate.js';
 import { COMMANDS, MODULES, PROJECTS, PAGES, PAGE_IDS, BACKGROUNDS, BACKGROUND_IDS, THEMES, THEME_IDS, EGGS, EGG_IDS } from '../data/commands.js';
 import { FILES, MANUAL, CHANGELOG, CERT_ROWS } from '../data/shell-text.js';
 import { LIMITS, TERMINAL_USER, TERMINAL_HOST, SHELL_IDS } from '../core/constants.js';
@@ -38,6 +38,8 @@ const ARG_SETS = new Map([
   ['themes', THEME_IDS], ['hunt', ['reset']], ['git', ['log']], ['files', FILE_NAMES],
   ['manpages', VISIBLE.map((command) => command.name)],
 ]);
+// ps views (options start with a dash, so they are matched here, not as identifiers).
+const PS_MODES = new Set(['aux', 'ax', '-aux', '-e', '-A', '-ef']);
 // help's usage column fits the longest visible usage.
 const HELP_WIDTH = Math.max(...VISIBLE.map((command) => command.usage.length)) + 2;
 // "sudo rm -rf" is matched against fixed flags and targets only (doctrine section 7).
@@ -157,6 +159,39 @@ function elevate(via, inner, shellEcho) {
   const echo = shellEcho || (inner === 'unknown' ? `${via} (arguments not kept)` : `${via} ${inner}`);
   return { lines: [], action: Object.freeze({ type: 'sudo', via, inner }), echo };
 }
+
+// ---------- Processes (ps, kill, btop) ----------
+// The process table comes from the UI (ui/terminal-ui.js lists what is really running:
+// shells, the background, the screensaver...). It is still checked here, field by field.
+const PROCESS_NAME = /^[a-z0-9][a-z0-9:/._-]{0,23}$/;
+const PROCESS_TTY = /^(?:tty[1-3]|\?)$/;
+const MAX_PROCESSES = 64;
+
+function cleanProcesses(value) {
+  if (!Array.isArray(value) || value.length > MAX_PROCESSES) return [];
+  const seen = new Set();
+  const list = [];
+  for (const entry of value) {
+    if (!isPlainObject(entry)) continue;
+    // Own fields only: nothing inherited through a prototype is trusted.
+    const [pid, user, name, cmd, tty, cpu, mem] = ['pid', 'user', 'name', 'cmd', 'tty', 'cpu', 'mem'].map((key) => ownField(entry, key));
+    if (!Number.isInteger(pid) || pid < 1 || pid > 9999999 || seen.has(pid)) continue;
+    if ((user !== 'root' && user !== 'visitor') || typeof name !== 'string' || !PROCESS_NAME.test(name)) continue;
+    if (typeof cmd !== 'string' || cmd.length > 64 || hasControlChars(cmd) || typeof tty !== 'string' || !PROCESS_TTY.test(tty)) continue;
+    const percent = (n) => (typeof n === 'number' && Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0);
+    seen.add(pid);
+    list.push({ pid, user, name, cmd, tty, cpu: percent(cpu), mem: percent(mem) });
+  }
+  return list;
+}
+
+// Signals kill understands: the two that matter here, by number or name.
+const SIGNALS = new Map([['9', 'KILL'], ['KILL', 'KILL'], ['SIGKILL', 'KILL'], ['15', 'TERM'], ['TERM', 'TERM'], ['SIGTERM', 'TERM']]);
+const SIGNAL_NUMBER = Object.freeze({ KILL: 9, TERM: 15 });
+const KILL_USAGE = 'kill: usage: kill [-s sigspec | -n signum | -sigspec] pid ... or kill -l [sigspec]';
+const PID_ARG = /^[0-9]{1,7}$/;
+
+const psTime = (proc) => (proc.cpu > 3 ? '00:00:01' : '00:00:00');
 
 // What a rejected argument says, per argument set. Never repeats the argument.
 const ARG_ERRORS = Object.freeze({
@@ -381,6 +416,69 @@ const HANDLERS = new Map([
       echo: args.length ? 'rm (arguments not kept)' : 'rm',
     };
   }],
+  // ps: the real process table (context.processes). Bare ps shows this shell's bash
+  // and ps itself, as on Linux; aux, -e and -ef show everything.
+  ['ps', ([mode], context) => {
+    if (mode !== undefined && !PS_MODES.has(mode)) {
+      return { lines: [err('ps: error: unsupported option. Try ps, ps aux, ps -e or ps -ef.')], echo: 'ps (arguments not kept)' };
+    }
+    const procs = context.processes;
+    const self = { pid: context.nextPid, user: context.root ? 'root' : TERMINAL_USER, name: 'ps', cmd: mode ? `ps ${mode}` : 'ps', tty: context.shell, cpu: 0, mem: 0.1 };
+    if (mode === undefined) {
+      const mine = [...procs.filter((proc) => proc.tty === context.shell && proc.name === 'bash'), self];
+      return { lines: [out('    PID TTY          TIME CMD'), ...mine.map((proc) => out(`${String(proc.pid).padStart(7)} ${pad(proc.tty, 8)} ${psTime(proc)} ${proc.name}`))] };
+    }
+    const all = [...procs, self];
+    if (mode === '-e' || mode === '-A') {
+      return { lines: [out('    PID TTY          TIME CMD'), ...all.map((proc) => out(`${String(proc.pid).padStart(7)} ${pad(proc.tty, 8)} ${psTime(proc)} ${proc.name}`))] };
+    }
+    if (mode === '-ef') {
+      return { lines: [out('UID          PID    PPID  C TTY          TIME CMD'), ...all.map((proc) => out(`${pad(proc.user, 8)} ${String(proc.pid).padStart(7)} ${String(proc.pid === 1 ? 0 : 1).padStart(7)} ${String(Math.round(proc.cpu)).padStart(2)} ${pad(proc.tty, 8)} ${psTime(proc)} ${proc.cmd}`))] };
+    }
+    return {
+      lines: [
+        out('USER         PID %CPU %MEM TTY      STAT COMMAND'),
+        ...all.map((proc) => out(`${pad(proc.user, 8)} ${String(proc.pid).padStart(7)} ${proc.cpu.toFixed(1).padStart(4)} ${proc.mem.toFixed(1).padStart(4)} ${pad(proc.tty, 8)} ${proc.cpu > 3 ? 'R' : 'S'}    ${proc.cmd}`)),
+      ],
+    };
+  }],
+  // kill, as bash's builtin: SIGTERM by default, -9 for SIGKILL, -l lists signals. Only
+  // root may signal root's processes. Free arguments: only PIDs and fixed signal names are
+  // accepted, and errors never repeat what was typed. The UI applies the signal.
+  ['kill', (args, context) => {
+    if (args.length === 0) return { lines: [out(KILL_USAGE)], echo: 'kill' };
+    if (args[0] === '-l' || args[0] === '-L') {
+      return { lines: [out(' 1) SIGHUP       2) SIGINT       3) SIGQUIT      9) SIGKILL'), out('15) SIGTERM     18) SIGCONT     19) SIGSTOP')], echo: 'kill -l' };
+    }
+    let signal = 'TERM';
+    let rest = args;
+    if (args[0] === '-s' || args[0] === '-n') {
+      signal = SIGNALS.get((args[1] || '').toUpperCase());
+      rest = args.slice(2);
+    } else if (args[0].startsWith('-')) {
+      signal = SIGNALS.get(args[0].slice(1).toUpperCase());
+      rest = args.slice(1);
+    }
+    if (!signal) return { lines: [err('bash: kill: invalid signal specification')], echo: 'kill (arguments not kept)' };
+    if (rest.length === 0) return { lines: [out(KILL_USAGE)], echo: `kill -${SIGNAL_NUMBER[signal]}` };
+    if (!rest.every((arg) => PID_ARG.test(arg))) {
+      return { lines: [err('bash: kill: arguments must be process or job IDs')], echo: 'kill (arguments not kept)' };
+    }
+    const lines = [];
+    const pids = [];
+    for (const pid of rest.map(Number)) {
+      const proc = context.processes.find((p) => p.pid === pid);
+      if (!proc) lines.push(err('bash: kill: No such process'));
+      else if (proc.user === 'root' && !context.root) lines.push(err(`bash: kill: (${pid}) - Operation not permitted`));
+      else pids.push(pid);
+    }
+    const echo = ['kill', ...(signal === 'TERM' ? [] : [`-${SIGNAL_NUMBER[signal]}`]), ...rest.map(Number)].join(' ');
+    return { lines, action: pids.length ? Object.freeze({ type: 'kill', signal, pids: Object.freeze(pids) }) : null, echo };
+  }],
+  // btop, and top/htop which open it too: a live process monitor (ui/btop.js).
+  ['btop', () => ({ lines: [], action: Object.freeze({ type: 'btop' }) })],
+  ['top', () => ({ lines: [], action: Object.freeze({ type: 'btop' }) })],
+  ['htop', () => ({ lines: [], action: Object.freeze({ type: 'btop' }) })],
   ['spawn', () => ({ lines: [ok('spawning a new shell...')], action: Object.freeze({ type: 'spawn' }) })],
   // As root, exit leaves the root shell first, as it would after "sudo su".
   ['exit', (args, context) => {
@@ -443,6 +541,9 @@ export function execute(raw, context = {}) {
     now: typeof ctx.now === 'number' && Number.isFinite(ctx.now) ? ctx.now : Date.now(),
     // Cosmetic only: changes the prompt, whoami and what rm does to the page.
     root: ctx.root === true,
+    processes: cleanProcesses(ctx.processes),
+    // The PID ps itself would get.
+    nextPid: Number.isInteger(ctx.nextPid) && ctx.nextPid > 0 && ctx.nextPid < 9999999 ? ctx.nextPid : 4000,
   };
   const result = handler(args, handlerContext);
   if (result.invalid) return { lines: result.lines, action: null, recognized: true, valid: false, echo: null };

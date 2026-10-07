@@ -84,6 +84,8 @@ export const SESSION_KEYS = Object.freeze({
   // When sudo last accepted the password (ms since the epoch): like real sudo it does not
   // ask again for a while (SUDO_REMEMBER_MS in ui/terminal-ui.js). Cleared with the session.
   sudoAt: `${STORAGE_PREFIX}sudo-at`,
+  // The screensaver was killed (btop or kill): it stays off until a refresh or reboot.
+  noScreensaver: `${STORAGE_PREFIX}no-screensaver`,
 });
 
 // Hosts that reviewed external links may point to (https only). Doctrine section 12.

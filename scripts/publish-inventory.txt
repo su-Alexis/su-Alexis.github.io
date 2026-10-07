@@ -95,6 +95,7 @@ assets/js/ui/bg-circuit.js
 assets/js/ui/screensaver.js
 assets/js/data/puzzles.js
 assets/js/features/puzzles.js
+assets/js/ui/btop.js
 assets/js/ui/hunt.js
 assets/js/ui/theme.js
 assets/js/ui/rm-rf.js

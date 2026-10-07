@@ -174,6 +174,9 @@ export const MANUAL = Object.freeze({
   clear: ['Clears this shell. Ctrl+L does the same.'],
   background: ['With no name, lists the page backgrounds and marks the current one. With a', 'name, switches to it. Your pick follows you between pages until a refresh.'],
   theme: ['With no name, lists the color themes and marks the current one. With a name,', 'switches to it: cyan, amber, green or purple. Lasts until a refresh.'],
+  ps: ['With no options, lists the processes on this shell. ps aux lists every process with', 'its user, CPU and memory; ps -e and ps -ef are the other usual views. The processes', 'are real: the shells, the background, the screensaver and so on.'],
+  kill: ['Sends a signal to a process by its PID (see ps). The default is SIGTERM (15),', 'which a process may ignore; interactive bash does. -9 sends SIGKILL, which it cannot.', "Only root may signal root's processes. kill -l lists the signals."],
+  btop: ['A live process monitor: CPU graph, memory, network and the process list, updated', 'every second. Up and Down select a process, t sends it SIGTERM and k sends SIGKILL', '(each asks first), q quits. top and htop open it too.'],
   hunt: ['Shows the easter eggs you have found, with hints for the rest. Progress is', 'kept in this browser, even across reboots. hunt reset hides them again.'],
   spawn: ['Opens another shell window, up to three in all. Each one keeps its own', 'history as you move between pages.'],
   exit: ['Closes a spawned shell. tty1 is the login shell and stays open.'],
@@ -184,6 +187,9 @@ export const MANUAL = Object.freeze({
 // Hashes are cosmetic. Messages describe real milestones of the build.
 
 export const CHANGELOG = Object.freeze([
+  ['c41d7b2', 'feat: btop, ps and kill, with real processes and Linux signals'],
+  ['7f7ec5f', 'fix: sudo and su behave as they do on Linux'],
+  ['253e93d', 'feat: neofetch shows the wafflesOS logo'],
   ['e41a9c7', 'feat: idle screensaver, with a CRT power-off and power-on'],
   ['b07d2f1', 'feat: color themes and three more backgrounds'],
   ['5c9e310', 'feat: neofetch, cat, man, history, uptime and git log'],

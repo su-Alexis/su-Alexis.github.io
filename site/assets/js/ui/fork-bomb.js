@@ -39,7 +39,8 @@ function setStatusChips(cpu, procs) {
   chips[2].textContent = 'User fork()';
 }
 
-function stopScreen(still) {
+// stopCode and advice: what the stop screen reports (the fork bomb, or a killed process).
+function stopScreen(still, stopCode = 'FORK_BOMB_DETECTED', advice = 'stop running fork bombs on portfolios') {
   const percent = el('span', { className: 'bsod-percent', text: still ? '100' : '0' });
   const screen = el('div', { className: 'bsod', attrs: { role: 'alert', 'aria-live': 'assertive' } }, [
     el('div', { className: 'bsod-inner' }, [
@@ -47,9 +48,9 @@ function stopScreen(still) {
       el('p', { className: 'bsod-title', text: 'Your portfolio ran into a problem and needs to restart. We\'re just collecting some error info, and then we\'ll restart for you.' }),
       el('p', { className: 'bsod-progress' }, [percent, '% complete']),
       el('div', { className: 'bsod-details' }, [
-        el('p', { text: 'For more information about this issue and possible fixes, stop running fork bombs on portfolios.' }),
+        el('p', { text: `For more information about this issue and possible fixes, ${advice}.` }),
         el('p', { text: 'If you call a support person, give them this info:' }),
-        el('p', { text: 'Stop code: FORK_BOMB_DETECTED' }),
+        el('p', { text: `Stop code: ${stopCode}` }),
         el('p', { text: 'What failed: wafflesOS.sys' }),
       ]),
       el('p', { className: 'bsod-hint', text: 'Press Esc to restart now' }),
@@ -57,6 +58,51 @@ function stopScreen(still) {
   ]);
   document.body.appendChild(screen);
   return percent;
+}
+
+// Switches the screen off like a CRT, then reboots (the end of every crash, and a
+// graceful shutdown on its own). Also used by "kill" on the hypervisor (ui/terminal-ui.js).
+export function powerOffAndReboot({ reboot, reducedMotion = false }) {
+  if (!document.querySelector('.bsod')) stopScreen(true);
+  const html = document.documentElement;
+  html.classList.remove('fork-bomb', 'fork-bomb-critical');
+  html.classList.add('power-off');
+  window.setTimeout(reboot, reducedMotion ? 0 : POWER_OFF_MS);
+}
+
+// The crash on its own, without the bomb: the stop screen counts to 100%, then the power
+// goes off and the machine reboots. Escape skips ahead. Used when a visitor SIGKILLs the
+// hypervisor from btop or kill.
+export function crashAndReboot({ stopCode, advice, reboot, reducedMotion = false }) {
+  if (running) return;
+  running = true;
+  const timers = [];
+  const later = (fn, ms) => timers.push(window.setTimeout(fn, ms));
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    for (const t of timers) window.clearTimeout(t);
+    document.removeEventListener('keydown', onKey, true);
+    powerOffAndReboot({ reboot, reducedMotion });
+  };
+  const onKey = (event) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    finish();
+  };
+  document.addEventListener('keydown', onKey, true);
+  const percent = stopScreen(reducedMotion, stopCode, advice);
+  if (reducedMotion) {
+    later(finish, STILL_CRASH_MS);
+    return;
+  }
+  const steps = 20;
+  for (let s = 1; s <= steps; s += 1) {
+    later(() => { percent.textContent = String(Math.round((s / steps) * 100)); }, (CRASH_MS - 600) * (s / steps));
+  }
+  later(finish, CRASH_MS);
 }
 
 // shell: the shell api that ran the command (print, live, setBusy).

@@ -16,17 +16,19 @@ import { el, byId } from '../utils/dom.js';
 import { execute, complete } from '../features/command-engine.js';
 import { sessionStore, readJson, writeJson, removeKey } from '../core/storage.js';
 import { restoreTerminalState, appendLines, clampWindow, defaultShell, nextShellId, fitToBudget } from '../core/state.js';
-import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WINDOW, SESSION_KEYS } from '../core/constants.js';
+import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WINDOW, SESSION_KEYS, SHELL_IDS } from '../core/constants.js';
 import { PAGES, PAGE_IDS } from '../data/commands.js';
 import { pickKnown } from '../utils/validate.js';
 import { playHello } from './hello-animation.js';
-import { resumeMatrix } from './matrix-rain.js';
+import { resumeMatrix, matrixActive } from './matrix-rain.js';
 import { resumeBackground, setBackground, currentBackground, toggleMatrixBackground } from './backgrounds.js';
-import { runForkBomb } from './fork-bomb.js';
+import { runForkBomb, crashAndReboot, powerOffAndReboot } from './fork-bomb.js';
+import { runBtop } from './btop.js';
+import { scrambleProcess, killStatusScramble } from './status-scramble.js';
 import { runRmRf } from './rm-rf.js';
 import { foundEggs, recordEgg, resetHunt } from './hunt.js';
 import { resumeTheme, setTheme, currentTheme } from './theme.js';
-import { startScreensaver } from './screensaver.js';
+import { startScreensaver, screensaverRunning, killScreensaver } from './screensaver.js';
 import { matchesPuzzle } from '../features/puzzles.js';
 import { PUZZLES } from '../data/puzzles.js';
 
@@ -113,6 +115,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.bootedAt);
     removeKey(store, SESSION_KEYS.root);
     removeKey(store, SESSION_KEYS.sudoAt);
+    removeKey(store, SESSION_KEYS.noScreensaver);
   }
   // The machine's boot time, for uptime and neofetch: set once per machine start.
   const bootedAt = (() => {
@@ -223,6 +226,126 @@ export function mountTerminal(primaryRoot) {
     writeJson(store, SESSION_KEYS.sudoAt, Date.now());
   }
 
+  // ---------- Processes: ps, kill and btop (owner request) ----------
+  // The process table lists what is really running on this page, so killing a process
+  // does what it says. Linux rules apply: init and kernel threads ignore signals; only
+  // root may signal root's processes; interactive bash ignores SIGTERM but not SIGKILL;
+  // a killed system daemon (cspd) is respawned with a new PID. Killing the hypervisor
+  // shuts the machine down (SIGTERM) or crashes it (SIGKILL), then it reboots.
+  // CPU and memory figures are estimates; ui/btop.js measures the frame rate itself.
+  let cspPid = 333;
+  let nextPid = 4000 + Math.floor(Math.random() * 400);
+  let btop = null; // { pid, shellId, quit }
+  const BG_PROCESS = Object.freeze({ hex_float: 'hexfloat', synthwave: 'synthwave', starfield: 'starfield', circuit: 'circuit' });
+  const est = (base, spread) => Math.round(Math.max(0, base + (Math.random() - 0.5) * spread) * 10) / 10;
+
+  function processTable() {
+    const list = [
+      { pid: 1, user: 'root', name: 'init', cmd: '/sbin/init', tty: '?', cpu: 0, mem: 0.4, kind: 'init' },
+      { pid: 2, user: 'root', name: 'kthreadd', cmd: '[kthreadd]', tty: '?', cpu: 0, mem: 0, kind: 'kernel' },
+      { pid: 14, user: 'root', name: 'kworker/0:1', cmd: '[kworker/0:1-events]', tty: '?', cpu: est(0.2, 0.3), mem: 0, kind: 'kernel' },
+      { pid: 300, user: 'root', name: 'hypervisord', cmd: '/usr/sbin/hypervisord --vm wafflesOS', tty: '?', cpu: est(0.8, 0.6), mem: 3.1, kind: 'hypervisor' },
+      { pid: cspPid, user: 'root', name: 'cspd', cmd: '/usr/sbin/cspd --policy strict', tty: '?', cpu: 0, mem: 0.3, kind: 'csp' },
+    ];
+    for (const shellState of state.shells) {
+      list.push({
+        pid: 1201 + SHELL_IDS.indexOf(shellState.id), user: isRoot ? 'root' : TERMINAL_USER, name: 'bash', cmd: '-bash',
+        tty: shellState.id, cpu: est(0.1, 0.1), mem: 0.6, kind: 'shell', target: shellState.id,
+      });
+    }
+    const background = currentBackground();
+    if (matrixActive()) list.push({ pid: 2102, user: TERMINAL_USER, name: 'cmatrix', cmd: 'cmatrix -b', tty: '?', cpu: est(7, 2), mem: 1.1, kind: 'matrix' });
+    else if (Object.hasOwn(BG_PROCESS, background)) {
+      list.push({ pid: 2101, user: TERMINAL_USER, name: BG_PROCESS[background], cmd: `bgd --scene ${background}`, tty: '?', cpu: est(5, 2), mem: 1.6, kind: 'background' });
+    }
+    if (screensaverRunning()) {
+      const awake = !document.querySelector('.screensaver');
+      list.push({ pid: 2201, user: TERMINAL_USER, name: 'xscreensaver', cmd: 'xscreensaver -no-splash', tty: '?', cpu: awake ? 0 : est(6, 2), mem: 0.9, kind: 'screensaver' });
+    }
+    const scramble = scrambleProcess();
+    if (scramble) list.push({ pid: 2301, user: TERMINAL_USER, name: 'statusd', cmd: `statusd --tags ${scramble.tags}`, tty: '?', cpu: est(0.4 * scramble.tags, 0.3), mem: 0.2, kind: 'scramble' });
+    if (btop) list.push({ pid: btop.pid, user: TERMINAL_USER, name: 'btop', cmd: 'btop', tty: btop.shellId, cpu: est(1.2, 0.6), mem: 0.8, kind: 'btop' });
+    return list;
+  }
+
+  // What the engine and btop see: the table without the internal fields.
+  const publicTable = () => processTable().map(({ pid, user, name, cmd, tty, cpu, mem }) => ({ pid, user, name, cmd, tty, cpu, mem }));
+
+  // Sends a signal. Returns an error message, or null when the signal was delivered
+  // (which includes being ignored, as init, kernel threads and bash do with some).
+  function signalProcess(pid, signal) {
+    const proc = processTable().find((p) => p.pid === pid);
+    if (!proc) return 'No such process';
+    if (proc.user === 'root' && !isRoot) return 'Operation not permitted';
+    const home = () => reboot({ home: true });
+    switch (proc.kind) {
+      case 'hypervisor':
+        if (signal === 'KILL') {
+          crashAndReboot({ stopCode: 'HYPERVISOR_KILLED', advice: 'let the hypervisor shut down on its own instead of SIGKILLing it', reboot: home, reducedMotion });
+        } else {
+          const primary = shells.get('tty1');
+          if (primary) primary.print([{ kind: 'out', text: 'hypervisord: caught SIGTERM, shutting down wafflesOS...' }]);
+          window.setTimeout(() => powerOffAndReboot({ reboot: home, reducedMotion }), 900);
+        }
+        break;
+      case 'csp':
+        // A system daemon: init starts it again straight away, under a new PID.
+        cspPid += 1 + Math.floor(Math.random() * 40);
+        break;
+      case 'shell':
+        if (signal !== 'KILL') break; // interactive bash ignores SIGTERM
+        if (proc.target === 'tty1') {
+          // The login shell died: getty logs the visitor in again on a fresh tty1.
+          if (isRoot) setRoot(false);
+          const primary = shells.get('tty1');
+          if (primary) primary.relogin();
+        } else {
+          close(proc.target);
+        }
+        break;
+      case 'background':
+        setBackground('default', { reducedMotion });
+        break;
+      case 'matrix':
+        toggleMatrixBackground({ reducedMotion });
+        break;
+      case 'screensaver':
+        killScreensaver();
+        break;
+      case 'scramble':
+        killStatusScramble();
+        break;
+      case 'btop':
+        if (btop) btop.quit();
+        break;
+      default:
+        break; // init and kernel threads ignore signals from user space
+    }
+    return null;
+  }
+
+  // btop opens in a big new shell window (like hello world), or here when all are open.
+  function openBtop(from) {
+    if (btop) {
+      from.print([{ kind: 'err', text: 'btop: already running. Press q in its window to quit it.' }]);
+      return;
+    }
+    const fresh = spawn(from, { quiet: true });
+    const host = fresh || from;
+    if (fresh) fresh.resize(Math.min(1000, window.innerWidth - 40), Math.min(680, window.innerHeight - 110));
+    const pid = nextPid;
+    nextPid += 1;
+    btop = { pid, shellId: host.id, quit: () => {} };
+    const handle = runBtop({
+      shell: host,
+      processes: publicTable,
+      kill: (target, signal) => signalProcess(target, signal),
+      uptime: () => (Date.now() - bootedAt) / 1000,
+      onExit: () => { btop = null; },
+    });
+    if (btop) btop.quit = handle.quit;
+  }
+
   function showUser() {
     const chips = document.querySelectorAll('.topbar .status li');
     if (chips.length >= 3) chips[2].textContent = `User ${isRoot ? 'root' : TERMINAL_USER}`;
@@ -277,6 +400,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.bootedAt);
     removeKey(store, SESSION_KEYS.root);
     removeKey(store, SESSION_KEYS.sudoAt);
+    removeKey(store, SESSION_KEYS.noScreensaver);
     for (const shell of shells.values()) shell.disable();
     window.setTimeout(() => {
       try {
@@ -597,11 +721,14 @@ export function mountTerminal(primaryRoot) {
         uptime: (Date.now() - bootedAt) / 1000,
         now: Date.now(),
         root: isRoot,
+        processes: publicTable(),
+        nextPid,
       };
     }
 
     function run(raw) {
       const result = execute(raw, context());
+      nextPid += 1; // every command line gets the next PID, as ps shows
       if (raw.trim().length === 0 && result.lines.length === 0) {
         print([cmdLine('')]);
         return;
@@ -655,6 +782,13 @@ export function mountTerminal(primaryRoot) {
       else if (action.type === 'sudo') sudo(action.inner, action.via === 'su' ? 'su' : 'sudo');
       else if (action.type === 'unroot') setRoot(false);
       else if (action.type === 'sudo-forget') removeKey(store, SESSION_KEYS.sudoAt);
+      else if (action.type === 'btop') openBtop(api);
+      else if (action.type === 'kill') {
+        for (const pid of action.pids) {
+          const error = signalProcess(pid, action.signal);
+          if (error) print([{ kind: 'err', text: `bash: kill: (${pid}) - ${error}` }]);
+        }
+      }
       else if (action.type === 'forkbomb') {
         runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
       }
@@ -747,6 +881,11 @@ export function mountTerminal(primaryRoot) {
     }
 
     listen(input, 'keydown', (event) => {
+      // A full-screen program (btop) gets every key while it runs.
+      if (grabbed) {
+        grabbed.onKey(event);
+        return;
+      }
       if (pendingSudo) {
         if (event.key === 'Enter') {
           event.preventDefault();
@@ -820,7 +959,76 @@ export function mountTerminal(primaryRoot) {
       return node;
     }
 
+    // ---------- Full-screen programs (btop) ----------
+    // grab() sends every key to the program instead of the prompt (which hides but keeps
+    // focus); screen() is a block of rows the program redraws; metrics() is how many
+    // characters fit. The program's text still renders only through el(), as text.
+    let grabbed = null;
+    let charBox = null;
+    function grab(onKey, onPick) {
+      grabbed = { onKey, onPick };
+      input.value = '';
+      root.classList.add('is-grabbed');
+      updateMirror();
+      return () => {
+        grabbed = null;
+        root.classList.remove('is-grabbed');
+        window.requestAnimationFrame(scrollToEnd);
+      };
+    }
+    function screen() {
+      const node = el('div', { className: 'term-screen', attrs: { role: 'img', 'aria-label': 'btop process monitor. Up and Down select a process, t terminates it, k kills it, q quits.' } });
+      output.appendChild(node);
+      let pickPids = [];
+      let pickStart = 0;
+      node.addEventListener('click', (event) => {
+        const row = event.target.closest('.btop-row');
+        const index = row ? [...node.children].indexOf(row) - pickStart : -1;
+        if (grabbed && grabbed.onPick && index >= 0 && index < pickPids.length) grabbed.onPick(pickPids[index]);
+        input.focus({ preventScroll: true });
+      });
+      return {
+        // rows: [[className, text], ...] per row. pids/start: which rows are processes.
+        set(rows, pids = [], start = 0) {
+          node.replaceChildren(...rows.map((row) => el('div', { className: 'btop-row' }, row.map(([cls, text]) => el('span', { className: cls, text })))));
+          pickPids = pids;
+          pickStart = start;
+          scrollToEnd();
+        },
+        remove() {
+          node.remove();
+        },
+      };
+    }
+    function metrics() {
+      if (!charBox) {
+        const probe = el('span', { className: 'term-screen term-probe', text: 'MMMMMMMMMM' });
+        const braille = el('span', { className: 'term-screen term-probe', text: String.fromCharCode(0x28ff).repeat(10) });
+        body.append(probe, braille);
+        const a = probe.getBoundingClientRect();
+        const b = braille.getBoundingClientRect();
+        charBox = { w: a.width / 10 || 8, h: a.height || 18, braille: Math.abs(b.width - a.width) < a.width * 0.02 };
+        probe.remove();
+        braille.remove();
+      }
+      const style = window.getComputedStyle(body);
+      const width = body.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const height = body.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      return { cols: Math.floor(width / charBox.w) - 1, rows: Math.floor(height / charBox.h) - 1, braille: charBox.braille };
+    }
+
     const api = {
+      id,
+      grab,
+      screen,
+      metrics,
+      // The login shell was killed: start a fresh session on this tty.
+      relogin() {
+        output.replaceChildren();
+        if (log && log.isConnected) log.remove();
+        shellState.transcript = [];
+        print([{ kind: 'ok', text: `[ ok ] ${id}: session restarted (login respawned by getty)` }]);
+      },
       root,
       print,
       refreshPrompt,

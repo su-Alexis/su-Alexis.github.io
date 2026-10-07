@@ -13,6 +13,8 @@
 // Reduced motion: no shutters and no bouncing; the logo sits still in the middle.
 
 import { el } from '../utils/dom.js';
+import { sessionStore, readJson, writeJson } from '../core/storage.js';
+import { SESSION_KEYS } from '../core/constants.js';
 
 const IDLE_MS = 120000;
 const CLOSE_MS = 750; // shutters close, line collapses (terminal.css, ss-close)
@@ -24,10 +26,23 @@ const ACTIVITY = ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'
 const BUSY = ['boot-run', 'fork-bomb', 'power-off'];
 
 let started = false;
+let killed = false;
+
+// For btop/ps/kill (ui/terminal-ui.js): the screensaver shows as a process until killed.
+// A kill keeps it off on every page until a refresh or reboot (SESSION_KEYS.noScreensaver).
+export function screensaverRunning() {
+  return started && !killed;
+}
+
+export function killScreensaver() {
+  killed = true;
+  writeJson(sessionStore(), SESSION_KEYS.noScreensaver, true);
+}
 
 export function startScreensaver({ reducedMotion = false, onWake = () => {} } = {}) {
   if (started) return;
   started = true;
+  if (readJson(sessionStore(), SESSION_KEYS.noScreensaver) === true) killed = true;
   const root = document.documentElement;
   let last = performance.now();
   let timer = 0;
@@ -46,7 +61,7 @@ export function startScreensaver({ reducedMotion = false, onWake = () => {} } = 
   }
 
   function check() {
-    if (phase !== 'idle') return;
+    if (phase !== 'idle' || killed) return;
     if (performance.now() - last < IDLE_MS) return schedule();
     if (busy()) {
       last = performance.now();

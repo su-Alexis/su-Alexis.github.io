@@ -83,6 +83,9 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'whoami', usage: 'whoami', description: 'print the current user', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'neofetch', usage: 'neofetch', description: 'show system information', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'uptime', usage: 'uptime', description: 'how long the machine has been up', args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'ps', usage: 'ps [aux|-e|-ef]', description: 'list processes', args: Object.freeze({ min: 0, max: 1, free: true }) }),
+  Object.freeze({ name: 'kill', usage: 'kill [-9|-15] <pid>', description: 'send a signal to a process', args: Object.freeze({ min: 0, max: 5, free: true }) }),
+  Object.freeze({ name: 'btop', usage: 'btop', description: 'process monitor (also top, htop)', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'history', usage: 'history', description: 'list the commands run in this shell', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'man', usage: 'man <command>', description: 'read the manual for a command', args: Object.freeze({ min: 0, max: 1, oneOf: 'manpages' }) }),
   Object.freeze({ name: 'git', usage: 'git log', description: "show this site's history", args: Object.freeze({ min: 1, max: 1, oneOf: 'git' }) }),
@@ -95,6 +98,9 @@ export const COMMANDS = Object.freeze([
   // Easter egg: hidden from help and Tab completion.
   Object.freeze({ name: 'hello', usage: 'hello world', description: 'say hello', hidden: true, args: Object.freeze({ min: 0, max: 1, oneOf: 'greeting', caseless: true }) }),
   // Easter egg: typing "31337" runs this (alias in command-engine.js). Hidden from help.
+  // top and htop open btop, as the help line says; listed there, not on their own.
+  Object.freeze({ name: 'top', usage: 'top', description: 'process monitor', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
+  Object.freeze({ name: 'htop', usage: 'htop', description: 'process monitor', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'leet', usage: '31337', description: 'toggle the matrix', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
   // Easter egg: the bash fork bomb ":(){ :|:& };:" runs this (matched in command-engine.js).
   Object.freeze({ name: 'forkbomb', usage: ':(){ :|:& };:', description: 'crash the machine', hidden: true, args: Object.freeze({ min: 0, max: 0 }) }),
