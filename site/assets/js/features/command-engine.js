@@ -416,8 +416,9 @@ const HANDLERS = new Map([
       echo: args.length ? 'rm (arguments not kept)' : 'rm',
     };
   }],
-  // ps: the real process table (context.processes). Bare ps shows this shell's bash
-  // and ps itself, as on Linux; aux, -e and -ef show everything.
+  // ps: the real process table (context.processes). Bare ps shows only the processes on
+  // this shell's terminal (its bash, btop if it runs here, ps itself), as on Linux; aux,
+  // -e and -ef show everything, the same list btop shows.
   ['ps', ([mode], context) => {
     if (mode !== undefined && !PS_MODES.has(mode)) {
       return { lines: [err('ps: error: unsupported option. Try ps, ps aux, ps -e or ps -ef.')], echo: 'ps (arguments not kept)' };
@@ -425,7 +426,7 @@ const HANDLERS = new Map([
     const procs = context.processes;
     const self = { pid: context.nextPid, user: context.root ? 'root' : TERMINAL_USER, name: 'ps', cmd: mode ? `ps ${mode}` : 'ps', tty: context.shell, cpu: 0, mem: 0.1 };
     if (mode === undefined) {
-      const mine = [...procs.filter((proc) => proc.tty === context.shell && proc.name === 'bash'), self];
+      const mine = [...procs.filter((proc) => proc.tty === context.shell), self];
       return { lines: [out('    PID TTY          TIME CMD'), ...mine.map((proc) => out(`${String(proc.pid).padStart(7)} ${pad(proc.tty, 8)} ${psTime(proc)} ${proc.name}`))] };
     }
     const all = [...procs, self];

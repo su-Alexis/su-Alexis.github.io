@@ -245,6 +245,10 @@ test('ps shows this shell, or every process with aux, -e and -ef', () => {
   assert.match(mine, /1202 tty2 .* bash/);
   assert.match(mine, /4100 tty2 .* ps/);
   assert.doesNotMatch(mine, /1201|init/);
+  // Everything on this terminal, btop included, and nothing from elsewhere.
+  const withBtop = texts(execute('ps', { processes: [...PROCS, { pid: 4300, user: 'visitor', name: 'btop', cmd: 'btop', tty: 'tty2', cpu: 1, mem: 0.8 }], nextPid: 4301, shell: 'tty2' }));
+  assert.match(withBtop, /4300 tty2 .* btop/);
+  assert.doesNotMatch(withBtop, /hexfloat/);
   const aux = texts(execute('ps aux', { processes: PROCS }));
   for (const proc of PROCS) assert.ok(aux.includes(proc.cmd), proc.name);
   assert.match(texts(execute('ps -ef', { processes: PROCS })), /^UID/);
