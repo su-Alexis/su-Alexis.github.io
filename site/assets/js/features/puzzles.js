@@ -1,4 +1,5 @@
-// Checks a typed puzzle answer against a stored SHA-256 digest (data/puzzles.js).
+// Checks a typed puzzle answer against stored SHA-256 digests (data/puzzles.js); a puzzle
+// may accept more than one answer.
 // Used by ui/terminal-ui.js for the sudo password prompt.
 //
 // The typed text is untrusted: it is length-checked and normalized by
@@ -9,8 +10,10 @@ import { normalizePuzzleAnswer } from '../utils/validate.js';
 
 const HEX = /^[0-9a-f]{64}$/;
 
-export async function matchesPuzzle(raw, sha256Hex) {
-  if (typeof sha256Hex !== 'string' || !HEX.test(sha256Hex)) return false;
+// sha256: one digest, or a list of them (any one matching is enough).
+export async function matchesPuzzle(raw, sha256) {
+  const digests = (Array.isArray(sha256) ? sha256 : [sha256]).filter((value) => typeof value === 'string' && HEX.test(value));
+  if (digests.length === 0) return false;
   const answer = normalizePuzzleAnswer(raw, { caseSensitive: true, collapseSpaces: false });
   if (!answer.ok) return false;
   const subtle = globalThis.crypto && globalThis.crypto.subtle;
@@ -18,7 +21,7 @@ export async function matchesPuzzle(raw, sha256Hex) {
   try {
     const digest = await subtle.digest('SHA-256', new TextEncoder().encode(answer.value));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    return hex === sha256Hex;
+    return digests.includes(hex);
   } catch {
     return false;
   }

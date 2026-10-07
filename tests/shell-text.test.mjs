@@ -209,7 +209,9 @@ test('puzzle answers are checked by digest, fail closed, and bound their input',
   const { matchesPuzzle } = await import('../site/assets/js/features/puzzles.js');
   const { PUZZLES } = await import('../site/assets/js/data/puzzles.js');
   const { createHash } = await import('node:crypto');
-  assert.match(PUZZLES.root.sha256, /^[0-9a-f]{64}$/);
+  assert.equal(PUZZLES.root.sha256.length, 2, 'two accepted answers');
+  for (const digest of PUZZLES.root.sha256) assert.match(digest, /^[0-9a-f]{64}$/);
+  const other = createHash('sha256').update('Other-Answer<3').digest('hex');
   // A stand-in answer, so the real one never appears in this public repository.
   const answer = 'Test-Answer!42';
   const digest = createHash('sha256').update(answer).digest('hex');
@@ -221,4 +223,10 @@ test('puzzle answers are checked by digest, fail closed, and bound their input',
   assert.equal(await matchesPuzzle('x'.repeat(10000), digest), false);
   assert.equal(await matchesPuzzle(`${answer}\u0000`, digest), false);
   assert.equal(await matchesPuzzle(42, digest), false);
+  // A list: any one of the answers matches.
+  assert.equal(await matchesPuzzle(answer, [other, digest]), true);
+  assert.equal(await matchesPuzzle('Other-Answer<3', [other, digest]), true);
+  assert.equal(await matchesPuzzle('neither', [other, digest]), false);
+  assert.equal(await matchesPuzzle(answer, []), false);
+  assert.equal(await matchesPuzzle(answer, ['bad', 7]), false);
 });
