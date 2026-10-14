@@ -821,6 +821,33 @@ body {
   font-size: var(--font-size-small);
 }
 
+/* A module title with a quiet link beside it: Featured Projects' one "View all projects"
+   (owner request, October 14, 2026), in the font, colour and size of a project's Status
+   line, lighting up like the other links on hover. */
+.module-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  align-items: baseline;
+  margin-bottom: var(--space-4);
+}
+
+.module-heading h2 {
+  margin-bottom: 0;
+}
+
+.module-heading-link {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-decoration: none;
+}
+
+.module-heading-link:hover,
+.module-heading-link:focus-visible {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
 .module-more {
   margin: 0;
   padding-top: var(--space-3);
@@ -1407,33 +1434,77 @@ a.project-shot-placeholder {
   font-size: var(--font-size-tiny);
 }
 
-/* ---------- Utility Tools: a text-only card listing several small scripts ---------- */
+/* ---------- Utility Tools: several small scripts under one project ---------- */
 
-/* Full-width stack instead of the screenshot + text columns used by other projects. */
+/* Full-width stack instead of the screenshot + text columns used by other projects. Its
+   width decides the tools' layout (the container query below), not the window's, since
+   the floating console takes a share of the window on desktops. */
 .project-tools {
   grid-template-columns: 1fr;
   gap: var(--space-3);
+  container-type: inline-size;
 }
 
+/* The tools sit straight on the module, divided by the certifications module's dashed
+   rule instead of each in a box of its own (owner request, October 14, 2026: a box in a
+   box with another box inside). Narrow: one under another, a rule between them. Wide:
+   three columns, a rule between each, and more tools wrap to a new row of three. */
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .tool {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface-raised);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) 0;
+}
+
+.tool + .tool {
+  border-top: 1px dashed var(--color-border);
+}
+
+@container (min-width: 54rem) {
+  .tool-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: var(--space-4);
+  }
+
+  .tool {
+    padding: 0 var(--space-4);
+  }
+
+  .tool + .tool {
+    border-top: 0;
+    border-left: 1px dashed var(--color-border);
+  }
+
+  .tool:nth-child(3n + 1) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .tool:nth-child(3n) {
+    padding-right: 0;
+  }
+
+  .tool:nth-child(n + 4) {
+    padding-top: var(--space-4);
+    border-top: 1px dashed var(--color-border);
+  }
 }
 
 .tool p {
   margin-bottom: var(--space-2);
   font-size: var(--font-size-small);
+}
+
+/* The Shows line and View repository sit at the foot of each tool, level across the row. */
+.tool .link-list {
+  margin-bottom: 0;
 }
 
 .tool .area-list {
@@ -1462,7 +1533,7 @@ a.project-shot-placeholder {
 }
 
 .tool .tool-shows {
-  margin-bottom: 0;
+  margin-top: auto;
   color: var(--color-text-faint);
   font-size: var(--font-size-tiny);
 }
