@@ -88,6 +88,12 @@ export function killStatusScramble() {
   if (mounted) mounted.kill();
 }
 
+// The page is being swapped out by core/router.js: stop quietly (its tags are leaving),
+// so the next page's tags get a scrambler of their own.
+export function unmountStatusScramble() {
+  if (mounted) mounted.stop();
+}
+
 export function mountStatusScramble(root = document) {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const tags = [...root.querySelectorAll('.status-tag:not(.status-ongoing):not(.status-archived)')].slice(0, MAX_TAGS);
@@ -110,6 +116,14 @@ export function mountStatusScramble(root = document) {
   start();
   mounted = {
     count: items.length,
+    stop() {
+      killed = true;
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', stop);
+      window.removeEventListener('pageshow', onShow);
+      mounted = null;
+    },
     kill() {
       killed = true;
       stop();

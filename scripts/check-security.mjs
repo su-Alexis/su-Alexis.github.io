@@ -9,6 +9,9 @@ import { ROOT, SITE_DIR, listFiles, readText, extOf, findAll, report, isMain } f
 import { LOCAL_DRAFT } from './check-publish.mjs';
 
 // Doctrine section 9. Every published HTML page carries exactly this policy.
+// connect-src 'self' (owner-approved, October 14, 2026): core/router.js fetches this
+// site's own pages for in-place navigation; NETWORK_RULES below keep every other script
+// from connecting anywhere.
 export const REQUIRED_CSP = Object.freeze({
   'default-src': "'none'",
   'script-src': "'self'",
@@ -17,7 +20,7 @@ export const REQUIRED_CSP = Object.freeze({
   'style-src-attr': "'none'",
   'img-src': "'self'",
   'font-src': "'self'",
-  'connect-src': "'none'",
+  'connect-src': "'self'",
   'object-src': "'none'",
   'base-uri': "'none'",
   'form-action': "'none'",
@@ -46,6 +49,17 @@ const JS_RULES = [
   [/\b(?:import|from)\s*['"](?:https?:)?\/\//g, 'remote module imports are forbidden'],
   [/['"`]\s*javascript:/gi, 'javascript: URLs are forbidden'],
   [/sourceMappingURL/g, 'source maps are not approved for production'],
+];
+
+// Doctrine section 12, "In-place navigation": only the router may fetch (this site's own
+// pages) or parse HTML (into an inert document it then checks).
+const NETWORK_ALLOWED = 'assets/js/core/router.js';
+const NETWORK_RULES = [
+  [/fetch\s*\(/g, 'fetch() is only allowed in core/router.js'],
+  [/XMLHttpRequest/g, 'XMLHttpRequest is not allowed'],
+  [/new\s+(?:WebSocket|EventSource)/g, 'WebSocket/EventSource are not allowed'],
+  [/sendBeacon/g, 'sendBeacon is not allowed'],
+  [/DOMParser/g, 'DOMParser is only allowed in core/router.js'],
 ];
 
 const HTML_RULES = [
@@ -207,6 +221,7 @@ export function checkSiteFile(rel, text) {
   const findings = [];
   if (ext === 'js' || ext === 'mjs') {
     findings.push(...ruleHits(file, text, JS_RULES));
+    if (rel !== NETWORK_ALLOWED) findings.push(...ruleHits(file, text, NETWORK_RULES));
     findings.push(...checkAddresses(file, text));
     if (/^assets\/js\/(?:data|features)\//.test(rel)) findings.push(...checkSimulatedHosts(file, text));
   } else if (ext === 'html' || ext === 'htm') {

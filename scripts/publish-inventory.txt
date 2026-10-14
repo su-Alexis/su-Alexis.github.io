@@ -99,6 +99,7 @@ assets/js/data/puzzles.js
 assets/js/features/puzzles.js
 assets/js/ui/btop.js
 assets/js/core/layer-loader.js
+assets/js/core/router.js
 assets/js/layers/layer2.js
 assets/js/features/guest-engine.js
 assets/js/data/images/winbows.js

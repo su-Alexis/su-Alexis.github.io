@@ -16,8 +16,13 @@ function openLightbox() {
   return box && box.classList.contains('lightbox') ? box : null;
 }
 
+// Mounted once per document: it looks the viewer up on every event, so it keeps working
+// when core/router.js swaps a page with a gallery in.
+let mounted = false;
+
 export function mountShotViewer() {
-  if (!document.querySelector('.lightbox')) return;
+  if (mounted) return;
+  mounted = true;
   let lastShot = null;
 
   const sync = () => {

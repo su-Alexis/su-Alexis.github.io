@@ -33,6 +33,7 @@ import { resumeTheme, setTheme, currentTheme } from './theme.js';
 import { startScreensaver, screensaverRunning, killScreensaver, activateScreensaver } from './screensaver.js';
 import { matchesPuzzle } from '../features/puzzles.js';
 import { loadLayer } from '../core/layer-loader.js';
+import { softNavigate } from '../core/router.js';
 import { PUZZLES } from '../data/puzzles.js';
 
 const NOT_KEPT = '(input not kept)';
@@ -155,8 +156,9 @@ export function mountTerminal(primaryRoot) {
 
   // The page comes from a data attribute in our own markup, but DOM values are still
   // treated as untrusted: only a known page id is accepted (doctrine section 4).
-  const page = pickKnown(primaryRoot.dataset.page, PAGE_IDS, 'home');
-  const cwd = PAGES[page].cwd;
+  // Both change when core/router.js swaps another page in (arrive(), below).
+  let page = pickKnown(primaryRoot.dataset.page, PAGE_IDS, 'home');
+  let cwd = PAGES[page].cwd;
   const reducedMotion = document.documentElement.classList.contains('reduced-motion');
   const html = document.documentElement;
   // Arriving on a new directory, by link or by cd, makes the last one OLDPWD.
@@ -164,7 +166,7 @@ export function mountTerminal(primaryRoot) {
   state.pwd = cwd;
   // Set when the console itself navigated (cd, open): the visitor's own command line
   // already shows the move, so the page log's synthetic "cd" line is dropped.
-  const fromShell = readJson(store, SESSION_KEYS.shellNav) === true;
+  let fromShell = readJson(store, SESSION_KEYS.shellNav) === true;
   removeKey(store, SESSION_KEYS.shellNav);
   const shells = new Map();
   let saveTimer = 0;
@@ -252,7 +254,7 @@ export function mountTerminal(primaryRoot) {
   let btop = null; // { pid, shellId, quit }
   let forkSince = 0;
   let leaving = false;
-  const mountedAt = performance.now();
+  let mountedAt = performance.now();
   const LOAD_LINE = /^load --module [a-z0-9-]{1,32}$/;
   const BTOP_SAMPLES = 240;
   const BG_PROCESS = Object.freeze({ default: 'circuit', hex_float: 'hexfloat', bubbles: 'bubbles', synthwave: 'synthwave', starfield: 'starfield' });
@@ -528,7 +530,11 @@ export function mountTerminal(primaryRoot) {
     const url = '../'.repeat(PAGES[page].depth) + PAGES[action.page].path + (action.anchor ? `#${action.anchor}` : '');
     writeJson(store, SESSION_KEYS.shellNav, true);
     writeNow();
-    window.setTimeout(() => window.location.assign(url || './'), 250);
+    // Between Layer 1 pages the router swaps the page in place (no reload); the lab, or a
+    // browser without the router, loads the page as usual.
+    window.setTimeout(() => {
+      if (!softNavigate(action.page, action.anchor)) window.location.assign(url || './');
+    }, 250);
   }
 
   // home: start again on the home page (the fork bomb crash), so the full BIOS boot plays;
@@ -637,19 +643,23 @@ export function mountTerminal(primaryRoot) {
 
     // History sits above this page's load log until the page finishes loading; then the
     // log joins the history and the prompt follows it.
-    const log = primary ? body.querySelector('.console-log') : null;
+    // A page swapped in by the router brings its own log (adoptLog).
+    let log = primary ? body.querySelector('.console-log') : null;
     body.insertBefore(output, log);
     body.appendChild(inputLine);
     // Make the live load log match what the history will keep, so nothing changes when it
     // joins the history: its prompt shows the directory the visitor came from, and the
     // "cd" line is dropped when the visitor typed the cd themselves.
-    const logPrompt = log ? log.querySelector('.line-prompt') : null;
-    if (logPrompt && fromShell) logPrompt.remove();
-    else if (logPrompt) {
-      const user = logPrompt.querySelector('.console-user');
-      const text = user ? user.nextSibling : null;
-      if (text && text.nodeType === Node.TEXT_NODE) text.textContent = `:${state.oldpwd || '~'}$ `;
+    function fitLogPrompt() {
+      const logPrompt = log ? log.querySelector('.line-prompt') : null;
+      if (logPrompt && fromShell) logPrompt.remove();
+      else if (logPrompt) {
+        const user = logPrompt.querySelector('.console-user');
+        const text = user ? user.nextSibling : null;
+        if (text && text.nodeType === Node.TEXT_NODE) text.textContent = `:${state.oldpwd || '~'}$ `;
+      }
     }
+    fitLogPrompt();
     // Keep the newest log line in view while the page's load sequence prints.
     for (const type of ['animationstart', 'animationend']) {
       listen(body, type, () => { if (log && log.isConnected) scrollToEnd(); });
@@ -1352,6 +1362,17 @@ export function mountTerminal(primaryRoot) {
         root.classList.add('is-ready');
         scrollToEnd();
       },
+      // A page swapped in by the router (tty1 only): its load log takes the usual place
+      // above the prompt, plays its load sequence (CSS), and joins the history at ready().
+      adoptLog(node) {
+        if (!primary || !node) return;
+        if (log && log.isConnected) log.remove();
+        log = node;
+        body.insertBefore(node, inputLine);
+        fitLogPrompt();
+        root.classList.remove('is-ready');
+        scrollToEnd();
+      },
       destroy() {
         alive = false;
         for (const cleanup of cleanups.splice(0)) cleanup();
@@ -1405,21 +1426,57 @@ export function mountTerminal(primaryRoot) {
     },
   });
 
-  if (html.classList.contains('boot-run')) {
-    const observer = new MutationObserver(() => {
+  // The page's own load sequence (layers/layer1.js) runs first; the shells finish
+  // loading when it ends.
+  let loading = null;
+  function whenLoaded() {
+    if (loading) loading.disconnect();
+    loading = null;
+    if (!html.classList.contains('boot-run')) {
+      ready();
+      return;
+    }
+    loading = new MutationObserver(() => {
       if (!html.classList.contains('boot-run')) {
-        observer.disconnect();
+        loading.disconnect();
+        loading = null;
         ready();
       }
     });
-    observer.observe(html, { attributes: true, attributeFilter: ['class'] });
-  } else {
-    ready();
+    loading.observe(html, { attributes: true, attributeFilter: ['class'] });
+  }
+  whenLoaded();
+
+  // core/router.js swapped another Layer 1 page in, without a reload (owner request,
+  // October 14, 2026): the shells stay exactly as they are and arrive in the new
+  // directory, as a page load would have them, and tty1 plays the new page's load log.
+  // next is a reviewed page id; log is that page's own load log, from our own markup,
+  // and is validated by captureLog() like any other.
+  function arrive(next, logNode) {
+    if (!Object.hasOwn(PAGES, next) || next === 'lab') return;
+    page = next;
+    cwd = PAGES[page].cwd;
+    if (state.pwd && state.pwd !== cwd) state.oldpwd = state.pwd;
+    state.pwd = cwd;
+    fromShell = readJson(store, SESSION_KEYS.shellNav) === true;
+    removeKey(store, SESSION_KEYS.shellNav);
+    mountedAt = performance.now();
+    primaryRoot.dataset.page = page;
+    for (const shell of shells.values()) shell.refreshPrompt();
+    const primary = shells.get('tty1');
+    if (primary && logNode) primary.adoptLog(logNode);
+    showUser();
+    save();
+    isReady = false;
+    whenLoaded();
   }
 
-  return () => {
-    window.clearTimeout(saveTimer);
-    window.removeEventListener('pagehide', onPageHide);
-    for (const shell of shells.values()) shell.destroy();
+  return {
+    arrive,
+    destroy() {
+      window.clearTimeout(saveTimer);
+      window.removeEventListener('pagehide', onPageHide);
+      for (const shell of shells.values()) shell.destroy();
+    },
   };
 }
