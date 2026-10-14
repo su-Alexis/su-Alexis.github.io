@@ -111,9 +111,10 @@ export const SESSION_KEYS = Object.freeze({
 export const VM_SESSION_VERSION = 2;
 // VM windows on the lab's desk (ui/windows-ui.js): the smallest a visitor can resize
 // one to, the size a fitted window floats at when nothing better is known, and the
-// bound on any stored coordinate.
+// bound on any stored coordinate. minWidth fits a phone's desk (owner request, October
+// 14, 2026: VM windows float and resize on phones too).
 export const VM_WINDOW = Object.freeze({
-  minWidth: 420,
+  minWidth: 280,
   minHeight: 260,
   defaultWidth: 960,
   defaultHeight: 540,

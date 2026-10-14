@@ -86,9 +86,10 @@ function captureLog(log, cached, cwd, fromShell, from = '~') {
   return lines;
 }
 
+// Phone-sized screens only: tablets get the desktop's floating console too, touch or not
+// (owner request, October 14, 2026: modern tablets and phones handle it).
 function isMobile() {
-  const touchOnly = Boolean(window.matchMedia) && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-  return touchOnly || window.innerWidth < 768;
+  return window.innerWidth < 768;
 }
 
 // Desktop default: a floating window in the top-left, just under the top bar, sized to

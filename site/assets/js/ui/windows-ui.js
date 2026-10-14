@@ -13,7 +13,9 @@
 // October 12, 2026: only the bottom-right corner did), and a double-click on
 // the title bar fits it again. Positions are desk-relative, clamped to the desk, and only
 // ever applied as the individual left/top/width/height properties (doctrine section 9).
-// Narrow screens (phones, portrait tablets) keep it fitted and full width.
+// Phones and tablets work the same way (owner request, October 14, 2026: modern phones
+// handle it): a window starts fitted to the screen's width and can be dragged, resized
+// and run beside others there too.
 //
 // Full screen uses the browser's own mode from the visitor's click; where that is missing
 // the window maximises to the browser window instead, and Escape restores it.
@@ -23,8 +25,6 @@
 
 import { el } from '../utils/dom.js';
 import { VM_WINDOW } from '../core/constants.js';
-
-const NARROW = '(max-width: 48em)';
 
 // Keeps a floating window inside a desk of deskW x deskH (pure; tested in Node).
 export function clampVm(state, deskW, deskH) {
@@ -61,7 +61,6 @@ export function createVmWindow({ guest, desk, saved = null, content = null, resu
     target.addEventListener(type, handler, options);
     cleanups.push(() => target.removeEventListener(type, handler, options));
   };
-  const narrow = () => Boolean(window.matchMedia) && window.matchMedia(NARROW).matches;
 
   const minimize = el('button', { className: 'console-button', text: '_', attrs: { 'aria-label': `Minimize ${guest.id}`, title: 'Minimize' } });
   const full = el('button', { className: 'console-button', text: '[ ]', attrs: { 'aria-label': 'Full screen', title: 'Full screen' } });
@@ -88,7 +87,7 @@ export function createVmWindow({ guest, desk, saved = null, content = null, resu
     : { floating: false, x: 0, y: 0, w: VM_WINDOW.defaultWidth, h: VM_WINDOW.defaultHeight };
 
   function apply() {
-    const floating = state.floating && !narrow();
+    const floating = state.floating;
     // Not the console's .is-floating: that one is fixed to the viewport with CSS resize.
     frame.classList.toggle('is-afloat', floating);
     if (!floating) {
@@ -102,19 +101,19 @@ export function createVmWindow({ guest, desk, saved = null, content = null, resu
     frame.style.height = `${state.h}px`;
   }
 
-  // Floats a fitted window exactly where it sits, so the first drag does not jump.
+  // Floats a fitted window exactly where it sits, so the first drag does not jump. Layout
+  // offsets (the desk is the frame's offset parent), not the bounding box: the power-on
+  // animation scales the frame for a moment, and a drag then must not shrink it.
   function floatHere() {
     if (state.floating) return;
-    const box = frame.getBoundingClientRect();
-    const deskBox = desk.getBoundingClientRect();
-    state = { floating: true, x: box.left - deskBox.left, y: box.top - deskBox.top, w: box.width, h: box.height };
+    state = { floating: true, x: frame.offsetLeft, y: frame.offsetTop, w: frame.offsetWidth, h: frame.offsetHeight };
     apply();
   }
 
   // One pointer gesture at a time: a drag by the title bar or a resize by an edge.
   let gesture = null;
   const begin = (event, kind, target, edge = null) => {
-    if (event.button !== 0 || narrow() || isFull()) return;
+    if (event.button !== 0 || isFull()) return;
     floatHere();
     gesture = { kind, edge, id: event.pointerId, target, startX: event.clientX, startY: event.clientY, from: { ...state } };
     try {

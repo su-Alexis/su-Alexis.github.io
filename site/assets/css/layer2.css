@@ -3606,8 +3606,9 @@
 }
 
 /* ---------- Phones and narrow tablets (portrait) ----------
-   No fixed stage height: the library sits above the screen, the VM takes the width and a tall screen instead
-   of a tiny 16:9 strip, and windows stay fitted (no dragging). Desktop stays the priority. */
+   No fixed stage height: the library sits above the screen, and a fitted VM takes the width
+   and a tall screen instead of a tiny 16:9 strip. Everything else works as on a desktop
+   (owner request, October 14, 2026): several VMs at once, dragged and resized by touch. */
 @media (max-width: 48em) {
   .lab-stage {
     height: auto;
@@ -3617,28 +3618,20 @@
     grid-template-columns: 1fr;
   }
 
+  /* The desk keeps its height when a window floats off it, so a floated window keeps
+     its size instead of being squeezed. */
   .lab-desk {
     flex-direction: column;
     gap: var(--space-2);
-    min-height: 60dvh;
+    min-height: 80dvh;
     padding: var(--space-2);
     container-type: normal;
   }
 
   .vm-window {
     width: 100%;
-    height: 70dvh;
+    height: 74dvh;
     aspect-ratio: auto;
-  }
-
-  /* One VM at a time here: the ones behind wait out of sight. */
-  .vm-window:not(.is-front) {
-    display: none;
-  }
-
-  .vm-grip,
-  .vm-edge {
-    display: none;
   }
 
 }
