@@ -188,6 +188,30 @@ function makeChip(x0, y0, w, h, quad) {
   return { kind: quad ? 'qfp' : 'soic', x0, y0, x1, y1, sides, label: '' };
 }
 
+// Parts with a solid body that traces must go round (the rest are rows of pads).
+const BODIED = new Set(['qfp', 'soic', 'bga', 'inductor']);
+const hasBody = (part) => BODIED.has(part.kind);
+
+// The main processor: a large ball-grid package. Its balls sit under the body; the traces
+// leave from fan-out points along its edges, as on a routed board.
+function makeBga(x0, y0, n) {
+  return { ...makeChip(x0, y0, n, n, true), kind: 'bga' };
+}
+
+// A power inductor: a big square body with one large pad either side.
+function makeInductor(x0, y0, size) {
+  const mid = y0 + Math.floor(size / 2);
+  return {
+    kind: 'inductor',
+    x0,
+    y0,
+    x1: x0 + size,
+    y1: y0 + size,
+    sides: [{ out: [-1, 0], pins: [[x0 - 1, mid]] }, { out: [1, 0], pins: [[x0 + size + 1, mid]] }],
+    label: '',
+  };
+}
+
 // A row of through-hole header pins, two cells apart. Its traces can leave from either
 // side of the row; each pin is still wired once.
 function makeHeader(x0, y0, count, vertical) {
@@ -220,7 +244,7 @@ const centre = (part) => [(part.x0 + part.x1) / 2, (part.y0 + part.y1) / 2];
 // Marks a part on the grid: its body (and body cells, so no diagonal cuts a corner), its
 // pads, and each pin's first cell kept for that pin.
 function claimPart(grid, part) {
-  if (part.kind === 'qfp' || part.kind === 'soic') {
+  if (hasBody(part)) {
     for (let x = part.x0; x <= part.x1; x += 1) {
       for (let y = part.y0; y <= part.y1; y += 1) {
         grid.set(x, y, PART);
@@ -263,8 +287,13 @@ function randomPart(grid, small) {
     const y0 = randInt(3, grid.rows - (vertical ? span : 0) - 3);
     return makeHeader(x0, y0, count, vertical);
   }
-  const quad = roll < (small ? 0.45 : 0.6);
-  let w = quad ? randInt(small ? 6 : 8, small ? 9 : 15) : randInt(small ? 4 : 6, small ? 8 : 13);
+  // Small fillers are mostly tiny packages (SOT-style, 3 x 2), with a few small QFNs.
+  if (small && roll < 0.4) {
+    const [w, h] = random() < 0.5 ? [3, 2] : [2, 3];
+    return makeChip(randInt(3, grid.cols - w - 3), randInt(3, grid.rows - h - 3), w, h, false);
+  }
+  const quad = roll < (small ? 0.75 : 0.6);
+  let w = quad ? randInt(small ? 4 : 7, small ? 7 : 11) : randInt(small ? 4 : 6, small ? 7 : 12);
   let h = quad ? w : randInt(3, 4);
   if (!quad && random() < 0.4) [w, h] = [h, w];
   const x0 = randInt(3, grid.cols - w - 3);
@@ -371,6 +400,16 @@ function makeRouter(grid) {
           points.push([(q % grid.width) - grid.margin, Math.floor(q / grid.width) - grid.margin]);
         }
         points.push(from);
+        // The search tracks direction as well as place, so a path can loop back over
+        // itself in a tight spot: such a path is no use (a trace never touches itself).
+        if (new Set(points.map((point) => `${point}`)).size !== points.length) return null;
+        const cuts = [];
+        for (let i = 1; i < points.length; i += 1) {
+          const [ax, ay] = points[i - 1];
+          const [bx, by] = points[i];
+          if (ax !== bx && ay !== by) cuts.push(`${Math.min(ax, bx)},${Math.min(ay, by)}`);
+        }
+        if (new Set(cuts).size !== cuts.length) return null;
         return points.reverse();
       }
       steps += 1;
@@ -504,17 +543,18 @@ function corners(points) {
 // resistors), traces (each from a pin of `chip`; `end` is the part it reaches, if any;
 // `via` says whether it ends in a via), copper pours and mounting holes. A `seed` (a whole
 // number) makes it repeatable: the page uses the session's seed, so every page draws the
-// same board. Exported for tests/bg-circuit.test.mjs.
-export function planBoard(cols, rows, partCount, seed = null) {
+// same board (a new boot, a new seed, a new board). `view` is the window's share of the
+// board in cells, where the processor goes. Exported for tests/bg-circuit.test.mjs.
+export function planBoard(cols, rows, partCount, seed = null, view = null) {
   random = seed === null ? Math.random : seeded(seed);
   try {
-    return layOut(cols, rows, partCount);
+    return layOut(cols, rows, partCount, view);
   } finally {
     random = Math.random;
   }
 }
 
-function layOut(cols, rows, partCount) {
+function layOut(cols, rows, partCount, view) {
   const grid = makeGrid(cols, rows);
   const route = makeRouter(grid);
   const budget = { left: ROUTE_BUDGET };
@@ -529,8 +569,10 @@ function layOut(cols, rows, partCount) {
   const keyOf = (pin) => `${pin}`;
 
   function addPart(part) {
-    if (part.kind === 'qfp') part.label = labels[parts.length % labels.length];
-    else if (part.kind === 'soic') part.label = `U${(chipNumber += 1)}`;
+    if (part.kind === 'bga') part.label = 'SoC';
+    else if (part.kind === 'qfp') part.label = labels[parts.length % labels.length];
+    else if (part.kind === 'soic') part.label = part.x1 - part.x0 <= 3 && part.y1 - part.y0 <= 3 ? `Q${(chipNumber += 1)}` : `U${(chipNumber += 1)}`;
+    else if (part.kind === 'inductor') part.label = `L${(chipNumber += 1)}`;
     else if (part.kind === 'header') part.label = `J${(headerNumber += 1)}`;
     parts.push(part);
     claimPart(grid, part);
@@ -675,8 +717,92 @@ function layOut(cols, rows, partCount) {
     }
   }
 
-  // 1 and 2: main parts, wired to each other, then their leftover pins.
+  // 1. The board's architecture first (owner request, October 14, 2026: realistic sizes
+  // and layouts, a new one every boot): one large processor, its memory in a row beside
+  // it, a block of identical chips repeated in a grid, connectors along the edges and a
+  // power stage of inductors in a corner. Then ordinary chips, and later small fillers.
   const area = cols * rows;
+  const place = (part, pad) => {
+    if (part.x0 < 2 || part.y0 < 2 || part.x1 > cols - 2 || part.y1 > rows - 2) return null;
+    if (!spotIsFree(grid, part.x0, part.y0, part.x1, part.y1, pad)) return null;
+    addPart(part);
+    return part;
+  };
+  const between = (lo, hi) => randInt(lo, Math.max(lo, hi));
+  // The processor goes where it will be seen: inside the window's part of the board
+  // (view, in grid cells) when that is known, not off in a corner of a larger screen.
+  const seenCols = view ? Math.min(cols, Math.max(40, view.cols)) : cols;
+  const seenRows = view ? Math.min(rows, Math.max(40, view.rows)) : rows;
+  let cpu = null;
+  for (let tries = 0; tries < 40 && !cpu; tries += 1) {
+    const n = randInt(16, 22);
+    if (n + 16 > cols || n + 16 > rows) break;
+    cpu = place(makeBga(between(Math.round(seenCols * 0.15), Math.round(seenCols * 0.85) - n), between(Math.round(seenRows * 0.12), Math.round(seenRows * 0.88) - n), n), 6);
+  }
+  if (cpu) {
+    // Memory: two to four identical chips side by side, a bus's width from the processor.
+    const count = randInt(2, 4);
+    const long = randInt(9, 13);
+    const gap = randInt(7, 10);
+    const pitch = randInt(9, 11); // room for both rows of pins and their escapes between chips
+    for (const side of shuffle([0, 1, 2, 3])) {
+      const chips = [];
+      for (let i = 0; i < count; i += 1) {
+        const horizontal = side < 2; // above or below: chips stand upright in a row
+        const x0 = horizontal ? cpu.x0 + i * pitch : side === 2 ? cpu.x0 - gap - long : cpu.x1 + gap;
+        const y0 = horizontal ? (side === 0 ? cpu.y0 - gap - long : cpu.y1 + gap) : cpu.y0 + i * pitch;
+        chips.push(horizontal ? makeChip(x0, y0, 4, long, false) : makeChip(x0, y0, long, 4, false));
+      }
+      if (chips.every((chip) => chip.x0 >= 3 && chip.y0 >= 3 && chip.x1 <= cols - 3 && chip.y1 <= rows - 3
+        && spotIsFree(grid, chip.x0, chip.y0, chip.x1, chip.y1, 2))) {
+        for (const chip of chips) addPart(chip);
+        break;
+      }
+    }
+  }
+  // A repeated block: identical small chips in a grid (the rows of identical modules on
+  // a real board), somewhere still free.
+  for (let tries = 0; tries < 30; tries += 1) {
+    const n = randInt(5, 7);
+    const pitch = n + randInt(7, 9);
+    const across = randInt(3, 5);
+    const down = randInt(2, 3);
+    const w = (across - 1) * pitch + n;
+    const h = (down - 1) * pitch + n;
+    if (w + 8 > cols || h + 8 > rows) continue;
+    const x0 = randInt(4, cols - w - 4);
+    const y0 = randInt(4, rows - h - 4);
+    if (!spotIsFree(grid, x0, y0, x0 + w, y0 + h, 3)) continue;
+    for (let i = 0; i < across; i += 1) for (let j = 0; j < down; j += 1) addPart(makeChip(x0 + i * pitch, y0 + j * pitch, n, n, true));
+    break;
+  }
+  // Connectors on the edges: long pin headers lying along them.
+  const connectors = randInt(1, 3);
+  for (let k = 0, made = 0; k < 40 && made < connectors; k += 1) {
+    const count = randInt(8, 16);
+    const span = (count - 1) * 2;
+    const edge = randInt(0, 3);
+    const vertical = edge >= 2;
+    const x0 = vertical ? (edge === 2 ? 3 : cols - 3) : randInt(4, cols - span - 4);
+    const y0 = vertical ? randInt(4, rows - span - 4) : (edge === 0 ? 3 : rows - 3);
+    if (place(makeHeader(x0, y0, count, vertical), 2)) made += 1;
+  }
+  // The power stage: a few inductors in a row near a corner.
+  for (let tries = 0; tries < 20; tries += 1) {
+    const size = randInt(4, 6);
+    const count = randInt(2, 4);
+    const step = size + randInt(4, 6);
+    const left = random() < 0.5;
+    const top = random() < 0.5;
+    const x0 = left ? randInt(4, Math.round(cols * 0.25)) : randInt(Math.round(cols * 0.6), Math.max(Math.round(cols * 0.6), cols - count * step - 4));
+    const y0 = top ? randInt(4, Math.round(rows * 0.25)) : randInt(Math.round(rows * 0.7), Math.max(Math.round(rows * 0.7), rows - size - 4));
+    const coils = Array.from({ length: count }, (_, i) => makeInductor(x0 + i * step, y0, size));
+    if (!coils.every((coil) => coil.x1 <= cols - 4 && coil.y1 <= rows - 4 && spotIsFree(grid, coil.x0 - 2, coil.y0, coil.x1 + 2, coil.y1, 2))) continue;
+    for (const coil of coils) addPart(coil);
+    break;
+  }
+
+  // 2. Ordinary chips up to the board's count, then everything wired, then leftover pins.
   for (let attempt = 0; attempt < partCount * 40 && parts.length < partCount; attempt += 1) {
     const part = randomPart(grid, false);
     if (spotIsFree(grid, part.x0, part.y0, part.x1, part.y1, PART_CLEARANCE)) addPart(part);
@@ -798,7 +924,7 @@ function pointAt(trace, distance) {
 
 // The outline a part glows along when a pulse reaches it, in pixels.
 function outline(part) {
-  const grow = part.kind === 'qfp' || part.kind === 'soic' ? 0 : CELL * 0.6;
+  const grow = hasBody(part) ? 0 : CELL * 0.6;
   return [part.x0 * CELL - grow, part.y0 * CELL - grow, (part.x1 - part.x0) * CELL + grow * 2, (part.y1 - part.y0) * CELL + grow * 2];
 }
 
@@ -836,6 +962,59 @@ function drawPart(b, part) {
   const y = part.y0 * CELL;
   const w = (part.x1 - part.x0) * CELL;
   const h = (part.y1 - part.y0) * CELL;
+  if (part.kind === 'inductor') {
+    // A shielded power inductor: a square body, a ring for the winding, two big pads.
+    b.fillStyle = `rgba(${INK.board}, 0.7)`;
+    b.fillRect(x, y, w, h);
+    b.strokeStyle = `rgba(${INK.path}, 0.7)`;
+    b.lineWidth = 1.2;
+    b.strokeRect(x, y, w, h);
+    b.beginPath();
+    b.arc(x + w / 2, y + h / 2, Math.min(w, h) * 0.32, 0, Math.PI * 2);
+    b.stroke();
+    b.fillStyle = `rgba(${INK.path}, 0.8)`;
+    for (const [px, py] of allPins(part)) b.fillRect(px * CELL - 4, py * CELL - 7, 8, 14);
+    b.fillStyle = `rgba(${INK.path}, 0.75)`;
+    b.fillText(part.label, x + w / 2, y - 9);
+    return;
+  }
+  if (part.kind === 'bga') {
+    // The processor: its ball grid under the body, fan-out vias where traces leave it.
+    b.fillStyle = `rgba(${INK.board}, 0.7)`;
+    b.fillRect(x, y, w, h);
+    b.strokeStyle = `rgba(${INK.path}, 0.75)`;
+    b.lineWidth = 1.4;
+    b.strokeRect(x, y, w, h);
+    b.fillStyle = `rgba(${INK.path}, 0.4)`;
+    for (let bx = x + CELL; bx < x + w - 2; bx += CELL) {
+      for (let by = y + CELL; by < y + h - 2; by += CELL) {
+        b.beginPath();
+        b.arc(bx, by, 1.6, 0, Math.PI * 2);
+        b.fill();
+      }
+    }
+    b.fillStyle = `rgba(${INK.board}, 0.95)`;
+    b.fillRect(x + w * 0.3, y + h * 0.42, w * 0.4, h * 0.16);
+    b.fillStyle = `rgba(${INK.path}, 0.85)`;
+    b.fillText(part.label, x + w / 2, y + h / 2);
+    b.strokeStyle = `rgba(${INK.path}, 0.75)`;
+    b.lineWidth = 1;
+    for (const side of part.sides) {
+      for (const [px, py] of side.pins) {
+        b.beginPath();
+        b.arc(px * CELL - side.out[0] * CELL * 0.5, py * CELL - side.out[1] * CELL * 0.5, 1.8, 0, Math.PI * 2);
+        b.stroke();
+      }
+    }
+    // Pin one's corner mark.
+    b.beginPath();
+    b.moveTo(x, y + 12);
+    b.lineTo(x, y);
+    b.lineTo(x + 12, y);
+    b.lineWidth = 2;
+    b.stroke();
+    return;
+  }
   b.fillStyle = `rgba(${INK.board}, 0.55)`;
   b.fillRect(x, y, w, h);
   b.strokeStyle = `rgba(${INK.path}, 0.7)`;
@@ -1127,7 +1306,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         boardRatio = Math.min(window.devicePixelRatio || 1, 2);
         const count = Math.max(MIN_PARTS, Math.min(MAX_PARTS, Math.round((boardW * boardH) / AREA_PER_PART)));
         seed = sessionSeed();
-        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count, seed);
+        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count, seed, { cols: Math.ceil(width / CELL), rows: Math.ceil(height / CELL) });
         chips = plan.chips;
         pours = plan.pours;
         stitches = plan.stitches;

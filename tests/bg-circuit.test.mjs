@@ -60,7 +60,7 @@ test('traces never share a point or a crossing, and never run through a part, po
         if (!(trace.end && cell === last)) assert.ok(!pins.has(cell), `trace runs over a pin at ${cell}`);
         const [x, y] = cell.split(',').map(Number);
         for (const c of chips) {
-          if (c.kind !== 'qfp' && c.kind !== 'soic') continue;
+          if (!['qfp', 'soic', 'bga', 'inductor'].includes(c.kind)) continue;
           assert.ok(!(x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1), `point ${cell} inside a chip`);
         }
         assert.ok(!copper.has(cell), `point ${cell} inside the pour`);
