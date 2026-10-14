@@ -556,9 +556,13 @@
 
 /* ---------- Desktop transitions between pages ----------
    Same-origin navigations slide like switching virtual desktops: the old page slides
-   out, the new one slides in (reversed when going back up the site). The top bar and
-   shell windows keep their place. CSS only (cross-document view transitions); browsers
-   without support simply navigate. Off for reduced motion. */
+   out, the new one slides in (reversed when going back up the site). The top bar, the
+   shell windows and the background keep their place. CSS only (cross-document view
+   transitions); browsers without support simply navigate. Off for reduced motion.
+   What slides is the page itself (.site, named "desktop"), not the root: the root holds
+   the background canvas (ui/canvas-bg.js), which now stays put like the shells (owner
+   request, October 14, 2026). The new page's root shows at once; the circuit board is the
+   same on every page of a session (ui/bg-circuit.js, its seed), so nothing jumps. */
 
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
@@ -582,22 +586,36 @@
   view-transition-name: tty3;
 }
 
+.site {
+  view-transition-name: desktop;
+}
+
 ::view-transition-old(root) {
-  animation: desktop-out-left 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation: none;
+  opacity: 0;
 }
 
 ::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(desktop) {
+  animation: desktop-out-left 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+::view-transition-new(desktop) {
   animation: desktop-in-right 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
-html:active-view-transition-type(back)::view-transition-old(root) {
+html:active-view-transition-type(back)::view-transition-old(desktop) {
   animation-name: desktop-out-right;
 }
 
-html:active-view-transition-type(back)::view-transition-new(root) {
+html:active-view-transition-type(back)::view-transition-new(desktop) {
   animation-name: desktop-in-left;
 }
 
+::view-transition-group(desktop),
 ::view-transition-group(tty1),
 ::view-transition-group(tty2),
 ::view-transition-group(tty3),

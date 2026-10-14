@@ -31,7 +31,9 @@
 // fillText.
 
 import { el } from '../utils/dom.js';
-import { startCanvas, rand } from './canvas-bg.js';
+import { startCanvas } from './canvas-bg.js';
+import { sessionStore, readJson, writeJson } from '../core/storage.js';
+import { SESSION_KEYS } from '../core/constants.js';
 
 const CELL = 10; // grid pitch, px: trace spacing and pin pitch
 const AREA_PER_PART = 75000; // px^2 of board per main part
@@ -64,8 +66,36 @@ const POUR = 4; // copper pour or mounting hole
 const DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
 const dirIndex = ([dx, dy]) => DIRS.findIndex(([x, y]) => x === dx && y === dy);
 
+// The board's randomness. planBoard() swaps in a seeded generator while it plans, so a
+// session's seed always gives the same board (page to page); otherwise Math.random.
+let random = Math.random;
+const rand = (min, max) => min + random() * (max - min);
 const randInt = (min, max) => Math.floor(rand(min, max + 1));
-const sign = () => (Math.random() < 0.5 ? -1 : 1);
+const sign = () => (random() < 0.5 ? -1 : 1);
+
+// mulberry32: a small, fast seeded generator (decorative layout only, not security).
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// This session's board seed: read back as untrusted (a whole number in range) or made and
+// kept now (SESSION_KEYS.bgSeed).
+const SEED_MAX = 0xffffffff;
+function sessionSeed() {
+  const store = sessionStore();
+  const kept = readJson(store, SESSION_KEYS.bgSeed);
+  if (Number.isInteger(kept) && kept >= 0 && kept <= SEED_MAX) return kept;
+  const fresh = Math.floor(Math.random() * SEED_MAX);
+  writeJson(store, SESSION_KEYS.bgSeed, fresh);
+  return fresh;
+}
 const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
 const scale = (a, k) => [a[0] * k, a[1] * k];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
@@ -75,7 +105,7 @@ const turn90 = (d, s) => (s > 0 ? [-d[1], d[0]] : [d[1], -d[0]]);
 
 function shuffle(list) {
   for (let i = list.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [list[i], list[j]] = [list[j], list[i]];
   }
   return list;
@@ -207,10 +237,10 @@ function spotIsFree(grid, x0, y0, x1, y1, pad) {
 
 // A random main or gap-filling part, placed at a random spot (not yet checked).
 function randomPart(grid, small) {
-  const roll = Math.random();
+  const roll = random();
   if (!small && roll < 0.18) {
     const count = randInt(4, 10);
-    const vertical = Math.random() < 0.5;
+    const vertical = random() < 0.5;
     const span = (count - 1) * 2;
     const x0 = randInt(3, grid.cols - (vertical ? 0 : span) - 3);
     const y0 = randInt(3, grid.rows - (vertical ? span : 0) - 3);
@@ -219,7 +249,7 @@ function randomPart(grid, small) {
   const quad = roll < (small ? 0.45 : 0.6);
   let w = quad ? randInt(small ? 6 : 8, small ? 9 : 15) : randInt(small ? 4 : 6, small ? 8 : 13);
   let h = quad ? w : randInt(3, 4);
-  if (!quad && Math.random() < 0.4) [w, h] = [h, w];
+  if (!quad && random() < 0.4) [w, h] = [h, w];
   const x0 = randInt(3, grid.cols - w - 3);
   const y0 = randInt(3, grid.rows - h - 3);
   return makeChip(x0, y0, w, h, quad);
@@ -427,11 +457,11 @@ function planBus(starts, out) {
   };
 
   straight(randInt(2, 4));
-  if (Math.random() < 0.45) turn(sign());
+  if (random() < 0.45) turn(sign());
   const runs = randInt(2, 4);
   for (let i = 0; i < runs; i += 1) {
     straight(randInt(4, 22));
-    const roll = Math.random();
+    const roll = random();
     if (roll < 0.4) jog(sign(), randInt(1, 3));
     else if (roll < 0.6) turn(net === 0 ? sign() : -net);
   }
@@ -455,9 +485,19 @@ function corners(points) {
 
 // The whole board in grid units for a cols x rows grid: parts (chips, headers,
 // resistors), traces (each from a pin of `chip`; `end` is the part it reaches, if any;
-// `via` says whether it ends in a via), copper pours and mounting holes. Exported for
-// tests/bg-circuit.test.mjs.
-export function planBoard(cols, rows, partCount) {
+// `via` says whether it ends in a via), copper pours and mounting holes. A `seed` (a whole
+// number) makes it repeatable: the page uses the session's seed, so every page draws the
+// same board. Exported for tests/bg-circuit.test.mjs.
+export function planBoard(cols, rows, partCount, seed = null) {
+  random = seed === null ? Math.random : seeded(seed);
+  try {
+    return layOut(cols, rows, partCount);
+  } finally {
+    random = Math.random;
+  }
+}
+
+function layOut(cols, rows, partCount) {
   const grid = makeGrid(cols, rows);
   const route = makeRouter(grid);
   const budget = { left: ROUTE_BUDGET };
@@ -609,7 +649,7 @@ export function planBoard(cols, rows, partCount) {
     for (const part of group) {
       for (const side of part.sides) {
         for (const run of freeRuns(side)) {
-          const roll = Math.random();
+          const roll = random();
           if (part.kind !== 'header' && run.length >= 2 && roll < 0.3) resistors(part, run, side.out);
           else if (run.length >= 2 && roll < 0.65) escape(part, run, side.out);
           for (const pin of run) if (!wired.has(keyOf(pin))) stub(part, pin, side.out);
@@ -838,8 +878,8 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   let active = 0; // transfers on the wire, plus parts about to act
 
   function send(link, forward, hops, color, cause) {
-    let lines = link.lines.filter(() => Math.random() < 0.7);
-    if (!lines.length) lines = [link.lines[Math.floor(Math.random() * link.lines.length)]];
+    let lines = link.lines.filter(() => random() < 0.7);
+    if (!lines.length) lines = [link.lines[Math.floor(random() * link.lines.length)]];
     const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color, cause, left: lines.length };
     const speed = rand(170, 250);
     for (const trace of lines) pulses.push({ trace, d: 0, speed, color, inward: !forward, transfer });
@@ -853,7 +893,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
     if (!options.length) return;
     const others = shuffle(options.filter((o) => o.link !== came));
     const back = options.find((o) => o.link === came);
-    const pick = !others.length || (back && Math.random() < REPLY_CHANCE)
+    const pick = !others.length || (back && random() < REPLY_CHANCE)
       ? back
       : others.find((o) => visible(o.link)) || others[0];
     if (pick) send(pick.link, pick.forward, hops, color, cause);
@@ -876,7 +916,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (transfer.left) continue;
         active -= 1;
         reached.push({ part: transfer.to, color: transfer.color });
-        if (transfer.hops < MAX_HOPS && Math.random() < CARRY_ON) {
+        if (transfer.hops < MAX_HOPS && random() < CARRY_ON) {
           queue.push({ at: clock + rand(0.06, 0.3), part: transfer.to, came: transfer.link, hops: transfer.hops + 1, color: transfer.color, cause: transfer });
           active += 1;
         }
@@ -888,8 +928,8 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (pulses.length < maxPulses) act(due);
       }
       if (active < target && pulses.length < maxPulses && links.length) {
-        const fresh = shuffle(links.slice(0, 400)).find(visible) || links[Math.floor(Math.random() * links.length)];
-        send(fresh, Math.random() < 0.5, 0, COLORS[Math.floor(Math.random() * COLORS.length)], null);
+        const fresh = shuffle(links.slice(0, 400)).find(visible) || links[Math.floor(random() * links.length)];
+        send(fresh, random() < 0.5, 0, COLORS[Math.floor(random() * COLORS.length)], null);
       }
       return reached;
     },
@@ -1001,7 +1041,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         boardH = Math.max(height, screen.height || 0);
         boardRatio = Math.min(window.devicePixelRatio || 1, 2);
         const count = Math.max(MIN_PARTS, Math.min(MAX_PARTS, Math.round((boardW * boardH) / AREA_PER_PART)));
-        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count);
+        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count, sessionSeed());
         chips = plan.chips;
         pours = plan.pours;
         stitches = plan.stitches;
@@ -1055,14 +1095,14 @@ export function startCircuit({ still = false, resume = false } = {}) {
           spawnIn -= dt;
           if (spawnIn <= 0 && ambient.length < MAX_AMBIENT && quiet.length) {
             spawnIn = AMBIENT_EVERY;
-            let trace = quiet[Math.floor(Math.random() * quiet.length)];
+            let trace = quiet[Math.floor(random() * quiet.length)];
             for (let tries = 0; tries < 4 && !onScreen(trace.points[0]); tries += 1) {
-              trace = quiet[Math.floor(Math.random() * quiet.length)];
+              trace = quiet[Math.floor(random() * quiet.length)];
             }
             const speed = rand(110, 190);
-            const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-            const inward = Math.random() < 0.3;
-            const group = Math.random() < 0.35 && trace.bus.length > 1 ? trace.bus : [trace];
+            const color = COLORS[Math.floor(random() * COLORS.length)];
+            const inward = random() < 0.3;
+            const group = random() < 0.35 && trace.bus.length > 1 ? trace.bus : [trace];
             for (const t of group) ambient.push({ trace: t, d: 0, speed, color, inward });
           }
           for (const pulse of ambient) pulse.d += pulse.speed * dt;

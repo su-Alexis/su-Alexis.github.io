@@ -140,3 +140,13 @@ test('data only moves along nets, and each hop starts where the last one arrived
     assert.ok(traffic.pulses.length <= 240);
   }
 });
+
+test('a seed always lays out the same board, so pages share one board', () => {
+  const shape = (board) => JSON.stringify({
+    chips: board.chips.map((c) => [c.kind, c.x0, c.y0, c.x1, c.y1, c.label]),
+    traces: board.traces.map((t) => t.points),
+    pours: board.pours.length,
+  });
+  assert.equal(shape(planBoard(160, 90, 20, 12345)), shape(planBoard(160, 90, 20, 12345)));
+  assert.notEqual(shape(planBoard(160, 90, 20, 12345)), shape(planBoard(160, 90, 20, 54321)));
+});
