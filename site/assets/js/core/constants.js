@@ -98,6 +98,9 @@ export const SESSION_KEYS = Object.freeze({
   // session draws the same board, so it stays put while pages slide over it. Refresh and
   // reboot clear it, and the next page lays out a new board.
   bgSeed: `${STORAGE_PREFIX}bg-seed`,
+  // Where the board's pulses were when the last page was left: { v: 1, seed, w, h, t, q,
+  // a } (ui/bg-circuit.js), so they carry on from there. Same lifetime as bgSeed.
+  bgPulses: `${STORAGE_PREFIX}bg-pulses`,
   // btop is running: { v: 1, shell, pid, samples }, so it keeps running in the same shell
   // on the next page with its graph intact (ui/terminal-ui.js). Cleared on quit and reset.
   btop: `${STORAGE_PREFIX}btop`,

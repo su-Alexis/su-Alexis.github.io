@@ -150,3 +150,21 @@ test('a seed always lays out the same board, so pages share one board', () => {
   assert.equal(shape(planBoard(160, 90, 20, 12345)), shape(planBoard(160, 90, 20, 12345)));
   assert.notEqual(shape(planBoard(160, 90, 20, 12345)), shape(planBoard(160, 90, 20, 54321)));
 });
+
+test('a traffic snapshot puts every pulse back where it was, and bad values are skipped', () => {
+  const board = boards.find((b) => b.cols >= 96);
+  const links = linksOf(board);
+  const before = makeTraffic(links, { target: 10 });
+  for (let t = 0; t < 80; t += 1) before.tick(0.05);
+  const data = JSON.parse(JSON.stringify(before.snapshot()));
+  const after = makeTraffic(links, { target: 0 });
+  after.restore(data);
+  const where = (traffic) => traffic.pulses.map((p) => `${links.indexOf(p.transfer.link)}:${p.transfer.link.lines.indexOf(p.trace)}:${Math.round(p.d)}`).sort();
+  assert.ok(before.pulses.length > 0);
+  assert.deepEqual(where(after), where(before));
+  const hostile = makeTraffic(links, { target: 0 });
+  hostile.restore({ t: [[999, 1, 0, 0, 200, [[0, 5]]], ['x'], [0, 1, 0, 0, 200, [[999, 5]]], [0, 2, 0, 0, 200, [[0, 5]]]], q: [[0, 1, 99999, 0, 0], null] });
+  hostile.restore(null);
+  hostile.restore({ t: 'nope', q: [] });
+  assert.equal(hostile.pulses.length, 0);
+});

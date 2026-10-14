@@ -933,6 +933,54 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
       }
       return reached;
     },
+    // What is on the wire, as plain numbers (owner request, October 14, 2026: the pulses
+    // keep their places from page to page). Links are named by index, so this only makes
+    // sense on the same board (the session seed and size; startCircuit checks).
+    //   t: [link, forward 0/1, hops, colour, speed, [[line, distance], ...]] per transfer
+    //   q: [link it came by, at that link's b end 0/1, due in ms, hops, colour] per part
+    //      about to act
+    snapshot() {
+      const index = new Map(links.map((link, i) => [link, i]));
+      const groups = new Map();
+      for (const pulse of pulses) {
+        if (!groups.has(pulse.transfer)) groups.set(pulse.transfer, { speed: pulse.speed, lines: [] });
+        groups.get(pulse.transfer).lines.push([pulse.transfer.link.lines.indexOf(pulse.trace), Math.round(pulse.d)]);
+      }
+      return {
+        t: [...groups].map(([transfer, group]) => [index.get(transfer.link), transfer.from === transfer.link.a ? 1 : 0,
+          transfer.hops, COLORS.indexOf(transfer.color), Math.round(group.speed), group.lines]),
+        q: queue.map((due) => [index.get(due.came), due.part === due.came.b ? 1 : 0,
+          Math.max(0, Math.round((due.at - clock) * 1000)), due.hops, COLORS.indexOf(due.color)]),
+      };
+    },
+    // Puts a snapshot back, checking every value first (it comes back from storage as
+    // untrusted): anything out of range is skipped. The chains carry on from where they
+    // were; what caused them is not kept.
+    restore(data) {
+      const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+      if (!data || !Array.isArray(data.t) || !Array.isArray(data.q)) return;
+      for (const entry of data.t.slice(0, maxPulses)) {
+        if (!Array.isArray(entry) || entry.length !== 6) continue;
+        const [li, forward, hops, colour, speed, lines] = entry;
+        if (!int(li, 0, links.length - 1) || !int(forward, 0, 1) || !int(hops, 0, MAX_HOPS) || !int(colour, 0, COLORS.length - 1)
+          || !int(speed, 100, 300) || !Array.isArray(lines) || !lines.length) continue;
+        const link = links[li];
+        const placed = lines.filter((line) => Array.isArray(line) && line.length === 2 && int(line[0], 0, link.lines.length - 1)
+          && int(line[1], 0, Math.ceil(link.lines[line[0]].length) + TAIL * TAIL_GAP));
+        if (!placed.length || pulses.length + placed.length > maxPulses) continue;
+        const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color: COLORS[colour], cause: null, left: placed.length };
+        for (const [line, d] of placed) pulses.push({ trace: link.lines[line], d, speed, color: transfer.color, inward: !forward, transfer });
+        active += 1;
+      }
+      for (const entry of data.q.slice(0, 200)) {
+        if (!Array.isArray(entry) || entry.length !== 5) continue;
+        const [li, atB, ms, hops, colour] = entry;
+        if (!int(li, 0, links.length - 1) || !int(atB, 0, 1) || !int(ms, 0, 1000) || !int(hops, 0, MAX_HOPS) || !int(colour, 0, COLORS.length - 1)) continue;
+        const came = links[li];
+        queue.push({ at: clock + ms / 1000, part: atB ? came.b : came.a, came, hops, color: COLORS[colour], cause: null });
+        active += 1;
+      }
+    },
   };
 }
 
@@ -966,6 +1014,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
       let boardRatio = 0;
       let rebuild = 0;
       let redraw = () => {};
+      let seed = 0;
 
       function drawBoard() {
         const ratio = boardRatio;
@@ -1041,7 +1090,8 @@ export function startCircuit({ still = false, resume = false } = {}) {
         boardH = Math.max(height, screen.height || 0);
         boardRatio = Math.min(window.devicePixelRatio || 1, 2);
         const count = Math.max(MIN_PARTS, Math.min(MAX_PARTS, Math.round((boardW * boardH) / AREA_PER_PART)));
-        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count, sessionSeed());
+        seed = sessionSeed();
+        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count, seed);
         chips = plan.chips;
         pours = plan.pours;
         stitches = plan.stitches;
@@ -1067,7 +1117,44 @@ export function startCircuit({ still = false, resume = false } = {}) {
         ambient = [];
         flashes = [];
         drawBoard();
+        restorePulses();
       }
+
+      // The pulses carry over from page to page (owner request, October 14, 2026): saved
+      // as the page is left (pageswap, just before the slide's picture is taken, or
+      // pagehide) and put back on the next page's identical board, so they pick up where
+      // they stopped. Only for the same seed and board size; a refresh or reboot clears
+      // them with the seed (ui/terminal-ui.js).
+      const ambientCap = MAX_AMBIENT;
+      function savePulses() {
+        if (!context.canvas.isConnected || !traces.length) return;
+        const index = new Map(quiet.map((trace, i) => [trace, i]));
+        writeJson(sessionStore(), SESSION_KEYS.bgPulses, {
+          v: 1, seed, w: boardW, h: boardH,
+          ...traffic.snapshot(),
+          a: ambient.map((p) => [index.get(p.trace), Math.round(p.d), Math.round(p.speed), COLORS.indexOf(p.color), p.inward ? 1 : 0]),
+        });
+      }
+      function restorePulses() {
+        const data = readJson(sessionStore(), SESSION_KEYS.bgPulses);
+        if (!data || data.v !== 1 || data.seed !== seed || data.w !== boardW || data.h !== boardH) return;
+        traffic.restore(data);
+        const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+        if (!Array.isArray(data.a)) return;
+        for (const entry of data.a.slice(0, ambientCap)) {
+          if (!Array.isArray(entry) || entry.length !== 5) continue;
+          const [ti, d, speed, colour, inward] = entry;
+          if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
+          if (!int(d, 0, Math.ceil(quiet[ti].length) + TAIL * TAIL_GAP)) continue;
+          ambient.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1 });
+        }
+      }
+      // pageswap is the moment the slide's picture is taken; pagehide is the fallback
+      // where it never fires (no transition), so it does not overwrite a pageswap save.
+      let saved = false;
+      window.addEventListener('pageswap', () => { saved = true; savePulses(); });
+      window.addEventListener('pagehide', () => { if (!saved) savePulses(); });
+      window.addEventListener('pageshow', () => { saved = false; });
 
       const onScreen = ([x, y]) => x <= width && y <= height;
 

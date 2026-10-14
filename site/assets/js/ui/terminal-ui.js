@@ -122,6 +122,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.sudoAt);
     removeKey(store, SESSION_KEYS.noScreensaver);
     removeKey(store, SESSION_KEYS.bgSeed);
+    removeKey(store, SESSION_KEYS.bgPulses);
     removeKey(store, SESSION_KEYS.btop);
     removeKey(store, SESSION_KEYS.vmPending);
     removeKey(store, SESSION_KEYS.vms);
@@ -548,6 +549,7 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.sudoAt);
     removeKey(store, SESSION_KEYS.noScreensaver);
     removeKey(store, SESSION_KEYS.bgSeed);
+    removeKey(store, SESSION_KEYS.bgPulses);
     removeKey(store, SESSION_KEYS.btop);
     removeKey(store, SESSION_KEYS.vmPending);
     removeKey(store, SESSION_KEYS.vms);
