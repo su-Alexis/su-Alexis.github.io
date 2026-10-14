@@ -563,9 +563,10 @@
    Layers, bottom to top (owner requests, October 14, 2026: the background holds still,
    no grey, no flicker, and every page slides the same way):
      root    the bare page colour, which does not move;
-     bg      the background canvas: the old board holds for the whole slide (the new
-             page's board is the same one, ui/bg-circuit.js's session seed, and takes over
-             when the slide ends);
+     bg      the background canvas: the old page's picture of the board, and over it the
+             new page's live board (the same board, ui/bg-circuit.js's session seed, with
+             its pulses carried over), opaque, so it covers the picture the moment it is
+             drawn and the pulses keep moving through the slide;
      desktop the page itself (.site), sliding. A long page is captured whole, so the
              old picture is lifted by how far that page was scrolled (--vt-shift) and
              both scale about the middle of what was on screen (--vt-old-origin,
@@ -616,15 +617,11 @@
   animation: none;
 }
 
-::view-transition-old(bg) {
+::view-transition-old(bg),
+::view-transition-new(bg) {
   animation: none;
   opacity: 1;
   mix-blend-mode: normal;
-}
-
-::view-transition-new(bg) {
-  animation: none;
-  opacity: 0;
 }
 
 ::view-transition-old(desktop) {

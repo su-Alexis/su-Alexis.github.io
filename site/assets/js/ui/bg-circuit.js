@@ -1015,6 +1015,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
       let rebuild = 0;
       let redraw = () => {};
       let seed = 0;
+      let firstPending = false;
 
       function drawBoard() {
         const ratio = boardRatio;
@@ -1024,6 +1025,12 @@ export function startCircuit({ still = false, resume = false } = {}) {
         b.setTransform(ratio, 0, 0, ratio, 0, 0);
         b.lineJoin = 'round';
         b.lineCap = 'round';
+        // The page colour under everything, so the canvas is opaque: during a page slide
+        // the new page's live board sits over the old page's picture of it and covers it
+        // the moment it is drawn, with nothing to blend (layer1.css, "Desktop transitions").
+        const page = getComputedStyle(document.body).backgroundColor;
+        b.fillStyle = page && !/rgba\(.*,\s*0\)$/.test(page) && page !== 'transparent' ? page : '#0a0c0e';
+        b.fillRect(0, 0, boardW, boardH);
         // Copper pour: one faint sheet (each pour point fills its cell, so neighbours join
         // up), filled once so overlaps never double up, with its stitching vias.
         b.beginPath();
@@ -1130,7 +1137,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         if (!context.canvas.isConnected || !traces.length) return;
         const index = new Map(quiet.map((trace, i) => [trace, i]));
         writeJson(sessionStore(), SESSION_KEYS.bgPulses, {
-          v: 1, seed, w: boardW, h: boardH,
+          v: 1, seed, w: boardW, h: boardH, at: Date.now(),
           ...traffic.snapshot(),
           a: ambient.map((p) => [index.get(p.trace), Math.round(p.d), Math.round(p.speed), COLORS.indexOf(p.color), p.inward ? 1 : 0]),
         });
@@ -1148,6 +1155,14 @@ export function startCircuit({ still = false, resume = false } = {}) {
           if (!int(d, 0, Math.ceil(quiet[ti].length) + TAIL * TAIL_GAP)) continue;
           ambient.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1 });
         }
+        // Move everything on by the time the page change took (at most two seconds), so
+        // the pulses arrive where they would be had they never stopped.
+        const away = Number.isFinite(data.at) ? Math.min(2, Math.max(0, (Date.now() - data.at) / 1000)) : 0;
+        if (away > 0) {
+          traffic.tick(away);
+          for (const pulse of ambient) pulse.d += pulse.speed * away;
+          ambient = ambient.filter((p) => p.d < p.trace.length + TAIL * TAIL_GAP);
+        }
       }
       // pageswap is the moment the slide's picture is taken; pagehide is the fallback
       // where it never fires (no transition), so it does not overwrite a pageswap save.
@@ -1162,8 +1177,18 @@ export function startCircuit({ still = false, resume = false } = {}) {
         resize(w, h) {
           width = w;
           height = h;
+          // The first layout waits until the page has painted (owner request, October 14,
+          // 2026: page changes were held up by it): the canvas is there, empty, from the
+          // start, and the board appears a moment later. During a page slide the old
+          // page's picture of the board shows until then.
           if (!boardW) {
-            build();
+            if (!firstPending) {
+              firstPending = true;
+              window.requestAnimationFrame(() => window.setTimeout(() => {
+                build();
+                redraw(); // a still (reduced motion) board has no loop to draw it
+              }, 0));
+            }
             return;
           }
           const ratio = Math.min(window.devicePixelRatio || 1, 2);
