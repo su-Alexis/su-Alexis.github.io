@@ -1453,7 +1453,7 @@ export function mountTerminal(primaryRoot) {
   // next is a reviewed page id; log is that page's own load log, from our own markup,
   // and is validated by captureLog() like any other.
   function arrive(next, logNode) {
-    if (!Object.hasOwn(PAGES, next) || next === 'lab') return;
+    if (!Object.hasOwn(PAGES, next)) return;
     page = next;
     cwd = PAGES[page].cwd;
     if (state.pwd && state.pwd !== cwd) state.oldpwd = state.pwd;
@@ -1468,11 +1468,19 @@ export function mountTerminal(primaryRoot) {
     showUser();
     save();
     isReady = false;
+    // The lab builds its hypervisor again (Layer 2), as on a page load.
+    mountLab();
     whenLoaded();
+  }
+
+  // Leaving the lab for a page swapped in place: the hypervisor saves and comes down.
+  function leave() {
+    if (page === 'lab' && layer2 && typeof layer2.unmountLab === 'function') layer2.unmountLab();
   }
 
   return {
     arrive,
+    leave,
     destroy() {
       window.clearTimeout(saveTimer);
       window.removeEventListener('pagehide', onPageHide);

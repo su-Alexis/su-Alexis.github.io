@@ -1473,6 +1473,12 @@ a.project-shot-placeholder {
 /* The canvas sits fixed behind everything; .site is lifted above it so modules, links and
    shells stay readable and clickable. Only present while an effect is on. */
 .matrix-rain,
+/* The move into the lab (core/router.js, owner request, October 14, 2026): the lab's page
+   waits out of sight while the old page slides away, then builds. */
+.vt-hold .site-main > :not(#terminal) {
+  visibility: hidden;
+}
+
 /* 100vw, scrollbar included, as the canvas's own width is (window.innerWidth,
    ui/canvas-bg.js): a page with a scrollbar then draws the board at the same scale as one
    without, so it does not shift from page to page. */

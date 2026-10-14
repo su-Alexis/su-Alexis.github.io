@@ -582,10 +582,36 @@ export function mountLab(host, { runCommand = () => {}, unlocked: readUnlocked =
     settle();
   }
 
-  window.addEventListener('pagehide', () => {
-    save();
-    stopEffects();
-  });
+  window.addEventListener('pagehide', onLeave);
+}
+
+function onLeave() {
+  save();
+  stopEffects();
+}
+
+// The visitor left the lab for a Layer 1 page swapped in place (core/router.js; owner
+// request, October 14, 2026): as when the page unloads, the running VMs are saved
+// (ui/vm-session.js) and suspended, then everything the hypervisor built is taken down
+// so a later visit builds it again.
+export function unmountLab() {
+  if (!stage) return;
+  onLeave();
+  window.removeEventListener('pagehide', onLeave);
+  for (const con of consoles.values()) {
+    if (con.desktop) con.desktop.destroy();
+    if (con.firmware) con.firmware.destroy();
+  }
+  for (const win of windows.values()) win.destroy();
+  windows.clear();
+  consoles.clear();
+  rows.clear();
+  focusOrder = [];
+  front = null;
+  details = null;
+  desk = null;
+  stage = null;
+  run = () => {};
 }
 
 // Powers a known VM on into a window, or brings a running one to the front. Returns false

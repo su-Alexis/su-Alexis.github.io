@@ -8,6 +8,7 @@ import { mountStatusScramble, unmountStatusScramble } from '../ui/status-scrambl
 import { mountCertVerify } from '../ui/cert-verify.js';
 import { mountShotViewer } from '../ui/shot-viewer.js';
 import { startRouter } from './router.js';
+import { loadLayer } from './layer-loader.js';
 import { PAGE_IDS } from '../data/commands.js';
 import { pickKnown } from '../utils/validate.js';
 
@@ -56,15 +57,25 @@ try {
   // The viewer still works with plain links.
 }
 
-// In-place navigation between Layer 1 pages (core/router.js; owner request, October 14,
-// 2026). Each swapped-in page gets the same enhancements as a page that loaded. Only
-// with a working console: the shell carries the page across, so without it pages load.
+// In-place navigation between pages, the lab included (core/router.js; owner requests,
+// October 14, 2026). Each swapped-in page gets the same enhancements as a page that
+// loaded. Only with a working console: the shell carries the page across, so without it
+// pages load.
 try {
   const terminal = byId('terminal');
   if (shells && terminal) {
     startRouter({
       page: pickKnown(terminal.dataset.page, PAGE_IDS, 'home'),
       reducedMotion: document.documentElement.classList.contains(ROOT_CLASSES.reducedMotion),
+      // Into the lab: Layer 2's module and stylesheet are ready before it swaps in.
+      prepare: (page) => (page === 'lab' ? loadLayer('workstation') : null),
+      onLeave: () => {
+        try {
+          shells.leave();
+        } catch {
+          // The page still changes; the VMs were saved when they last changed.
+        }
+      },
       onArrive: (page, log) => {
         try {
           shells.arrive(page, log);

@@ -2,9 +2,9 @@
 // should be seamless, with no reload). Doctrine section 12, "In-place navigation".
 //
 // Every page is still a complete static HTML file, and every link still works as a plain
-// link: without JavaScript, or for the lab, a modified click, another tab, or anything
-// this module cannot handle, the browser simply loads the page. When it can, a click on a
-// link to another Layer 1 page is handled here instead:
+// link: without JavaScript, for a modified click, another tab, or anything this module
+// cannot handle, the browser simply loads the page. When it can, a click on a link to
+// another page (Layer 1, or the lab) is handled here instead:
 //   1. The page is fetched from this site only, by a path from the fixed page map
 //      (data/commands.js PAGES); nothing typed or taken from the link's text builds it.
 //      The response must be a same-origin HTML page of bounded size.
@@ -29,9 +29,11 @@ import { el } from '../utils/dom.js';
 const MAX_BYTES = 600000; // our largest page is well under this
 const CACHE_PAGES = 12;
 const HASH = /^#[A-Za-z][A-Za-z0-9_-]{0,63}$/;
-const PAGE_CLASS = /^(?:steps|long-step)-\d{1,2}$/;
-// The lab builds Layer 2 when it loads, so it is always a normal page load.
-const SOFT_PAGES = Object.freeze(PAGE_IDS.filter((id) => id !== 'lab'));
+// The page's own classes on <html>: its load-sequence sizes, and the lab's marker.
+const PAGE_CLASS = /^(?:(?:steps|long-step)-\d{1,2}|lab-page)$/;
+// Every page in the map, the lab included (owner request, October 14, 2026: the move
+// into Layer 2 should be as seamless as the rest).
+const SOFT_PAGES = PAGE_IDS;
 
 // The site's root path, from this page's path and its reviewed place in the page map
 // (pure; tested): "/" on the live site, or a sub-path when served from one.
@@ -55,9 +57,9 @@ export function isPlainClick(event) {
 
 let router = null;
 
-// Asks the running router to go to a page (the shell's cd and open). Returns false when
-// it cannot (no router, the lab, a page it does not handle), and the caller loads the
-// page normally.
+// Asks the running router to go to a page (the shell's cd, open and vm). Returns false
+// when it cannot (no router, a page it does not handle), and the caller loads the page
+// normally.
 export function softNavigate(pageId, anchor = null) {
   if (!router || !SOFT_PAGES.includes(pageId)) return false;
   router.go(pageId, anchor ? `#${anchor}` : '', { push: true });
@@ -77,7 +79,10 @@ function executable(root) {
   return false;
 }
 
-export function startRouter({ page, onArrive = () => {}, reducedMotion = false }) {
+// prepare(id): a promise to wait for before a page swaps in (the lab's Layer 2 module and
+// stylesheet). onLeave(from): the page being left goes (the lab takes its VMs down).
+// onArrive(id, log): the new page is in; the shell and page features catch up.
+export function startRouter({ page, onArrive = () => {}, onLeave = () => {}, prepare = () => null, reducedMotion = false }) {
   if (router || !SOFT_PAGES.includes(page)) return;
   if (typeof window.fetch !== 'function' || typeof window.DOMParser !== 'function' || !window.history || !window.history.pushState) return;
   const siteRoot = siteRootFor(window.location.pathname, page);
@@ -192,40 +197,56 @@ export function startRouter({ page, onArrive = () => {}, reducedMotion = false }
     const target = urlFor(id) + (HASH.test(hash) ? hash : '');
     try {
       const next = readPage(await fetchPage(id));
+      try {
+        await prepare(id);
+      } catch {
+        // The page still comes in; whatever failed to load shows its static fallback.
+      }
       const oldScroll = Math.round(window.scrollY);
+      const html = document.documentElement;
+      // A hidden tab renders nothing, so a view transition there would wait for the tab
+      // to come back before the page even changes: swap straight away instead.
+      const animate = !reducedMotion && typeof document.startViewTransition === 'function' && document.visibilityState === 'visible';
+      // Into the lab, the hypervisor builds once the old page has slid out (owner request,
+      // October 14, 2026): the new page waits hidden (html.vt-hold, layout.css) until the
+      // slide ends, then its load sequence, the shell's log and Layer 2 start together.
+      const hold = animate && id === 'lab';
       let log = null;
+      const arrived = () => {
+        html.classList.remove('vt-hold');
+        // The page's load sequence (layers/layer1.js), then the shell and page features.
+        document.dispatchEvent(new Event('rwa:page'));
+        onArrive(id, log);
+        announcer.textContent = next.title;
+      };
       const update = () => {
         if (push) {
           window.history.replaceState({ ...(window.history.state || {}), rwa: 1, page: from, scroll: oldScroll }, '');
           window.history.pushState({ rwa: 1, page: id, scroll: 0 }, '', target);
         }
+        onLeave(from);
         log = swap(next);
         current = id;
         const anchor = HASH.test(hash) ? document.getElementById(hash.slice(1)) : null;
         const top = anchor ? Math.max(0, Math.round(window.scrollY + anchor.getBoundingClientRect().top - 16)) : (push ? 0 : scroll);
         window.scrollTo({ top, behavior: 'instant' });
         // The slide lines the old picture up with where it was scrolled (layer1.css).
-        const html = document.documentElement;
         const newScroll = Math.round(window.scrollY);
         const middle = Math.round(window.innerHeight / 2);
         html.style.setProperty('--vt-shift', `${newScroll - oldScroll}px`);
         html.style.setProperty('--vt-old-origin', `${oldScroll + middle}px`);
         html.style.setProperty('--vt-new-origin', `${newScroll + middle}px`);
-        // The page's load sequence (layers/layer1.js), then the shell and page features.
-        document.dispatchEvent(new Event('rwa:page'));
-        onArrive(id, log);
-        announcer.textContent = next.title;
+        if (hold) html.classList.add('vt-hold');
+        else arrived();
       };
       const clear = () => {
-        const html = document.documentElement;
         html.style.removeProperty('--vt-shift');
         html.style.removeProperty('--vt-old-origin');
         html.style.removeProperty('--vt-new-origin');
+        if (hold) arrived();
       };
       const direction = PAGES[id].depth < PAGES[from].depth ? 'back' : 'forward';
-      // A hidden tab renders nothing, so a view transition there would wait for the tab
-      // to come back before the page even changes: swap straight away instead.
-      if (!reducedMotion && typeof document.startViewTransition === 'function' && document.visibilityState === 'visible') {
+      if (animate) {
         let transition;
         try {
           transition = document.startViewTransition({ update, types: [direction] });
