@@ -69,6 +69,8 @@ export const SESSION_KEYS = Object.freeze({
   visited: `${STORAGE_PREFIX}visited`,
   // Depth of the page being left, for the slide direction of the next transition.
   fromDepth: `${STORAGE_PREFIX}from-depth`,
+  // How far the page being left was scrolled, so its picture slides out from where it was.
+  fromScroll: `${STORAGE_PREFIX}from-scroll`,
   // The one-time startup tip in the console.
   hintShown: `${STORAGE_PREFIX}hint-shown`,
   // Set when the console itself navigated (cd, open), so the next page does not echo

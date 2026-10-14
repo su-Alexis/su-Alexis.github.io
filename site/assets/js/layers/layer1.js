@@ -22,6 +22,7 @@
   var BOOT_PLAYED_KEY = 'rwa:boot-played';
   var VISITED_KEY = 'rwa:visited';
   var FROM_DEPTH_KEY = 'rwa:from-depth';
+  var FROM_SCROLL_KEY = 'rwa:from-scroll';
   // Safety net only: must stay above the longest full boot (about 18s on the home page).
   var FALLBACK_MS = 25000;
   var MODULE_SCROLL_MS = 550;
@@ -94,18 +95,25 @@
       return;
     }
     storageSet(FROM_DEPTH_KEY, String(depth));
-    // The page's background colour steps aside so the still background canvas shows
-    // under the sliding page (layer1.css, "Desktop transitions").
-    root.classList.add('vt-see-through');
-  });
-  // Back from the back/forward cache: this page was captured mid-transition.
-  window.addEventListener('pageshow', function () {
-    root.classList.remove('vt-see-through');
+    storageSet(FROM_SCROLL_KEY, String(Math.round(window.scrollY || 0)));
   });
   window.addEventListener('pagereveal', function (event) {
     if (!event.viewTransition) return;
-    root.classList.add('vt-see-through');
-    var settle = function () { root.classList.remove('vt-see-through'); };
+    // The old page is captured whole: line its picture up with where it was scrolled
+    // to, and scale both pictures about the middle of the screen (layer1.css, "Desktop
+    // transitions"). Read back as untrusted: a bounded whole number, or no shift.
+    var oldScroll = Number(storageGet(FROM_SCROLL_KEY));
+    if (!Number.isFinite(oldScroll) || oldScroll < 0 || oldScroll > 1000000) oldScroll = 0;
+    var newScroll = Math.round(window.scrollY || 0);
+    var middle = Math.round((window.innerHeight || 0) / 2);
+    root.style.setProperty('--vt-shift', (newScroll - oldScroll) + 'px');
+    root.style.setProperty('--vt-old-origin', (oldScroll + middle) + 'px');
+    root.style.setProperty('--vt-new-origin', (newScroll + middle) + 'px');
+    var settle = function () {
+      root.style.removeProperty('--vt-shift');
+      root.style.removeProperty('--vt-old-origin');
+      root.style.removeProperty('--vt-new-origin');
+    };
     event.viewTransition.finished.then(settle, settle);
     var from = Number(storageGet(FROM_DEPTH_KEY));
     try {

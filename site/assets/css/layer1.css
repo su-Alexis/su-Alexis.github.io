@@ -558,14 +558,19 @@
    Same-origin navigations slide like switching virtual desktops: the old page slides
    out, the new one slides in (reversed when going back up the site). The top bar, the
    shell windows and the background keep their place. CSS only (cross-document view
-   transitions); browsers without support simply navigate. Off for reduced motion.
-   The background (owner requests, October 14, 2026: it stays put like the shells, with
-   no shift or flicker): its canvas is its own group ("bg"), held still and slipped under
-   the sliding page (z-index -1). For it to show through, the page's own background colour
-   is cleared while a transition runs (html.vt-see-through, set by layers/layer1.js) and
-   painted on ::view-transition instead. The circuit board is the same on every page of a
-   session (ui/bg-circuit.js, its seed), so the old canvas simply holds until the new one,
-   identical, takes over. */
+   transitions) plus the scroll bookkeeping in layers/layer1.js; browsers without
+   support simply navigate. Off for reduced motion.
+   Layers, bottom to top (owner requests, October 14, 2026: the background holds still,
+   no grey, no flicker, and every page slides the same way):
+     root    the bare page colour, which does not move;
+     bg      the background canvas: the old board holds for the whole slide (the new
+             page's board is the same one, ui/bg-circuit.js's session seed, and takes over
+             when the slide ends);
+     desktop the page itself (.site), sliding. A long page is captured whole, so the
+             old picture is lifted by how far that page was scrolled (--vt-shift) and
+             both scale about the middle of what was on screen (--vt-old-origin,
+             --vt-new-origin); without that, leaving a scrolled page slid it diagonally;
+     topbar, tty1-3 the bar and shells, which stay put. */
 
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
@@ -593,23 +598,24 @@
   view-transition-name: bg;
 }
 
-::view-transition {
-  background: var(--color-bg);
+.site {
+  view-transition-name: desktop;
 }
 
-html.vt-see-through,
-html.vt-see-through body {
-  background-color: transparent;
+::view-transition-old(root) {
+  animation: none;
+  opacity: 0;
 }
 
-::view-transition-group(bg) {
-  z-index: -1;
+::view-transition-new(root) {
   animation: none;
 }
 
-/* No blend (owner report, October 14, 2026: blending the two canvases greyed the board
-   out): the old board stays exactly as it was for the whole slide, and the new page's
-   canvas (the same board, already drawn by then) takes over when the slide ends. */
+::view-transition-group(bg),
+::view-transition-group(desktop) {
+  animation: none;
+}
+
 ::view-transition-old(bg) {
   animation: none;
   opacity: 1;
@@ -621,19 +627,24 @@ html.vt-see-through body {
   opacity: 0;
 }
 
-::view-transition-old(root) {
+::view-transition-old(desktop) {
+  translate: 0 var(--vt-shift, 0px);
+  transform-origin: 50% var(--vt-old-origin, 50vh);
+  mix-blend-mode: normal;
   animation: desktop-out-left 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
-::view-transition-new(root) {
+::view-transition-new(desktop) {
+  transform-origin: 50% var(--vt-new-origin, 50vh);
+  mix-blend-mode: normal;
   animation: desktop-in-right 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
-html:active-view-transition-type(back)::view-transition-old(root) {
+html:active-view-transition-type(back)::view-transition-old(desktop) {
   animation-name: desktop-out-right;
 }
 
-html:active-view-transition-type(back)::view-transition-new(root) {
+html:active-view-transition-type(back)::view-transition-new(desktop) {
   animation-name: desktop-in-left;
 }
 
