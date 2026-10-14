@@ -15,6 +15,19 @@ body {
 
 /* ---------- Top bar ---------- */
 
+/* A soft backing behind the loose text over the circuit board: the name, the user prompt
+   and the footer line (owner request, October 14, 2026: too hard to read without one).
+   The page's own black, mostly opaque, with its edge feathered by a shadow of the same
+   colour, so it reads as a shadow behind the words rather than a box or a band. The
+   negative margins give back the padding, so nothing moves. */
+.brand,
+.status,
+.site-footer p {
+  border-radius: var(--radius);
+  background: rgba(10, 12, 14, 0.78);
+  box-shadow: 0 0 10px 4px rgba(10, 12, 14, 0.78);
+}
+
 /* No banner (owner request, October 13, 2026): the top bar has no band or rule of its own,
    so the page background floats up through it. It scrolls away with the page rather than
    sticking, so content never slides under a see-through bar. */
@@ -39,6 +52,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  margin: -0.2rem -0.5rem;
+  padding: 0.2rem 0.5rem;
   color: var(--color-heading);
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -61,8 +76,8 @@ body {
   display: inline-flex;
   gap: var(--space-2);
   align-items: center;
-  margin: 0 0 0 auto; /* stays on the right even when it wraps under the name on phones */
-  padding: 0.1rem 0;
+  margin: -0.1rem -0.5rem -0.1rem auto; /* stays on the right even when it wraps under the name on phones */
+  padding: 0.2rem 0.5rem;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: var(--font-size-tiny);
@@ -465,16 +480,19 @@ body {
   position: relative;
   z-index: 1;
   background: transparent;
+  padding: var(--space-3) var(--gutter);
   color: var(--color-text-faint);
   font-size: var(--font-size-tiny);
   letter-spacing: 0.06em;
   text-align: center;
 }
 
+/* Only as wide as its words, so its backing hugs them. */
 .site-footer p {
-  max-width: var(--content-width);
+  width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
-  padding: var(--space-3) var(--gutter);
+  padding: 0.2rem 0.6rem;
 }
 
 /* ---------- Certifications module ---------- */
