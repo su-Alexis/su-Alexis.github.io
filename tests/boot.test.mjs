@@ -14,10 +14,10 @@ test('the boot gate uses the shared session keys', () => {
   for (const key of [SESSION_KEYS.bootPlayed, SESSION_KEYS.visited, SESSION_KEYS.fromDepth]) assert.ok(gate.includes(`'${key}'`), key);
 });
 
-test('the boot gate only toggles the fixed classes and imports nothing', () => {
+test('the boot gate only toggles the fixed classes (and the transition see-through) and imports nothing', () => {
   assert.doesNotMatch(gate, /\bimport\b/);
   const added = [...gate.matchAll(/classList\.(?:add|remove)\('([^']+)'\)/g)].map((m) => m[1]);
-  assert.deepEqual([...new Set(added)].sort(), ['boot-done', 'boot-run', 'page-boot', 'page-cached']);
+  assert.deepEqual([...new Set(added)].sort(), ['boot-done', 'boot-run', 'page-boot', 'page-cached', 'vt-see-through']);
 });
 
 test('nothing is hidden unless the boot sequence is running', () => {

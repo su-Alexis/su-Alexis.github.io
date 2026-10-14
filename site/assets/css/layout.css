@@ -1473,11 +1473,14 @@ a.project-shot-placeholder {
 /* The canvas sits fixed behind everything; .site is lifted above it so modules, links and
    shells stay readable and clickable. Only present while an effect is on. */
 .matrix-rain,
+/* 100vw, scrollbar included, as the canvas's own width is (window.innerWidth,
+   ui/canvas-bg.js): a page with a scrollbar then draws the board at the same scale as one
+   without, so it does not shift from page to page. */
 .bg-canvas {
   position: fixed;
   inset: 0;
   z-index: 0;
-  width: 100%;
+  width: 100vw;
   height: 100%;
   pointer-events: none;
 }

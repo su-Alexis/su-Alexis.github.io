@@ -559,10 +559,12 @@
    out, the new one slides in (reversed when going back up the site). The top bar, the
    shell windows and the background keep their place. CSS only (cross-document view
    transitions); browsers without support simply navigate. Off for reduced motion.
-   What slides is the page itself (.site, named "desktop"), not the root: the root holds
-   the background canvas (ui/canvas-bg.js), which now stays put like the shells (owner
-   request, October 14, 2026). The new page's root shows at once; the circuit board is the
-   same on every page of a session (ui/bg-circuit.js, its seed), so nothing jumps. */
+   The background (owner requests, October 14, 2026: it stays put like the shells, with
+   no shift or flicker): its canvas is its own group ("bg"), held still and slipped under
+   the sliding page (z-index -1). For it to show through, the page's own background colour
+   is cleared while a transition runs (html.vt-see-through, set by layers/layer1.js) and
+   painted on ::view-transition instead. The circuit board is the same on every page of a
+   session (ui/bg-circuit.js, its seed), so the old and new canvases blend into one. */
 
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
@@ -586,36 +588,47 @@
   view-transition-name: tty3;
 }
 
-.site {
-  view-transition-name: desktop;
+.bg-canvas {
+  view-transition-name: bg;
+}
+
+::view-transition {
+  background: var(--color-bg);
+}
+
+html.vt-see-through,
+html.vt-see-through body {
+  background-color: transparent;
+}
+
+::view-transition-group(bg) {
+  z-index: -1;
+  animation: none;
+}
+
+/* The old and new canvases blend (the default plus-lighter fade), so the board looks the
+   same throughout, and a new canvas that has not drawn yet never blinks to empty. */
+::view-transition-old(bg),
+::view-transition-new(bg) {
+  animation-duration: 0.5s;
 }
 
 ::view-transition-old(root) {
-  animation: none;
-  opacity: 0;
-}
-
-::view-transition-new(root) {
-  animation: none;
-}
-
-::view-transition-old(desktop) {
   animation: desktop-out-left 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
-::view-transition-new(desktop) {
+::view-transition-new(root) {
   animation: desktop-in-right 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
-html:active-view-transition-type(back)::view-transition-old(desktop) {
+html:active-view-transition-type(back)::view-transition-old(root) {
   animation-name: desktop-out-right;
 }
 
-html:active-view-transition-type(back)::view-transition-new(desktop) {
+html:active-view-transition-type(back)::view-transition-new(root) {
   animation-name: desktop-in-left;
 }
 
-::view-transition-group(desktop),
 ::view-transition-group(tty1),
 ::view-transition-group(tty2),
 ::view-transition-group(tty3),

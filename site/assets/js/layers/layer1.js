@@ -94,9 +94,19 @@
       return;
     }
     storageSet(FROM_DEPTH_KEY, String(depth));
+    // The page's background colour steps aside so the still background canvas shows
+    // under the sliding page (layer1.css, "Desktop transitions").
+    root.classList.add('vt-see-through');
+  });
+  // Back from the back/forward cache: this page was captured mid-transition.
+  window.addEventListener('pageshow', function () {
+    root.classList.remove('vt-see-through');
   });
   window.addEventListener('pagereveal', function (event) {
     if (!event.viewTransition) return;
+    root.classList.add('vt-see-through');
+    var settle = function () { root.classList.remove('vt-see-through'); };
+    event.viewTransition.finished.then(settle, settle);
     var from = Number(storageGet(FROM_DEPTH_KEY));
     try {
       event.viewTransition.types.add(Number.isFinite(from) && from > depth ? 'back' : 'forward');
