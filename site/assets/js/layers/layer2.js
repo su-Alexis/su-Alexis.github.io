@@ -555,10 +555,35 @@ export function mountLab(host, { runCommand = () => {}, unlocked: readUnlocked =
     return el('li', {}, [row]);
   }));
   details = el('div', { className: 'lab-details', attrs: { 'aria-live': 'polite' } });
+  // Reset missions (owner request, October 14, 2026): progress is kept in this browser on
+  // purpose, so this is the visible way to replay the labs. It runs the same fixed
+  // "vm reset-missions" line in tty1 (VM keys stay), after a second click to confirm.
+  const reset = el('button', { className: 'lab-reset', text: 'Reset missions', attrs: { title: 'Open every ticket again (VM keys stay)' } });
+  let armed = 0;
+  const disarm = () => {
+    window.clearTimeout(armed);
+    armed = 0;
+    reset.textContent = 'Reset missions';
+    reset.classList.remove('is-armed');
+  };
+  reset.addEventListener('click', () => {
+    if (!armed) {
+      reset.textContent = 'Click again to reset every ticket';
+      reset.classList.add('is-armed');
+      armed = window.setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
+    run('vm reset-missions');
+    reset.textContent = 'Missions reset';
+    armed = window.setTimeout(disarm, 2000);
+  });
+  reset.addEventListener('blur', () => { if (reset.classList.contains('is-armed')) disarm(); });
   const library = el('section', { className: 'lab-library', attrs: { 'aria-label': 'Library' } }, [
     el('p', { className: 'lab-library-title', text: 'library · vm-host01' }),
     list,
     details,
+    el('div', { className: 'lab-library-foot' }, [reset]),
   ]);
 
   // ---------- Desk ----------

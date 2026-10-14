@@ -270,6 +270,37 @@
   background: rgba(79, 209, 224, 0.12);
 }
 
+/* The library's Reset missions button (layers/layer2.js), at its foot: quiet until it
+   asks for the confirming second click, then amber. */
+.lab-library-foot {
+  margin-top: auto;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.lab-reset {
+  width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.lab-reset:hover,
+.lab-reset:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.lab-reset.is-armed {
+  border-color: var(--color-warn);
+  background: rgba(240, 180, 60, 0.12);
+  color: var(--color-warn);
+}
+
 /* ---------- The desk: the hypervisor's screen behind the VMs ----------
    A waffle lattice (the machine's namesake) under a soft glow and faint scanlines, the
    wafflesOS logo as a watermark, and the host's name in the corner. Static: nothing here
