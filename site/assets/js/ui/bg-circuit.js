@@ -46,12 +46,14 @@ const NET_REACH = 90; // cells: parts further apart are not wired together
 const ROUTE_STEPS = 6000; // A* expansions per trace
 const ROUTE_BUDGET = 1200000; // A* expansions per board, so a huge screen stays quick
 const MAX_PULSES = 240; // data on the nets
-const MAX_AMBIENT = 40; // pulses on stubs, resistors and escaping buses at once
-const AMBIENT_CYCLE = [16, 24]; // seconds for a part to light each of those once
+const MAX_AMBIENT = 64; // pulses on stubs, resistors and escaping buses at once
+const AMBIENT_CYCLE = [8, 12]; // seconds for a part to light each of those once
+const TURNS_PER_TICK = 4; // most of those a part starts in one frame
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
 const CARRY_ON = 0.85; // chance a part passes data on once it arrives
 const TAIL = 10; // dots in a pulse's tail
+const AMBIENT_TAIL = 6; // shorter, on the quiet lines: a quick blip, not a streak
 const TAIL_GAP = 4; // px between tail dots
 // The board's palette (owner request, October 14, 2026), on the page's own black:
 //   deep blue-teal #16383F  subtle background circuitry (the copper pour, chip bodies)
@@ -60,17 +62,24 @@ const TAIL_GAP = 4; // px between tail dots
 //   deep violet #40345F     subtle purple circuit paths (about a third of the buses)
 //   muted purple #8870B5    purple node rings and accents (vias, mounting holes)
 //   soft lavender #B99AFF   small purple glow effects (pulses on violet paths)
-// The owner's optional amber is left out, as suggested with purple in use.
+//   warm amber #E8B45B      occasional status lights: signals on power and control lines
+// Two more (owner request, October 14, 2026: the pour and its stitching vias wanted a
+// colour of their own that complements the rest, and the board read as three colours):
+//   midnight indigo #1F2450 the copper pour, between the teal and the violet
+//   amber, faint            its stitching vias, like gold-plated vias on a real board
 const INK = Object.freeze({
   board: '22, 56, 63',
   path: '50, 119, 131',
   violet: '64, 52, 95',
   ring: '136, 112, 181',
+  pour: '31, 36, 80',
+  gold: '232, 180, 91',
 });
-// Pulse colours: index 0 rides teal paths, index 1 violet ones (stored by index).
-const COLORS = ['103, 220, 232', '185, 154, 255'];
+// Pulse colours, stored by index: 0 rides teal paths, 1 violet ones, 2 power and control
+// lines (toneColour).
+const COLORS = ['103, 220, 232', '185, 154, 255', '232, 180, 91'];
 const VIOLET_SHARE = 0.32;
-const toneColour = (trace) => COLORS[trace && trace.tone === 'violet' ? 1 : 0];
+const toneColour = (trace) => COLORS[!trace ? 0 : trace.signal === 'power' || trace.signal === 'control' ? 2 : trace.tone === 'violet' ? 1 : 0];
 const LABELS = ['SoC', 'NIC', 'TPM', 'FPGA', 'ROM', 'WAFF-1', 'HSM', 'DSP', 'GPU', 'MCU', 'PHY', 'PMIC'];
 
 // What sits on a grid point.
@@ -896,6 +905,10 @@ function layOut(cols, rows, partCount, view) {
   for (const trace of traces) {
     if (!tones.has(trace.bus)) tones.set(trace.bus, random() < VIOLET_SHARE ? 'violet' : 'teal');
     trace.tone = tones.get(trace.bus);
+    // What the line carries, for its pulses' colour: power to and from the inductors,
+    // control through the resistors (pull-ups, enables, status), data everywhere else.
+    const touches = (kind) => trace.chip.kind === kind || (trace.end && trace.end.kind === kind);
+    trace.signal = touches('inductor') ? 'power' : touches('passive') ? 'control' : 'data';
   }
   return { chips: kept, traces, pours, chamfers, stitches, holes };
 }
@@ -909,7 +922,11 @@ function toPixels(trace) {
   for (let i = 1; i < points.length; i += 1) {
     at.push(at[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
   }
-  return { ...trace, points, at, length: at[at.length - 1] };
+  // Its top-left corner, to tell whether any of it is in view (the window is never
+  // offset into the board, so only the near edges matter).
+  const minX = Math.min(...points.map((p) => p[0]));
+  const minY = Math.min(...points.map((p) => p[1]));
+  return { ...trace, points, at, length: at[at.length - 1], minX, minY };
 }
 
 function pointAt(trace, distance) {
@@ -1229,7 +1246,9 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
 //     own (AMBIENT_CYCLE seconds), the way a chip polls its I/O. So every line lights
 //     once a cycle, and the parts stay out of step with each other.
 //   - A bundle goes as one word, all its lines together.
-//   - Lines out of view take their turn without a pulse (nobody would see it).
+//   - Lines out of view are passed over at once, so a part's cycle covers only what is
+//     in view, and a smaller window sees each line more often.
+//   - The pulses are quick, short blips, so lighting every line often stays calm.
 //   - Most signals go out from the part; some come in, and the part lights up as they
 //     land. Data reaching a part over a net (poke) makes it drive its next line soon, so
 //     the quiet lines answer the traffic.
@@ -1258,12 +1277,43 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
     return { part, list: shuffle(list), next: Math.floor(random() * list.length), step, at: random() * step, last: -Infinity };
   });
   const byPart = new Map(parts.map((p) => [p.part, p]));
+  let holding = null; // the part waiting for room, if any
+
+  // One turn of a part's round; false when it has to wait.
+  function turn(p) {
+    // Its next line in view, passing over the rest; none in view: look again shortly.
+    let bundle = null;
+    for (let k = 0; k < p.list.length && !bundle; k += 1) {
+      if (p.list[p.next].lines.some(visible)) bundle = p.list[p.next];
+      else p.next = (p.next + 1) % p.list.length;
+    }
+    if (!bundle) {
+      p.at = clock + 1;
+      return false;
+    }
+    // Wait for room (a bundle bigger than the cap still goes once the board is clear).
+    // The first part kept waiting goes before any other, so a wide bus is never starved
+    // by a stream of single lines slipping into the gaps.
+    if (holding && holding !== p) return false;
+    if (pulses.length && pulses.length + bundle.lines.length > cap) {
+      holding = p;
+      return false;
+    }
+    holding = null;
+    fire(bundle);
+    p.last = clock;
+    p.next = (p.next + 1) % p.list.length;
+    // A part that fell behind (a hidden tab, a long wait for room) catches up by one turn
+    // at most, so it never bursts.
+    p.at = Math.max(p.at, clock - p.step) + p.step * rand(0.8, 1.2);
+    return true;
+  }
 
   function fire(bundle) {
-    const speed = rand(110, 190);
+    const speed = rand(160, 240);
     const color = toneColour(bundle.lines[0]);
     const inward = random() < 0.3;
-    for (const trace of bundle.lines) pulses.push({ trace, d: 0, speed, color, inward });
+    for (const trace of bundle.lines) pulses.push({ trace, d: 0, speed, color, inward, tail: AMBIENT_TAIL });
   }
 
   return {
@@ -1276,7 +1326,7 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
       for (let i = pulses.length - 1; i >= 0; i -= 1) {
         const pulse = pulses[i];
         pulse.d += pulse.speed * dt;
-        if (pulse.d < pulse.trace.length + TAIL * TAIL_GAP) continue;
+        if (pulse.d < pulse.trace.length + AMBIENT_TAIL * TAIL_GAP) continue;
         pulses.splice(i, 1);
         const { trace, color } = pulse;
         if (pulse.inward) landed.push({ part: trace.chip, color, inward: true });
@@ -1286,19 +1336,12 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
           landed.push({ x, y, color });
         }
       }
+      // A part with many lines (the processor's fan-out) can be due more than once in a
+      // frame; it takes up to TURNS_PER_TICK turns, so its cycle keeps time.
       for (const p of parts) {
-        if (p.at > clock) continue;
-        const bundle = p.list[p.next];
-        if (bundle.lines.some(visible)) {
-          // Wait for room (a bundle bigger than the cap still goes once the board is clear).
-          if (pulses.length && pulses.length + bundle.lines.length > cap) continue;
-          fire(bundle);
-          p.last = clock;
+        for (let turns = 0; turns < TURNS_PER_TICK && p.at <= clock; turns += 1) {
+          if (!turn(p)) break;
         }
-        p.next = (p.next + 1) % p.list.length;
-        // A part that fell behind (a hidden tab, a long wait for room) catches up by one
-        // turn at most, so it never bursts.
-        p.at = Math.max(p.at, clock - p.step) + p.step * rand(0.8, 1.2);
       }
       return landed;
     },
@@ -1320,8 +1363,8 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
         if (!Array.isArray(entry) || entry.length !== 5 || pulses.length >= cap) continue;
         const [ti, d, speed, colour, inward] = entry;
         if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
-        if (!int(d, 0, Math.ceil(quiet[ti].length) + TAIL * TAIL_GAP)) continue;
-        pulses.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1 });
+        if (!int(d, 0, Math.ceil(quiet[ti].length) + AMBIENT_TAIL * TAIL_GAP)) continue;
+        pulses.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL });
       }
     },
   };
@@ -1381,9 +1424,9 @@ export function startCircuit({ still = false, resume = false } = {}) {
           tri.forEach(([x, y], i) => (i ? b.lineTo(x * CELL, y * CELL) : b.moveTo(x * CELL, y * CELL)));
           b.closePath();
         }
-        b.fillStyle = `rgba(${INK.board}, 0.2)`;
+        b.fillStyle = `rgba(${INK.pour}, 0.32)`;
         b.fill();
-        b.strokeStyle = `rgba(${INK.path}, 0.35)`;
+        b.strokeStyle = `rgba(${INK.gold}, 0.42)`;
         b.lineWidth = 1;
         for (const [x, y] of stitches) {
           b.beginPath();
@@ -1462,13 +1505,13 @@ export function startCircuit({ still = false, resume = false } = {}) {
           links.get(trace.bus).lines.push(traces[i]);
         });
         const all = [...links.values()];
-        const seen = (link) => link.lines.some((t) => onScreen(t.points[0]) || onScreen(t.points[t.points.length - 1]));
-        const inView = all.filter(seen).length;
+        const seen = (link) => link.lines.some(inView);
+        const netsInView = all.filter(seen).length;
         // About two chains of transfers going for every three nets in view: busy, with room
         // left for the quiet lines (makeAmbient) to show.
-        traffic = makeTraffic(all, { target: Math.max(5, Math.min(24, Math.round(inView * 0.65))), visible: seen });
+        traffic = makeTraffic(all, { target: Math.max(5, Math.min(24, Math.round(netsInView * 0.65))), visible: seen });
         quiet = traces.filter((trace) => !trace.end || trace.end.kind === 'passive');
-        ambient = makeAmbient(quiet, { visible: (trace) => onScreen(trace.points[0]) || onScreen(trace.points[trace.points.length - 1]) });
+        ambient = makeAmbient(quiet, { visible: inView });
         flashes = [];
         drawBoard();
         restorePulses();
@@ -1507,7 +1550,9 @@ export function startCircuit({ still = false, resume = false } = {}) {
       window.addEventListener('pagehide', () => { if (!saved) savePulses(); });
       window.addEventListener('pageshow', () => { saved = false; });
 
-      const onScreen = ([x, y]) => x <= width && y <= height;
+      // Any part of the trace in the window, not just its ends (a long line crossing the
+      // view with both ends off it used to be counted out, so it hardly ever lit).
+      const inView = (trace) => trace.minX <= width && trace.minY <= height;
 
       const view = {
         resize(w, h) {
@@ -1562,11 +1607,12 @@ export function startCircuit({ still = false, resume = false } = {}) {
           // fainter, so it fills the board in without competing with it.
           for (const [pulses, strength] of [[traffic.pulses, 0.85], [ambient.pulses, 0.6]]) {
             for (const pulse of pulses) {
-              for (let k = TAIL; k >= 0; k -= 1) {
+              const tail = pulse.tail || TAIL;
+              for (let k = tail; k >= 0; k -= 1) {
                 const d = pulse.d - k * TAIL_GAP;
                 if (d < 0 || d > pulse.trace.length) continue;
                 const [x, y] = pointAt(pulse.trace, pulse.inward ? pulse.trace.length - d : d);
-                const a = (1 - k / (TAIL + 1)) * strength;
+                const a = (1 - k / (tail + 1)) * strength;
                 const r = k === 0 ? 2.2 : 1.4;
                 ctx.fillStyle = `rgba(${pulse.color}, ${a.toFixed(3)})`;
                 ctx.fillRect(x - r, y - r, r * 2, r * 2);

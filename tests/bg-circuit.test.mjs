@@ -178,18 +178,18 @@ function quietOf(board) {
   return [...copies.values()];
 }
 
-test('every wire on the board lights up within a cycle, and never too many at once', () => {
+test('every wire on the board lights up within 16 seconds, and never too many at once', () => {
   for (const board of boards.filter((b) => b.cols >= 96)) {
     const links = linksOf(board);
     const quiet = quietOf(board);
     const traffic = makeTraffic(links, { target: 10 });
-    const ambient = makeAmbient(quiet, { cap: 40 });
+    const ambient = makeAmbient(quiet, { cap: 64 });
     const lit = new Set();
-    for (let t = 0; t < 30 * 20; t += 1) {
+    for (let t = 0; t < 16 * 20; t += 1) {
       for (const { part } of traffic.tick(0.05)) ambient.poke(part);
       for (const landed of ambient.tick(0.05)) if (landed.inward) traffic.kick(landed.part);
       for (const pulse of [...traffic.pulses, ...ambient.pulses]) lit.add(pulse.trace);
-      assert.ok(ambient.pulses.length <= 40, 'the quiet lines stay under their cap');
+      assert.ok(ambient.pulses.length <= 64, 'the quiet lines stay under their cap');
     }
     for (const link of links) assert.ok(link.lines.some((line) => lit.has(line)), 'every net carries data');
     for (const trace of quiet) assert.ok(lit.has(trace), 'every quiet line lights up');
@@ -226,4 +226,21 @@ test('an ambient snapshot comes back the same, and bad values are skipped', () =
   hostile.restore('nope');
   hostile.restore(null);
   assert.equal(hostile.pulses.length, 0);
+});
+
+test('lines are coloured by what they carry: power and control in amber, data by its bus', () => {
+  for (const board of boards) {
+    for (const trace of board.traces) {
+      const touches = (kind) => trace.chip.kind === kind || (trace.end && trace.end.kind === kind);
+      const expected = touches('inductor') ? 'power' : touches('passive') ? 'control' : 'data';
+      assert.equal(trace.signal, expected);
+    }
+  }
+  const board = boards.find((b) => b.cols >= 96);
+  const ambient = makeAmbient(quietOf(board));
+  for (let t = 0; t < 200; t += 1) ambient.tick(0.05);
+  for (const pulse of ambient.pulses) {
+    const amber = pulse.trace.signal !== 'data';
+    assert.equal(pulse.color === '232, 180, 91', amber, 'amber exactly on power and control lines');
+  }
 });
