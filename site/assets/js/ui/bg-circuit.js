@@ -52,7 +52,24 @@ const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
 const CARRY_ON = 0.85; // chance a part passes data on once it arrives
 const TAIL = 10; // dots in a pulse's tail
 const TAIL_GAP = 4; // px between tail dots
-const COLORS = ['79, 209, 224', '95, 207, 128'];
+// The board's palette (owner request, October 14, 2026), on the page's own black:
+//   deep blue-teal #16383F  subtle background circuitry (the copper pour, chip bodies)
+//   muted teal-blue #327783 circuit paths and node outlines
+//   icy cyan #67DCE8        active nodes and highlights (pulses on teal paths)
+//   deep violet #40345F     subtle purple circuit paths (about a third of the buses)
+//   muted purple #8870B5    purple node rings and accents (vias, mounting holes)
+//   soft lavender #B99AFF   small purple glow effects (pulses on violet paths)
+// The owner's optional amber is left out, as suggested with purple in use.
+const INK = Object.freeze({
+  board: '22, 56, 63',
+  path: '50, 119, 131',
+  violet: '64, 52, 95',
+  ring: '136, 112, 181',
+});
+// Pulse colours: index 0 rides teal paths, index 1 violet ones (stored by index).
+const COLORS = ['103, 220, 232', '185, 154, 255'];
+const VIOLET_SHARE = 0.32;
+const toneColour = (trace) => COLORS[trace && trace.tone === 'violet' ? 1 : 0];
 const LABELS = ['SoC', 'NIC', 'TPM', 'FPGA', 'ROM', 'WAFF-1', 'HSM', 'DSP', 'GPU', 'MCU', 'PHY', 'PMIC'];
 
 // What sits on a grid point.
@@ -747,6 +764,12 @@ function layOut(cols, rows, partCount) {
     for (const side of part.sides) side.pins = side.pins.filter((pin) => wired.has(keyOf(pin)));
   }
   const kept = parts.filter((part) => part.sides.some((side) => side.pins.length));
+  // About a third of the buses (and lone stubs) run in violet, the rest in teal.
+  const tones = new Map();
+  for (const trace of traces) {
+    if (!tones.has(trace.bus)) tones.set(trace.bus, random() < VIOLET_SHARE ? 'violet' : 'teal');
+    trace.tone = tones.get(trace.bus);
+  }
   return { chips: kept, traces, pours, chamfers, stitches, holes };
 }
 
@@ -782,13 +805,13 @@ function outline(part) {
 function drawPart(b, part) {
   if (part.kind === 'header') {
     const [x, y, w, h] = outline(part);
-    b.strokeStyle = 'rgba(79, 209, 224, 0.2)';
+    b.strokeStyle = `rgba(${INK.path}, 0.45)`;
     b.lineWidth = 1;
     b.strokeRect(x - 2, y - 2, w + 4, h + 4);
-    b.fillStyle = 'rgba(79, 209, 224, 0.26)';
+    b.fillStyle = `rgba(${INK.path}, 0.75)`;
     b.fillText(part.label, x + w / 2, y - 9);
     b.lineWidth = 1.6;
-    b.strokeStyle = 'rgba(79, 209, 224, 0.34)';
+    b.strokeStyle = `rgba(${INK.ring}, 0.6)`;
     allPins(part).forEach(([px, py], i) => {
       b.beginPath();
       if (i === 0) b.rect(px * CELL - 3.5, py * CELL - 3.5, 7, 7);
@@ -799,12 +822,12 @@ function drawPart(b, part) {
   }
   if (part.kind === 'passive') {
     // Two pads with the part's body between them.
-    b.fillStyle = 'rgba(79, 209, 224, 0.34)';
+    b.fillStyle = `rgba(${INK.path}, 0.75)`;
     for (const [px, py] of allPins(part)) b.fillRect(px * CELL - 3, py * CELL - 3, 6, 6);
     const mx = ((part.x0 + part.x1) / 2) * CELL;
     const my = ((part.y0 + part.y1) / 2) * CELL;
     const [bw, bh] = part.y0 === part.y1 ? [10, 7] : [7, 10];
-    b.strokeStyle = 'rgba(79, 209, 224, 0.24)';
+    b.strokeStyle = `rgba(${INK.path}, 0.6)`;
     b.lineWidth = 1;
     b.strokeRect(mx - bw / 2, my - bh / 2, bw, bh);
     return;
@@ -813,12 +836,12 @@ function drawPart(b, part) {
   const y = part.y0 * CELL;
   const w = (part.x1 - part.x0) * CELL;
   const h = (part.y1 - part.y0) * CELL;
-  b.fillStyle = 'rgba(79, 209, 224, 0.035)';
+  b.fillStyle = `rgba(${INK.board}, 0.55)`;
   b.fillRect(x, y, w, h);
-  b.strokeStyle = 'rgba(79, 209, 224, 0.26)';
+  b.strokeStyle = `rgba(${INK.path}, 0.7)`;
   b.lineWidth = 1.2;
   b.strokeRect(x, y, w, h);
-  b.fillStyle = 'rgba(79, 209, 224, 0.3)';
+  b.fillStyle = `rgba(${INK.path}, 0.75)`;
   for (const side of part.sides) {
     for (const [px, py] of side.pins) {
       // A pad from the body edge out to the pin point, where its trace starts.
@@ -834,9 +857,9 @@ function drawPart(b, part) {
   if (part.kind === 'qfp') {
     // The exposed thermal pad under a quad package, with its via array.
     const inset = Math.round(w * 0.28);
-    b.fillStyle = 'rgba(79, 209, 224, 0.045)';
+    b.fillStyle = `rgba(${INK.board}, 0.8)`;
     b.fillRect(x + inset, y + inset, w - inset * 2, h - inset * 2);
-    b.fillStyle = 'rgba(79, 209, 224, 0.2)';
+    b.fillStyle = `rgba(${INK.path}, 0.55)`;
     for (let i = 1; i <= 3; i += 1) {
       for (let j = 1; j <= 3; j += 1) {
         b.beginPath();
@@ -845,7 +868,7 @@ function drawPart(b, part) {
       }
     }
   }
-  b.fillStyle = 'rgba(79, 209, 224, 0.26)';
+  b.fillStyle = `rgba(${INK.path}, 0.75)`;
   b.fillText(part.label, x + w / 2, part.kind === 'qfp' ? y + h * 0.14 + 4 : y + h / 2);
 }
 
@@ -878,6 +901,8 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   let active = 0; // transfers on the wire, plus parts about to act
 
   function send(link, forward, hops, color, cause) {
+    // Data takes the colour of the bus it rides: cyan on teal, lavender on violet.
+    if (link.lines[0] && link.lines[0].tone) color = toneColour(link.lines[0]);
     let lines = link.lines.filter(() => random() < 0.7);
     if (!lines.length) lines = [link.lines[Math.floor(random() * link.lines.length)]];
     const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color, cause, left: lines.length };
@@ -929,7 +954,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
       }
       if (active < target && pulses.length < maxPulses && links.length) {
         const fresh = shuffle(links.slice(0, 400)).find(visible) || links[Math.floor(random() * links.length)];
-        send(fresh, random() < 0.5, 0, COLORS[Math.floor(random() * COLORS.length)], null);
+        send(fresh, random() < 0.5, 0, toneColour(fresh.lines[0]), null);
       }
       return reached;
     },
@@ -1039,9 +1064,9 @@ export function startCircuit({ still = false, resume = false } = {}) {
           tri.forEach(([x, y], i) => (i ? b.lineTo(x * CELL, y * CELL) : b.moveTo(x * CELL, y * CELL)));
           b.closePath();
         }
-        b.fillStyle = 'rgba(95, 207, 128, 0.05)';
+        b.fillStyle = `rgba(${INK.board}, 0.2)`;
         b.fill();
-        b.strokeStyle = 'rgba(95, 207, 128, 0.2)';
+        b.strokeStyle = `rgba(${INK.path}, 0.35)`;
         b.lineWidth = 1;
         for (const [x, y] of stitches) {
           b.beginPath();
@@ -1050,7 +1075,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         }
         // Mounting holes.
         for (const [hx, hy] of holes) {
-          b.strokeStyle = 'rgba(79, 209, 224, 0.22)';
+          b.strokeStyle = `rgba(${INK.ring}, 0.5)`;
           b.lineWidth = 1.2;
           b.beginPath();
           b.arc(hx * CELL, hy * CELL, CELL * 1.9, 0, Math.PI * 2);
@@ -1058,7 +1083,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
           b.beginPath();
           b.arc(hx * CELL, hy * CELL, CELL * 1.1, 0, Math.PI * 2);
           b.stroke();
-          b.fillStyle = 'rgba(79, 209, 224, 0.22)';
+          b.fillStyle = `rgba(${INK.ring}, 0.5)`;
           for (let k = 0; k < 8; k += 1) {
             const a = (k / 8) * Math.PI * 2;
             b.beginPath();
@@ -1066,18 +1091,22 @@ export function startCircuit({ still = false, resume = false } = {}) {
             b.fill();
           }
         }
-        // Traces.
-        b.strokeStyle = 'rgba(79, 209, 224, 0.16)';
+        // Traces, teal then violet, and the vias where they end (purple rings on violet).
         b.lineWidth = 1.2;
-        b.beginPath();
-        for (const trace of traces) trace.points.forEach(([x, y], i) => (i ? b.lineTo(x, y) : b.moveTo(x, y)));
-        b.stroke();
-        // Vias where traces end.
-        b.strokeStyle = 'rgba(79, 209, 224, 0.3)';
+        for (const [tone, ink] of [['teal', `rgba(${INK.path}, 0.55)`], ['violet', `rgba(${INK.violet}, 0.95)`]]) {
+          b.strokeStyle = ink;
+          b.beginPath();
+          for (const trace of traces) {
+            if (trace.tone !== tone) continue;
+            trace.points.forEach(([x, y], i) => (i ? b.lineTo(x, y) : b.moveTo(x, y)));
+          }
+          b.stroke();
+        }
         b.lineWidth = 1.1;
         for (const trace of traces) {
           if (!trace.via) continue;
           const [x, y] = trace.points[trace.points.length - 1];
+          b.strokeStyle = trace.tone === 'violet' ? `rgba(${INK.ring}, 0.7)` : `rgba(${INK.path}, 0.8)`;
           b.beginPath();
           b.arc(x, y, 2.4, 0, Math.PI * 2);
           b.stroke();
@@ -1212,7 +1241,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
               trace = quiet[Math.floor(random() * quiet.length)];
             }
             const speed = rand(110, 190);
-            const color = COLORS[Math.floor(random() * COLORS.length)];
+            const color = toneColour(trace);
             const inward = random() < 0.3;
             const group = random() < 0.35 && trace.bus.length > 1 ? trace.bus : [trace];
             for (const t of group) ambient.push({ trace: t, d: 0, speed, color, inward });
