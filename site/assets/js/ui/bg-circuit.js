@@ -65,15 +65,16 @@ const TAIL_GAP = 4; // px between tail dots
 //   warm amber #E8B45B      occasional status lights: signals on power and control lines
 // Two more (owner request, October 14, 2026: the pour and its stitching vias wanted a
 // colour of their own that complements the rest, and the board read as three colours):
-//   deep plum #4A2648       the copper pour: a warm purple between the violet and the
-//                           amber, set against the teal (indigo was tried first)
+//   charcoal slate #3C424E  the copper pour: a neutral grey that leaves the colour to
+//                           the paths and pulses (picked over indigo, plum, wine,
+//                           mulberry, mauve, ocean blue, bronze and pine green)
 //   amber, faint            its stitching vias, like gold-plated vias on a real board
 const INK = Object.freeze({
   board: '22, 56, 63',
   path: '50, 119, 131',
   violet: '64, 52, 95',
   ring: '136, 112, 181',
-  pour: '74, 38, 72',
+  pour: '60, 66, 78',
   gold: '232, 180, 91',
 });
 // Pulse colours, stored by index: 0 rides teal paths, 1 violet ones, 2 power and control
