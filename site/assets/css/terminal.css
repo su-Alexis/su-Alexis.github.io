@@ -1,0 +1,674 @@
+/* Interactive console window. Loaded with ui/terminal-ui.js (doctrine section 17).
+   Position and size come from fixed individual style properties set by reviewed code;
+   everything else is classes. */
+
+/* ---------- Output and prompt ---------- */
+
+.term-output {
+  margin: 0;
+}
+
+.term-line {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+
+.term-cmd {
+  color: var(--color-text);
+}
+
+.term-out {
+  color: var(--color-text-muted);
+}
+
+.term-ok {
+  color: var(--color-ok);
+}
+
+.term-err {
+  color: var(--color-error);
+}
+
+.term-input-line {
+  position: relative;
+  display: none;
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--color-text);
+}
+
+.is-ready .term-input-line {
+  display: block;
+}
+
+/* The real input sits invisibly over the line; the mirror shows text and a block cursor. */
+.term-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font: inherit;
+  opacity: 0;
+}
+
+.term-input:focus {
+  outline: none;
+}
+
+.term-mirror {
+  white-space: pre-wrap;
+}
+
+.term-cursor {
+  display: inline-block;
+  width: 0.62em;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  border: 1px solid var(--color-ok);
+  background: transparent;
+}
+
+.is-focused .term-cursor {
+  background: var(--color-ok);
+  animation: term-blink 1.05s steps(1, end) infinite;
+}
+
+.is-focused .term-input-line {
+  outline: 1px dashed var(--color-border-strong);
+  outline-offset: 2px;
+}
+
+
+/* ---------- Window chrome ---------- */
+
+.console.is-interactive .console-bar {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.console.is-dragging,
+.console.is-dragging .console-bar {
+  cursor: grabbing;
+}
+
+.console-controls {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.console-button {
+  min-width: 1.9rem;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tiny);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.console-button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-heading);
+}
+
+/* Docked: sits in the page; the output area can be resized vertically. */
+.console.is-interactive .console-body {
+  max-height: 26rem;
+  min-height: 8rem;
+  overflow: auto;
+  resize: vertical;
+}
+
+/* Floating: a window above the page, dragged by its bar, resized from the corner. */
+.console.is-floating {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  min-height: 160px;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  resize: both;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--color-border-strong);
+}
+
+.console.is-floating .console-body {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+  resize: none;
+}
+
+.console.is-minimized .console-body {
+  display: none;
+}
+
+.console.is-floating.is-minimized {
+  height: auto !important;
+  min-height: 0;
+  resize: none;
+}
+
+/* ---------- Module highlight after "open" ---------- */
+
+.module-flash {
+  animation: module-flash 1.2s ease-out;
+}
+
+@keyframes module-flash {
+  0% { box-shadow: 0 0 0 1px var(--color-accent), 0 0 24px rgba(79, 209, 224, 0.35); }
+  100% { box-shadow: 0 0 0 1px transparent, 0 0 0 transparent; }
+}
+
+@keyframes term-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* The log's prompt line renders exactly like a history command line (no flex gap
+   between user and path), so nothing shifts when the log joins the history. */
+.console-log .line-prompt {
+  display: block;
+}
+
+/* The interactive prompt replaces the startup log's decorative cursor. */
+.is-ready .console-log .cursor {
+  display: none;
+}
+
+/* ---------- Spawned shells and stacking ---------- */
+
+.console.is-front {
+  z-index: 45;
+}
+
+/* Spawned shells stay out of sight during the full startup boot only. On other pages
+   they are already open and simply carry over. */
+.boot-run:not(.page-boot) .console-spawned {
+  visibility: hidden;
+}
+
+/* Shells restored from an earlier page are the same windows, not new ones: no
+   window-open animation, so they hold still while the page slides underneath.
+   ui/terminal-ui.js sets .shells-resumed (before first paint; app.js is render-blocking). */
+.shells-resumed .console {
+  animation: none;
+}
+
+.console-spawned .console-bar {
+  background: var(--color-surface-raised);
+}
+
+/* A page already loaded this session resumes: its load log is not replayed. */
+.page-cached .console-log {
+  display: none;
+}
+
+/* ---------- ASCII art and animation ---------- */
+
+.term-art {
+  color: var(--color-brand);
+}
+
+.term-anim {
+  overflow: hidden;
+  white-space: pre;
+}
+
+/* While an animation plays, the prompt waits. */
+.is-busy .term-input-line {
+  display: none;
+}
+
+/* Room under the prompt so its focus outline is never clipped by the window edge. */
+.console.is-interactive .console-body {
+  padding-bottom: var(--space-4);
+}
+
+/* ---------- Fork bomb easter egg (ui/fork-bomb.js) ----------
+   html.fork-bomb: the site destabilises while the bomb spreads (jitter, colour-channel
+   split, slicing). Kept below three flashes a second and without large full-screen
+   brightness swings, so it stays safe for photosensitive visitors. html.fork-bomb-critical
+   intensifies it just before the crash. .bsod is the blue stop screen. Motion-safe only
+   for the glitch; the stop screen itself is static apart from its counter. */
+@media (prefers-reduced-motion: no-preference) {
+  .fork-bomb .site {
+    animation: fork-jitter 0.45s steps(2, end) infinite;
+  }
+
+  .fork-bomb .module,
+  .fork-bomb .topbar {
+    animation: fork-split 0.7s steps(3, end) infinite;
+  }
+
+  .fork-bomb-critical .site {
+    animation-duration: 0.35s;
+    filter: saturate(1.6) hue-rotate(-12deg);
+  }
+
+  .fork-bomb-critical .module {
+    animation: fork-slice 0.5s steps(2, end) infinite;
+  }
+}
+
+@keyframes fork-jitter {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-3px, 1px) skewX(-0.6deg); }
+  100% { transform: translate(2px, -1px); }
+}
+
+@keyframes fork-split {
+  0%, 100% { box-shadow: none; text-shadow: none; }
+  33% { text-shadow: 2px 0 rgba(224, 108, 108, 0.75), -2px 0 rgba(79, 209, 224, 0.75); }
+  66% { box-shadow: 3px 0 0 rgba(224, 108, 108, 0.35), -3px 0 0 rgba(79, 209, 224, 0.35); }
+}
+
+@keyframes fork-slice {
+  0% { clip-path: inset(0 0 0 0); transform: none; }
+  50% { clip-path: inset(18% 0 34% 0); transform: translateX(6px); }
+  100% { clip-path: inset(0 0 0 0); transform: none; }
+}
+
+.bsod {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  overflow: auto;
+  padding: 6vh 10vw;
+  background: #0078d7;
+  color: #fff;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.bsod-inner {
+  max-width: 52rem;
+}
+
+.bsod-inner p {
+  margin: 0 0 1.2rem;
+}
+
+.bsod-face {
+  font-size: clamp(5rem, 14vw, 10rem);
+  line-height: 1;
+}
+
+.bsod-title {
+  max-width: 44rem;
+  font-size: clamp(1.25rem, 2.6vw, 1.9rem);
+  line-height: 1.35;
+}
+
+.bsod-progress {
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+}
+
+.bsod-details {
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.bsod-details p {
+  margin-bottom: 0.4rem;
+}
+
+.bsod-hint {
+  margin-top: 2rem;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+/* Power off (fork bomb reboot): everything but the stop screen goes dark, then the stop
+   screen collapses like a CRT switching off: squeezed to a bright line, shrunk to a dot,
+   gone. The next page starts black and plays the boot's power-on line (layer1.css). */
+.power-off body {
+  background: #000;
+}
+
+.power-off .site,
+.power-off .console-spawned,
+.power-off .matrix-rain,
+.power-off .bg-canvas {
+  visibility: hidden;
+}
+
+.power-off .bsod {
+  animation: crt-off 0.75s cubic-bezier(0.55, 0, 0.75, 0.4) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-off .bsod {
+    visibility: hidden;
+  }
+}
+
+@keyframes crt-off {
+  0% { transform: none; filter: none; opacity: 1; }
+  45% { transform: scale(1, 0.004); filter: brightness(5) saturate(0.2); opacity: 1; }
+  80% { transform: scale(0.02, 0.004); filter: brightness(6) saturate(0); opacity: 1; }
+  100% { transform: scale(0, 0.004); filter: brightness(6) saturate(0); opacity: 0; }
+}
+
+/* ---------- neofetch and git log lines (ui/terminal-ui.js renderLine) ----------
+   neofetch: the wafflesOS logo image floats left, the info lines sit beside it, and the
+   next ordinary line clears below it. git log: the commit hash in the brand color. */
+.term-output {
+  display: flow-root;
+  --logo-w: min(11lh, 38%);
+}
+
+.term-logo {
+  float: left;
+  width: var(--logo-w);
+  margin: 0.15lh 0 0.5lh;
+}
+
+/* Indented by the logo's width rather than wrapping round it, so an info line that runs
+   past the bottom of the image still lines up with the rest. */
+.term-logo ~ .term-fetch {
+  margin-left: calc(var(--logo-w) + 2ch);
+}
+
+.term-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.term-logo ~ .term-line:not(.term-fetch) {
+  clear: left;
+}
+
+.term-fetch {
+  overflow-wrap: anywhere;
+}
+
+.term-git {
+  white-space: pre-wrap;
+}
+
+.term-lead {
+  color: var(--color-brand);
+}
+
+.term-key {
+  color: var(--color-accent);
+}
+
+/* ---------- sudo rm -rf easter egg (ui/rm-rf.js) ----------
+   Elements fall off the page one by one (rm-gone, tilted left or right), then fly back
+   (rm-back). Classes only; nothing is removed. Reduced motion fades instead. */
+.site .rm-gone {
+  pointer-events: none;
+  animation: rm-fall 1.1s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+.rm-tilt-left {
+  --rm-tilt: -9deg;
+}
+
+.rm-tilt-right {
+  --rm-tilt: 7deg;
+}
+
+.site .rm-back {
+  animation: rm-rise 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes rm-fall {
+  0% { transform: none; }
+  18% { transform: translateY(-14px) rotate(calc(var(--rm-tilt, 6deg) * -0.25)); }
+  100% { transform: translateY(130vh) rotate(var(--rm-tilt, 6deg)); }
+}
+
+@keyframes rm-rise {
+  from { transform: translateY(130vh) rotate(var(--rm-tilt, 6deg)); }
+  to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site .rm-gone {
+    animation: none;
+    opacity: 0;
+  }
+
+  .site .rm-back {
+    animation: none;
+  }
+}
+
+/* ---------- Idle screensaver (ui/screensaver.js) ----------
+   Going to sleep (is-closing): black shutters close from the top and bottom onto a
+   bright line, which shrinks to a dot, like a CRT switching off. Asleep: the canvas
+   shows the bouncing logo. Waking (is-waking): the line flashes back across the
+   screen and the shutters open on the page. Reduced motion: no shutters or line. */
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  cursor: none;
+}
+
+.ss-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  opacity: 0;
+}
+
+.screensaver.is-asleep .ss-canvas {
+  opacity: 1;
+}
+
+.ss-shutter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: #000;
+}
+
+.ss-top {
+  top: 0;
+  transform: translateY(-100%);
+}
+
+.ss-bottom {
+  bottom: 0;
+  transform: translateY(100%);
+}
+
+.ss-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  margin-top: -1px;
+  background: #f4fbff;
+  opacity: 0;
+}
+
+/* Asleep: the canvas is black itself; the shutters step aside so the logo shows. */
+.is-asleep .ss-shutter {
+  display: none;
+}
+
+.is-closing .ss-top,
+.is-closing .ss-bottom {
+  animation: ss-close 0.32s cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+.is-closing .ss-line {
+  animation: ss-line-off 0.42s ease-in 0.3s both;
+}
+
+.is-waking .ss-top {
+  animation: ss-open-top 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.28s both;
+}
+
+.is-waking .ss-bottom {
+  animation: ss-open-bottom 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.28s both;
+}
+
+.is-waking .ss-line {
+  animation: ss-line-on 0.65s ease-out both;
+}
+
+@keyframes ss-close {
+  to { transform: none; }
+}
+
+@keyframes ss-line-off {
+  0% { opacity: 1; transform: scaleX(1); }
+  75% { opacity: 1; transform: scaleX(0.008); }
+  100% { opacity: 0; transform: scaleX(0); }
+}
+
+@keyframes ss-line-on {
+  0% { opacity: 1; transform: scaleX(0.01); }
+  40% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1) scaleY(30); }
+}
+
+@keyframes ss-open-top {
+  from { transform: none; }
+  to { transform: translateY(-100%); }
+}
+
+@keyframes ss-open-bottom {
+  from { transform: none; }
+  to { transform: translateY(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screensaver .ss-shutter,
+  .screensaver .ss-line {
+    display: none;
+  }
+}
+
+/* ---------- btop (ui/btop.js) ----------
+   Rows of box-drawing text, redrawn once a second. While it runs the prompt is hidden
+   but keeps focus (is-grabbed), so every key reaches btop. */
+.term-screen {
+  margin: 0;
+  white-space: pre;
+  line-height: 1.25;
+  cursor: default;
+  user-select: none;
+}
+
+.term-probe {
+  position: absolute;
+  visibility: hidden;
+}
+
+.btop-row {
+  min-height: 1.25em;
+}
+
+.b-line {
+  color: var(--color-accent);
+  opacity: 0.7;
+}
+
+.b-title {
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.b-key {
+  color: var(--color-accent);
+}
+
+.b-dim {
+  color: var(--color-text-faint);
+}
+
+.b-ok {
+  color: var(--color-ok);
+}
+
+.b-warn {
+  color: var(--color-warn);
+}
+
+.b-err {
+  color: var(--color-error);
+}
+
+.b-sel {
+  background: rgba(79, 209, 224, 0.22);
+  color: var(--color-heading);
+}
+
+.is-grabbed .term-input-line {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+/* ---------- tty1 parking itself on the lab page (ui/terminal-ui.js, park()) ----------
+   It folds toward its title bar while drifting up and left, then the minimized bar
+   settles back into place. Reduced motion: it simply minimizes. */
+.console.is-parking {
+  pointer-events: none;
+  transform-origin: top left;
+  animation: console-park 0.6s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+.console.is-parked {
+  transform-origin: top left;
+  animation: console-settle 0.35s ease-out both;
+}
+
+@keyframes console-park {
+  0% { transform: none; opacity: 1; }
+  30% { transform: translate(-6px, -6px) scale(0.97); opacity: 1; }
+  100% { transform: translate(-14px, -10px) scale(0.6, 0.08); opacity: 0.55; }
+}
+
+/* Back from the lab: tty1 grows out of its title bar again (the reverse of console-park). */
+.console.is-unparking {
+  transform-origin: top left;
+  animation: console-unpark 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes console-unpark {
+  0% { transform: translate(-14px, -10px) scale(0.6, 0.08); opacity: 0.55; }
+  70% { transform: translate(-2px, -2px) scale(1.01); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+
+@keyframes console-settle {
+  0% { transform: translate(-14px, -10px); opacity: 0.55; }
+  100% { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console.is-parking,
+  .console.is-parked,
+  .console.is-unparking {
+    animation: none;
+  }
+}

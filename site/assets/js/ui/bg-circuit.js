@@ -1,0 +1,1118 @@
+// The default background (owner decision, October 13, 2026; it was "circuit" before): a
+// printed circuit board, with pulses of light running along its traces. "background
+// default" brings it back; ui/backgrounds.js starts and stops it, ui/canvas-bg.js runs
+// the loop.
+//
+// Laid out like a real routed board (owner requests, October 14, 2026, with a real board
+// layout as the reference: traces must connect things, nothing scattered at random, no
+// bare pads, no big empty patches). planBoard() works on a grid, in this order:
+//   1. Parts: quad (QFP) and small outline (SOIC) chips and pin headers, spread out.
+//   2. Nets: each part is wired to its nearest neighbours. The facing sides of two parts
+//      are joined pin to pin by a bundle of traces, routed by a small A* maze router that
+//      only turns 45 degrees at a time and prefers to run alongside traces already laid,
+//      so bundles hug each other the way autorouted boards do. Pins are paired in order
+//      across the bundle and the shortest are routed first, so they nest without crossing.
+//   3. Leftover pins: a row of series resistors in front of the chip, a bus escaping off
+//      the edge of the board (planBus: parallel lines that jog and fan around corners),
+//      or a short escape stub to a via. Every pin's first cell is reserved until then, so
+//      routing never walls a pin in.
+//   4. Gaps: smaller chips dropped into free space and wired up the same way, then
+//      mounting holes, then copper pours with stitching vias over whatever is left.
+// Traces never cross or touch: every grid point and every diagonal crossing is claimed
+// once. A pin that still ends up with no wire loses its pad, so none is left bare.
+// tests/bg-circuit.test.mjs checks these rules on random boards.
+//
+// The board is planned for the whole screen and drawn once onto an offscreen canvas, so
+// each frame only copies it and draws the pulses, and resizing the window shows more or
+// less of the same board. Data flows between parts over their nets as chains of cause and
+// effect (makeTraffic, below); stubs, resistors and escaping buses get quieter traffic.
+//
+// Decorative only, on a transparent canvas; the part labels are fixed strings drawn with
+// fillText.
+
+import { el } from '../utils/dom.js';
+import { startCanvas, rand } from './canvas-bg.js';
+
+const CELL = 10; // grid pitch, px: trace spacing and pin pitch
+const AREA_PER_PART = 75000; // px^2 of board per main part
+const MIN_PARTS = 3;
+const MAX_PARTS = 40;
+const PART_CLEARANCE = 5; // cells between main parts, room for their traces
+const NEIGHBOURS = 4; // neighbours each part is wired to, at most
+const NET_REACH = 90; // cells: parts further apart are not wired together
+const ROUTE_STEPS = 6000; // A* expansions per trace
+const ROUTE_BUDGET = 1200000; // A* expansions per board, so a huge screen stays quick
+const MAX_PULSES = 240; // data on the nets
+const MAX_AMBIENT = 30; // pulses on stubs, resistors and escaping buses
+const AMBIENT_EVERY = 0.3; // seconds between those
+const MAX_HOPS = 10; // a chain of transfers ends after this many
+const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
+const CARRY_ON = 0.85; // chance a part passes data on once it arrives
+const TAIL = 10; // dots in a pulse's tail
+const TAIL_GAP = 4; // px between tail dots
+const COLORS = ['79, 209, 224', '95, 207, 128'];
+const LABELS = ['SoC', 'NIC', 'TPM', 'FPGA', 'ROM', 'WAFF-1', 'HSM', 'DSP', 'GPU', 'MCU', 'PHY', 'PMIC'];
+
+// What sits on a grid point.
+const FREE = 0;
+const PART = 1; // a part's body or pad
+const WIRE = 2; // a trace or via
+const KEEP = 3; // a pin's first cell, kept for that pin's own trace
+const POUR = 4; // copper pour or mounting hole
+
+// 8 directions, clockwise from east.
+const DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+const dirIndex = ([dx, dy]) => DIRS.findIndex(([x, y]) => x === dx && y === dy);
+
+const randInt = (min, max) => Math.floor(rand(min, max + 1));
+const sign = () => (Math.random() < 0.5 ? -1 : 1);
+const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+const scale = (a, k) => [a[0] * k, a[1] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+const same = (a, b) => a[0] === b[0] && a[1] === b[1];
+// An orthogonal direction turned 90 degrees one way (s = 1) or the other (s = -1).
+const turn90 = (d, s) => (s > 0 ? [-d[1], d[0]] : [d[1], -d[0]]);
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+// ---------- The grid ----------
+
+// Grid points from (-margin, -margin) to (cols + margin, rows + margin); the margin lets
+// a bus run a little way off the visible board. Anything outside reads as taken.
+function makeGrid(cols, rows) {
+  const margin = 4;
+  const width = cols + 1 + margin * 2;
+  const height = rows + 1 + margin * 2;
+  const point = new Uint8Array(width * height);
+  const crossing = new Uint8Array(width * height); // diagonal through the cell at (x, y)
+  const inGrid = (x, y) => x >= -margin && y >= -margin && x <= cols + margin && y <= rows + margin;
+  const at = (x, y) => (y + margin) * width + x + margin;
+  return {
+    cols,
+    rows,
+    width,
+    margin,
+    point,
+    at,
+    onBoard: (x, y) => x >= 0 && y >= 0 && x <= cols && y <= rows,
+    get: (x, y) => (inGrid(x, y) ? point[at(x, y)] : PART),
+    set: (x, y, value) => { if (inGrid(x, y)) point[at(x, y)] = value; },
+    crossed(x, y, nx, ny) {
+      const cx = Math.min(x, nx);
+      const cy = Math.min(y, ny);
+      return inGrid(cx, cy) ? crossing[at(cx, cy)] === 1 : true;
+    },
+    cross(x, y, nx, ny) {
+      const cx = Math.min(x, nx);
+      const cy = Math.min(y, ny);
+      if (inGrid(cx, cy)) crossing[at(cx, cy)] = 1;
+    },
+    blockCell(x, y) { if (inGrid(x, y)) crossing[at(x, y)] = 1; },
+  };
+}
+
+// ---------- Parts ----------
+
+// A chip's body in grid points (corners inclusive) and its pins: each pin sits one cell
+// outside the body, with the direction a trace leaves it. Quad packages have pins on all
+// four sides, the small outline ones on their two long sides.
+function makeChip(x0, y0, w, h, quad) {
+  const x1 = x0 + w;
+  const y1 = y0 + h;
+  const sides = [];
+  if (quad || w >= h) {
+    const xs = [];
+    for (let x = x0 + 1; x < x1; x += 1) xs.push(x);
+    sides.push({ out: [0, -1], pins: xs.map((x) => [x, y0 - 1]) });
+    sides.push({ out: [0, 1], pins: xs.map((x) => [x, y1 + 1]) });
+  }
+  if (quad || h > w) {
+    const ys = [];
+    for (let y = y0 + 1; y < y1; y += 1) ys.push(y);
+    sides.push({ out: [-1, 0], pins: ys.map((y) => [x0 - 1, y]) });
+    sides.push({ out: [1, 0], pins: ys.map((y) => [x1 + 1, y]) });
+  }
+  return { kind: quad ? 'qfp' : 'soic', x0, y0, x1, y1, sides, label: '' };
+}
+
+// A row of through-hole header pins, two cells apart. Its traces can leave from either
+// side of the row; each pin is still wired once.
+function makeHeader(x0, y0, count, vertical) {
+  const pins = [];
+  for (let i = 0; i < count; i += 1) pins.push(vertical ? [x0, y0 + i * 2] : [x0 + i * 2, y0]);
+  const [x1, y1] = pins[pins.length - 1];
+  const sides = vertical
+    ? [{ out: [-1, 0], pins }, { out: [1, 0], pins }]
+    : [{ out: [0, -1], pins }, { out: [0, 1], pins }];
+  return { kind: 'header', x0, y0, x1, y1, sides, label: '' };
+}
+
+// A two-pad resistor between `near` and `far` (two cells apart along `out`).
+function makePassive(near, out) {
+  const far = add(near, scale(out, 2));
+  return {
+    kind: 'passive',
+    x0: Math.min(near[0], far[0]),
+    y0: Math.min(near[1], far[1]),
+    x1: Math.max(near[0], far[0]),
+    y1: Math.max(near[1], far[1]),
+    sides: [{ out: scale(out, -1), pins: [near] }, { out, pins: [far] }],
+    label: '',
+  };
+}
+
+const allPins = (part) => [...new Set(part.sides.flatMap((side) => side.pins))];
+const centre = (part) => [(part.x0 + part.x1) / 2, (part.y0 + part.y1) / 2];
+
+// Marks a part on the grid: its body (and body cells, so no diagonal cuts a corner), its
+// pads, and each pin's first cell kept for that pin.
+function claimPart(grid, part) {
+  if (part.kind === 'qfp' || part.kind === 'soic') {
+    for (let x = part.x0; x <= part.x1; x += 1) {
+      for (let y = part.y0; y <= part.y1; y += 1) {
+        grid.set(x, y, PART);
+        grid.blockCell(x, y);
+      }
+    }
+  } else {
+    // Headers and resistors: the row itself, pads and the gaps between them.
+    for (let x = part.x0; x <= part.x1; x += 1) {
+      for (let y = part.y0; y <= part.y1; y += 1) grid.set(x, y, PART);
+    }
+  }
+  for (const side of part.sides) {
+    for (const pin of side.pins) {
+      grid.set(pin[0], pin[1], PART);
+      const [kx, ky] = add(pin, side.out);
+      if (grid.get(kx, ky) === FREE) grid.set(kx, ky, KEEP);
+    }
+  }
+}
+
+// True when the box (x0, y0)-(x1, y1) and `pad` cells around it are free and on the board.
+function spotIsFree(grid, x0, y0, x1, y1, pad) {
+  for (let x = x0 - pad; x <= x1 + pad; x += 1) {
+    for (let y = y0 - pad; y <= y1 + pad; y += 1) {
+      if (!grid.onBoard(x, y) || grid.get(x, y) !== FREE) return false;
+    }
+  }
+  return true;
+}
+
+// A random main or gap-filling part, placed at a random spot (not yet checked).
+function randomPart(grid, small) {
+  const roll = Math.random();
+  if (!small && roll < 0.18) {
+    const count = randInt(4, 10);
+    const vertical = Math.random() < 0.5;
+    const span = (count - 1) * 2;
+    const x0 = randInt(3, grid.cols - (vertical ? 0 : span) - 3);
+    const y0 = randInt(3, grid.rows - (vertical ? span : 0) - 3);
+    return makeHeader(x0, y0, count, vertical);
+  }
+  const quad = roll < (small ? 0.45 : 0.6);
+  let w = quad ? randInt(small ? 6 : 8, small ? 9 : 15) : randInt(small ? 4 : 6, small ? 8 : 13);
+  let h = quad ? w : randInt(3, 4);
+  if (!quad && Math.random() < 0.4) [w, h] = [h, w];
+  const x0 = randInt(3, grid.cols - w - 3);
+  const y0 = randInt(3, grid.rows - h - 3);
+  return makeChip(x0, y0, w, h, quad);
+}
+
+// ---------- Routing ----------
+
+// The A* maze router: from one pin's first cell to another's, turning at most 45 degrees
+// per step, with a cost for turning and a discount for running beside an existing trace.
+// Its search arrays are allocated once per board and reused through a run stamp.
+function makeRouter(grid) {
+  const size = grid.point.length * 8;
+  const cost = new Float32Array(size);
+  const seen = new Uint32Array(size);
+  const done = new Uint32Array(size);
+  const prev = new Int32Array(size);
+  const heapKey = [];
+  const heapState = [];
+  let run = 0;
+
+  function push(key, state) {
+    let i = heapKey.length;
+    heapKey.push(key);
+    heapState.push(state);
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (heapKey[parent] <= key) break;
+      heapKey[i] = heapKey[parent];
+      heapState[i] = heapState[parent];
+      i = parent;
+    }
+    heapKey[i] = key;
+    heapState[i] = state;
+  }
+
+  function pop() {
+    const top = heapState[0];
+    const key = heapKey.pop();
+    const state = heapState.pop();
+    const n = heapKey.length;
+    if (n) {
+      let i = 0;
+      for (;;) {
+        let child = i * 2 + 1;
+        if (child >= n) break;
+        if (child + 1 < n && heapKey[child + 1] < heapKey[child]) child += 1;
+        if (heapKey[child] >= key) break;
+        heapKey[i] = heapKey[child];
+        heapState[i] = heapState[child];
+        i = child;
+      }
+      heapKey[i] = key;
+      heapState[i] = state;
+    }
+    return top;
+  }
+
+  const hugs = (x, y) => grid.get(x + 1, y) === WIRE || grid.get(x - 1, y) === WIRE
+    || grid.get(x, y + 1) === WIRE || grid.get(x, y - 1) === WIRE;
+
+  // Returns the grid points from pin `from` to pin `to`, or null. `budget` is a shared
+  // counter object, spent as nodes are expanded.
+  return function route(from, fromOut, to, toOut, budget) {
+    const [sx, sy] = add(from, fromOut);
+    const [gx, gy] = add(to, toOut);
+    const usable = (v) => v === FREE || v === KEEP;
+    if (!usable(grid.get(sx, sy)) || !usable(grid.get(gx, gy)) || (sx === gx && sy === gy)) return null;
+    run += 1;
+    heapKey.length = 0;
+    heapState.length = 0;
+    const startDir = dirIndex(fromOut);
+    const lastDir = dirIndex(scale(toOut, -1));
+    const reach = 24; // how far a trace may detour outside the box between its ends
+    const minX = Math.max(0, Math.min(sx, gx) - reach);
+    const maxX = Math.min(grid.cols, Math.max(sx, gx) + reach);
+    const minY = Math.max(0, Math.min(sy, gy) - reach);
+    const maxY = Math.min(grid.rows, Math.max(sy, gy) + reach);
+    const guess = (x, y) => {
+      const dx = Math.abs(x - gx);
+      const dy = Math.abs(y - gy);
+      return (Math.max(dx, dy) + 0.414 * Math.min(dx, dy)) * 1.15;
+    };
+    const first = grid.at(sx, sy) * 8 + startDir;
+    cost[first] = 0;
+    seen[first] = run;
+    prev[first] = -1;
+    push(guess(sx, sy), first);
+    let steps = 0;
+    while (heapKey.length) {
+      const state = pop();
+      if (done[state] === run) continue;
+      done[state] = run;
+      const p = state >> 3;
+      const d = state & 7;
+      const x = (p % grid.width) - grid.margin;
+      const y = Math.floor(p / grid.width) - grid.margin;
+      const turnIn = (lastDir - d + 8) % 8;
+      if (x === gx && y === gy && (turnIn === 0 || turnIn === 1 || turnIn === 7)) {
+        const points = [to];
+        for (let s = state; s !== -1; s = prev[s]) {
+          const q = s >> 3;
+          points.push([(q % grid.width) - grid.margin, Math.floor(q / grid.width) - grid.margin]);
+        }
+        points.push(from);
+        return points.reverse();
+      }
+      steps += 1;
+      budget.left -= 1;
+      if (steps > ROUTE_STEPS || budget.left <= 0) return null;
+      for (const t of [0, 1, 7]) {
+        const nd = (d + t) & 7;
+        const [dx, dy] = DIRS[nd];
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+        const v = grid.get(nx, ny);
+        if (!(v === FREE || (v === KEEP && nx === gx && ny === gy))) continue;
+        if (dx && dy && grid.crossed(x, y, nx, ny)) continue;
+        let step = dx && dy ? 1.414 : 1;
+        if (t) step += 0.6;
+        if (hugs(nx, ny)) step *= 0.72;
+        const next = grid.at(nx, ny) * 8 + nd;
+        const total = cost[state] + step;
+        if (seen[next] === run && cost[next] <= total) continue;
+        seen[next] = run;
+        cost[next] = total;
+        prev[next] = state;
+        push(total + guess(nx, ny), next);
+      }
+    }
+    return null;
+  };
+}
+
+// Claims a laid trace's points (all but its two pins) and its diagonal crossings.
+function claimTrace(grid, points) {
+  for (let i = 1; i < points.length; i += 1) {
+    const [x, y] = points[i - 1];
+    const [nx, ny] = points[i];
+    if (nx !== x && ny !== y) grid.cross(x, y, nx, ny);
+    if (grid.get(nx, ny) !== PART) grid.set(nx, ny, WIRE);
+  }
+}
+
+// Lays a trace along planned steps from a pin, stopping one step short of anything in
+// the way (its own pin's kept cell is fine), or after its first step off the board.
+function layTrace(grid, start, steps) {
+  const points = [start];
+  let [x, y] = start;
+  let offBoard = false;
+  for (let i = 0; i < steps.length; i += 1) {
+    const [dx, dy] = steps[i];
+    const nx = x + dx;
+    const ny = y + dy;
+    const v = grid.get(nx, ny);
+    if (!(v === FREE || (v === KEEP && i === 0))) break;
+    if (dx && dy && grid.crossed(x, y, nx, ny)) break;
+    if (dx && dy) grid.cross(x, y, nx, ny);
+    grid.set(nx, ny, WIRE);
+    points.push([nx, ny]);
+    x = nx;
+    y = ny;
+    if (!grid.onBoard(nx, ny)) {
+      offBoard = true;
+      break;
+    }
+  }
+  return { points, offBoard };
+}
+
+// The steps every line of an escaping bus takes, all decided together so the lines stay
+// parallel. starts: the pins, in order along the side; out: the direction they leave in.
+function planBus(starts, out) {
+  const lines = starts.map((pin) => ({ pos: pin, steps: [] }));
+  let dir = out;
+  let net = 0; // quarter turns away from "out"; kept within one either way
+  const move = (line, d, n) => {
+    for (let k = 0; k < n; k += 1) {
+      line.steps.push(d);
+      line.pos = add(line.pos, d);
+    }
+  };
+  const straight = (n) => lines.forEach((line) => move(line, dir, n));
+  // A 45 degree jog sideways and back: every line moves the same, so they stay parallel.
+  const jog = (s, n) => {
+    const diagonal = add(dir, turn90(dir, s));
+    lines.forEach((line) => move(line, diagonal, n));
+  };
+  // A 90 degree turn as a staggered fan: the line furthest toward the turn bends first,
+  // each line further out runs one more step before and after its bend, and the fronts
+  // end level again.
+  const turn = (s) => {
+    const next = turn90(dir, s);
+    const reach = lines.map((line) => dot(line.pos, next));
+    const most = Math.max(...reach);
+    const diagonal = add(dir, next);
+    lines.forEach((line, i) => {
+      const rank = most - reach[i];
+      move(line, dir, rank);
+      move(line, diagonal, 1);
+      move(line, next, rank);
+    });
+    dir = next;
+    net += s;
+  };
+
+  straight(randInt(2, 4));
+  if (Math.random() < 0.45) turn(sign());
+  const runs = randInt(2, 4);
+  for (let i = 0; i < runs; i += 1) {
+    straight(randInt(4, 22));
+    const roll = Math.random();
+    if (roll < 0.4) jog(sign(), randInt(1, 3));
+    else if (roll < 0.6) turn(net === 0 ? sign() : -net);
+  }
+  straight(randInt(2, 8));
+  // Stagger the vias every other line so they have room.
+  lines.forEach((line, i) => move(line, dir, (i % 2) * 2));
+  return lines.map((line) => line.steps);
+}
+
+// Drops the points where a trace runs straight on, leaving only its corners.
+function corners(points) {
+  return points.filter((point, i) => {
+    if (i === 0 || i === points.length - 1) return true;
+    const [ax, ay] = points[i - 1];
+    const [bx, by] = points[i + 1];
+    return (point[0] - ax) !== (bx - point[0]) || (point[1] - ay) !== (by - point[1]);
+  });
+}
+
+// ---------- The board ----------
+
+// The whole board in grid units for a cols x rows grid: parts (chips, headers,
+// resistors), traces (each from a pin of `chip`; `end` is the part it reaches, if any;
+// `via` says whether it ends in a via), copper pours and mounting holes. Exported for
+// tests/bg-circuit.test.mjs.
+export function planBoard(cols, rows, partCount) {
+  const grid = makeGrid(cols, rows);
+  const route = makeRouter(grid);
+  const budget = { left: ROUTE_BUDGET };
+  const parts = [];
+  const traces = [];
+  const pours = [];
+  const holes = [];
+  const wired = new Set(); // pins with a trace
+  const labels = shuffle([...LABELS]);
+  let chipNumber = 0;
+  let headerNumber = 0;
+  const keyOf = (pin) => `${pin}`;
+
+  function addPart(part) {
+    if (part.kind === 'qfp') part.label = labels[parts.length % labels.length];
+    else if (part.kind === 'soic') part.label = `U${(chipNumber += 1)}`;
+    else if (part.kind === 'header') part.label = `J${(headerNumber += 1)}`;
+    parts.push(part);
+    claimPart(grid, part);
+  }
+
+  function addTrace(points, chip, end, via, bus) {
+    const trace = { chip, end, points: corners(points), via };
+    trace.bus = bus || [trace];
+    if (!bus) traces.push(trace);
+    wired.add(keyOf(points[0]));
+    if (end) wired.add(keyOf(points[points.length - 1]));
+    return trace;
+  }
+
+  // Runs of neighbouring pins on a side that have no wire yet.
+  function freeRuns(side) {
+    const runs = [];
+    let current = [];
+    for (const pin of side.pins) {
+      if (wired.has(keyOf(pin))) {
+        if (current.length) runs.push(current);
+        current = [];
+      } else current.push(pin);
+    }
+    if (current.length) runs.push(current);
+    return runs;
+  }
+
+  // Wires part a to part b: their facing sides, pin to pin, as one bundle.
+  function connect(a, b) {
+    const toward = [centre(b)[0] - centre(a)[0], centre(b)[1] - centre(a)[1]];
+    const back = scale(toward, -1);
+    // The side facing the other part, or failing that one at right angles to it (its
+    // traces then turn the corner); never one facing away.
+    const best = (part, v) => {
+      const unit = scale(v, 1 / (Math.hypot(v[0], v[1]) || 1));
+      return part.sides
+        .filter((side) => dot(side.out, unit) > -0.2 && freeRuns(side).length)
+        .sort((s, t) => dot(t.out, unit) - dot(s.out, unit))[0];
+    };
+    const sideA = best(a, toward);
+    const sideB = best(b, back);
+    if (!sideA || !sideB) return;
+    const runA = freeRuns(sideA).sort((r, s) => s.length - r.length)[0];
+    const runB = freeRuns(sideB).sort((r, s) => s.length - r.length)[0];
+    const count = Math.min(runA.length, runB.length, randInt(3, 12));
+    const pick = (run) => {
+      const from = randInt(0, run.length - count);
+      return run.slice(from, from + count);
+    };
+    // Paired in order across the bundle, so the traces nest instead of crossing.
+    const across = [-toward[1], toward[0]];
+    const order = (pins) => pins.sort((p, q) => dot(p, across) - dot(q, across));
+    const pinsA = order(pick(runA));
+    const pinsB = order(pick(runB));
+    const pairs = pinsA.map((pin, i) => [pin, pinsB[i]]);
+    const length = ([p, q]) => Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]);
+    pairs.sort((p, q) => length(p) - length(q));
+    const bus = [];
+    for (const [pa, pb] of pairs) {
+      if (budget.left <= 0) break;
+      const points = route(pa, sideA.out, pb, sideB.out, budget);
+      if (!points) continue;
+      claimTrace(grid, points);
+      bus.push(addTrace(points, a, b, false, bus));
+    }
+    traces.push(...bus);
+  }
+
+  // Wires each of these parts to its nearest neighbours, nearest pairs first.
+  function connectAll(group) {
+    const pairs = [];
+    const done = new Set();
+    for (const a of group) {
+      const near = parts
+        .filter((b) => b !== a && b.kind !== 'passive')
+        .map((b) => ({ b, d: Math.hypot(centre(b)[0] - centre(a)[0], centre(b)[1] - centre(a)[1]) }))
+        .filter(({ d }) => d < NET_REACH)
+        .sort((p, q) => p.d - q.d)
+        .slice(0, NEIGHBOURS);
+      for (const { b, d } of near) {
+        const key = [parts.indexOf(a), parts.indexOf(b)].sort((p, q) => p - q).join();
+        if (done.has(key)) continue;
+        done.add(key);
+        pairs.push({ a, b, d });
+      }
+    }
+    pairs.sort((p, q) => p.d - q.d);
+    for (const { a, b } of pairs) connect(a, b);
+  }
+
+  // A short escape stub from a pin to a via.
+  function stub(part, pin, out) {
+    const laid = layTrace(grid, pin, [out, out]);
+    if (laid.points.length > 1) addTrace(laid.points, part, null, !laid.offBoard);
+  }
+
+  // Series resistors in front of every other pin of a run: pin to resistor, resistor to via.
+  function resistors(part, run, out) {
+    run.forEach((pin, i) => {
+      if (i % 2) return;
+      const gap = randInt(3, 4);
+      const near = add(pin, scale(out, gap));
+      const far = add(near, scale(out, 2));
+      for (let k = 2; k <= gap + 3; k += 1) {
+        const [x, y] = add(pin, scale(out, k));
+        if (!grid.onBoard(x, y) || grid.get(x, y) !== FREE) return;
+      }
+      const passive = makePassive(near, out);
+      parts.push(passive);
+      claimPart(grid, passive);
+      const lead = [pin];
+      for (let k = 1; k <= gap; k += 1) lead.push(add(pin, scale(out, k)));
+      claimTrace(grid, lead);
+      addTrace(lead, part, passive, false);
+      stub(passive, far, out);
+    });
+  }
+
+  // A bus of the run's pins escaping off across the board.
+  function escape(part, run, out) {
+    const plans = planBus(run, out);
+    const bus = [];
+    run.forEach((pin, i) => {
+      const laid = layTrace(grid, pin, plans[i]);
+      if (laid.points.length > 1) bus.push(addTrace(laid.points, part, null, !laid.offBoard, bus));
+    });
+    traces.push(...bus);
+  }
+
+  // Whatever pins of these parts are still unwired.
+  function finish(group) {
+    for (const part of group) {
+      for (const side of part.sides) {
+        for (const run of freeRuns(side)) {
+          const roll = Math.random();
+          if (part.kind !== 'header' && run.length >= 2 && roll < 0.3) resistors(part, run, side.out);
+          else if (run.length >= 2 && roll < 0.65) escape(part, run, side.out);
+          for (const pin of run) if (!wired.has(keyOf(pin))) stub(part, pin, side.out);
+        }
+      }
+    }
+  }
+
+  // 1 and 2: main parts, wired to each other, then their leftover pins.
+  const area = cols * rows;
+  for (let attempt = 0; attempt < partCount * 40 && parts.length < partCount; attempt += 1) {
+    const part = randomPart(grid, false);
+    if (spotIsFree(grid, part.x0, part.y0, part.x1, part.y1, PART_CLEARANCE)) addPart(part);
+  }
+  connectAll(parts.slice());
+  finish(parts.slice());
+
+  // 3: smaller chips in the gaps, each wired as it lands.
+  for (let attempt = 0; attempt < area / 8; attempt += 1) {
+    const part = randomPart(grid, true);
+    if (!spotIsFree(grid, part.x0, part.y0, part.x1, part.y1, 3)) continue;
+    addPart(part);
+    connectAll([part]);
+    finish([part]);
+  }
+
+  // Release the kept cells nobody used, then mounting holes and copper pours.
+  for (let i = 0; i < grid.point.length; i += 1) if (grid.point[i] === KEEP) grid.point[i] = FREE;
+  for (let attempt = 0; attempt < 200 && holes.length < Math.max(2, Math.round(area / 5000)); attempt += 1) {
+    const x = randInt(4, cols - 4);
+    const y = randInt(4, rows - 4);
+    if (!spotIsFree(grid, x - 2, y - 2, x + 2, y + 2, 1)) continue;
+    holes.push([x, y]);
+    for (let hx = x - 2; hx <= x + 2; hx += 1) for (let hy = y - 2; hy <= y + 2; hy += 1) grid.set(hx, hy, POUR);
+  }
+  // Copper pour: every free point at least a cell clear of everything else, as one
+  // sheet around the parts and traces; specks too small to read as copper stay bare.
+  // Stitching vias sit on a regular grid inside it.
+  const inPour = new Uint8Array(grid.point.length);
+  const clear = (x, y) => {
+    for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) if (grid.get(x + dx, y + dy) !== FREE) return false;
+    return true;
+  };
+  for (let x = 0; x <= cols; x += 1) for (let y = 0; y <= rows; y += 1) if (clear(x, y)) inPour[grid.at(x, y)] = 1;
+  const stitches = [];
+  for (let x = 0; x <= cols; x += 1) {
+    for (let y = 0; y <= rows; y += 1) {
+      if (inPour[grid.at(x, y)] !== 1) continue;
+      // Flood the island, then keep it only if it is big enough.
+      const island = [[x, y]];
+      inPour[grid.at(x, y)] = 2;
+      for (let i = 0; i < island.length; i += 1) {
+        const [ix, iy] = island[i];
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = ix + dx;
+          const ny = iy + dy;
+          if (grid.onBoard(nx, ny) && inPour[grid.at(nx, ny)] === 1) {
+            inPour[grid.at(nx, ny)] = 2;
+            island.push([nx, ny]);
+          }
+        }
+      }
+      if (island.length < 16) continue;
+      for (const [ix, iy] of island) inPour[grid.at(ix, iy)] = 3;
+      pours.push(...island);
+    }
+  }
+  for (const [x, y] of pours) grid.set(x, y, POUR);
+  // Where the pour's edge steps along a 45 degree trace, fill half of each notch so the
+  // edge runs straight along the trace instead of in stairs. Every triangle winds the
+  // same way as the pour's squares, so they all fill as one shape.
+  const poured = (x, y) => grid.onBoard(x, y) && inPour[grid.at(x, y)] === 3;
+  const chamfers = [];
+  for (let x = 0; x <= cols; x += 1) {
+    for (let y = 0; y <= rows; y += 1) {
+      if (poured(x, y)) continue;
+      for (const a of [-1, 1]) {
+        for (const b of [-1, 1]) {
+          if (!poured(x + a, y) || !poured(x, y + b)) continue;
+          const tri = [[x + a / 2, y + b / 2], [x + a / 2, y - b / 2], [x - a / 2, y + b / 2]];
+          const [[x1, y1], [x2, y2], [x3, y3]] = tri;
+          if ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1) < 0) tri.reverse();
+          chamfers.push(tri);
+        }
+      }
+    }
+  }
+  for (const [x, y] of pours) {
+    if (x % 4 || y % 4) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => grid.get(x + dx, y + dy) === POUR)) stitches.push([x, y]);
+  }
+
+  // No bare pads: a pin with no wire loses its pad; a part left with no pins is dropped.
+  for (const part of parts) {
+    for (const side of part.sides) side.pins = side.pins.filter((pin) => wired.has(keyOf(pin)));
+  }
+  const kept = parts.filter((part) => part.sides.some((side) => side.pins.length));
+  return { chips: kept, traces, pours, chamfers, stitches, holes };
+}
+
+// ---------- Drawing and pulses ----------
+
+// A trace in pixels, with the cumulative length at each corner for placing pulses.
+function toPixels(trace) {
+  const points = trace.points.map(([x, y]) => [x * CELL, y * CELL]);
+  const at = [0];
+  for (let i = 1; i < points.length; i += 1) {
+    at.push(at[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
+  }
+  return { ...trace, points, at, length: at[at.length - 1] };
+}
+
+function pointAt(trace, distance) {
+  const d = Math.max(0, Math.min(trace.length, distance));
+  let i = 1;
+  while (i < trace.at.length - 1 && trace.at[i] < d) i += 1;
+  const [x0, y0] = trace.points[i - 1];
+  const [x1, y1] = trace.points[i];
+  const span = trace.at[i] - trace.at[i - 1] || 1;
+  const t = (d - trace.at[i - 1]) / span;
+  return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t];
+}
+
+// The outline a part glows along when a pulse reaches it, in pixels.
+function outline(part) {
+  const grow = part.kind === 'qfp' || part.kind === 'soic' ? 0 : CELL * 0.6;
+  return [part.x0 * CELL - grow, part.y0 * CELL - grow, (part.x1 - part.x0) * CELL + grow * 2, (part.y1 - part.y0) * CELL + grow * 2];
+}
+
+function drawPart(b, part) {
+  if (part.kind === 'header') {
+    const [x, y, w, h] = outline(part);
+    b.strokeStyle = 'rgba(79, 209, 224, 0.2)';
+    b.lineWidth = 1;
+    b.strokeRect(x - 2, y - 2, w + 4, h + 4);
+    b.fillStyle = 'rgba(79, 209, 224, 0.26)';
+    b.fillText(part.label, x + w / 2, y - 9);
+    b.lineWidth = 1.6;
+    b.strokeStyle = 'rgba(79, 209, 224, 0.34)';
+    allPins(part).forEach(([px, py], i) => {
+      b.beginPath();
+      if (i === 0) b.rect(px * CELL - 3.5, py * CELL - 3.5, 7, 7);
+      else b.arc(px * CELL, py * CELL, 3.6, 0, Math.PI * 2);
+      b.stroke();
+    });
+    return;
+  }
+  if (part.kind === 'passive') {
+    // Two pads with the part's body between them.
+    b.fillStyle = 'rgba(79, 209, 224, 0.34)';
+    for (const [px, py] of allPins(part)) b.fillRect(px * CELL - 3, py * CELL - 3, 6, 6);
+    const mx = ((part.x0 + part.x1) / 2) * CELL;
+    const my = ((part.y0 + part.y1) / 2) * CELL;
+    const [bw, bh] = part.y0 === part.y1 ? [10, 7] : [7, 10];
+    b.strokeStyle = 'rgba(79, 209, 224, 0.24)';
+    b.lineWidth = 1;
+    b.strokeRect(mx - bw / 2, my - bh / 2, bw, bh);
+    return;
+  }
+  const x = part.x0 * CELL;
+  const y = part.y0 * CELL;
+  const w = (part.x1 - part.x0) * CELL;
+  const h = (part.y1 - part.y0) * CELL;
+  b.fillStyle = 'rgba(79, 209, 224, 0.035)';
+  b.fillRect(x, y, w, h);
+  b.strokeStyle = 'rgba(79, 209, 224, 0.26)';
+  b.lineWidth = 1.2;
+  b.strokeRect(x, y, w, h);
+  b.fillStyle = 'rgba(79, 209, 224, 0.3)';
+  for (const side of part.sides) {
+    for (const [px, py] of side.pins) {
+      // A pad from the body edge out to the pin point, where its trace starts.
+      const cx = px * CELL - side.out[0] * CELL * 0.5;
+      const cy = py * CELL - side.out[1] * CELL * 0.5;
+      const [pw, ph] = side.out[0] ? [CELL, 4] : [4, CELL];
+      b.fillRect(cx - pw / 2, cy - ph / 2, pw, ph);
+    }
+  }
+  b.beginPath();
+  b.arc(x + 6, y + 6, 1.8, 0, Math.PI * 2);
+  b.fill();
+  if (part.kind === 'qfp') {
+    // The exposed thermal pad under a quad package, with its via array.
+    const inset = Math.round(w * 0.28);
+    b.fillStyle = 'rgba(79, 209, 224, 0.045)';
+    b.fillRect(x + inset, y + inset, w - inset * 2, h - inset * 2);
+    b.fillStyle = 'rgba(79, 209, 224, 0.2)';
+    for (let i = 1; i <= 3; i += 1) {
+      for (let j = 1; j <= 3; j += 1) {
+        b.beginPath();
+        b.arc(x + inset + ((w - inset * 2) * i) / 4, y + inset + ((h - inset * 2) * j) / 4, 1.3, 0, Math.PI * 2);
+        b.fill();
+      }
+    }
+  }
+  b.fillStyle = 'rgba(79, 209, 224, 0.26)';
+  b.fillText(part.label, x + w / 2, part.kind === 'qfp' ? y + h * 0.14 + 4 : y + h / 2);
+}
+
+// ---------- Traffic ----------
+
+// Data moving between parts over the nets they share (owner request, October 14, 2026:
+// a busier board whose flow follows realistic logic). A link is one bundle of traces
+// between two parts. The rules, which tests/bg-circuit.test.mjs holds us to:
+//   - Data only travels along a net, from one part to the part at its other end.
+//   - A transfer is a word on the bus: some of the bundle's lines at once, at one speed.
+//     It has arrived when its last line lands (longer lines arrive later, as skew does).
+//   - The part it reaches lights up, and a moment later usually acts on it: it answers
+//     back on the same bus now and then, otherwise passes data on over one of its other
+//     nets. So activity spreads as chains of cause and effect, never jumping between
+//     parts that are not wired together. A chain ends at random or after MAX_HOPS.
+//   - New chains start on links in view, enough to keep `target` chains going.
+// Exported for tests; it uses no DOM.
+export function makeTraffic(links, { target = 8, visible = () => true, maxPulses = MAX_PULSES } = {}) {
+  const byPart = new Map();
+  for (const link of links) {
+    for (const [part, forward] of [[link.a, true], [link.b, false]]) {
+      if (!byPart.has(part)) byPart.set(part, []);
+      byPart.get(part).push({ link, forward });
+    }
+  }
+  const pulses = [];
+  const queue = [];
+  const log = [];
+  let clock = 0;
+  let active = 0; // transfers on the wire, plus parts about to act
+
+  function send(link, forward, hops, color, cause) {
+    let lines = link.lines.filter(() => Math.random() < 0.7);
+    if (!lines.length) lines = [link.lines[Math.floor(Math.random() * link.lines.length)]];
+    const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color, cause, left: lines.length };
+    const speed = rand(170, 250);
+    for (const trace of lines) pulses.push({ trace, d: 0, speed, color, inward: !forward, transfer });
+    log.push(transfer);
+    if (log.length > 400) log.shift();
+    active += 1;
+  }
+
+  function act({ part, came, hops, color, cause }) {
+    const options = byPart.get(part) || [];
+    if (!options.length) return;
+    const others = shuffle(options.filter((o) => o.link !== came));
+    const back = options.find((o) => o.link === came);
+    const pick = !others.length || (back && Math.random() < REPLY_CHANCE)
+      ? back
+      : others.find((o) => visible(o.link)) || others[0];
+    if (pick) send(pick.link, pick.forward, hops, color, cause);
+  }
+
+  return {
+    pulses,
+    log,
+    // Moves everything on by dt seconds; returns the parts data reached, with its colour.
+    tick(dt) {
+      clock += dt;
+      const reached = [];
+      for (const pulse of pulses) pulse.d += pulse.speed * dt;
+      for (let i = pulses.length - 1; i >= 0; i -= 1) {
+        const pulse = pulses[i];
+        if (pulse.d < pulse.trace.length + TAIL * TAIL_GAP) continue;
+        pulses.splice(i, 1);
+        const { transfer } = pulse;
+        transfer.left -= 1;
+        if (transfer.left) continue;
+        active -= 1;
+        reached.push({ part: transfer.to, color: transfer.color });
+        if (transfer.hops < MAX_HOPS && Math.random() < CARRY_ON) {
+          queue.push({ at: clock + rand(0.06, 0.3), part: transfer.to, came: transfer.link, hops: transfer.hops + 1, color: transfer.color, cause: transfer });
+          active += 1;
+        }
+      }
+      for (let i = queue.length - 1; i >= 0; i -= 1) {
+        if (queue[i].at > clock) continue;
+        const [due] = queue.splice(i, 1);
+        active -= 1;
+        if (pulses.length < maxPulses) act(due);
+      }
+      if (active < target && pulses.length < maxPulses && links.length) {
+        const fresh = shuffle(links.slice(0, 400)).find(visible) || links[Math.floor(Math.random() * links.length)];
+        send(fresh, Math.random() < 0.5, 0, COLORS[Math.floor(Math.random() * COLORS.length)], null);
+      }
+      return reached;
+    },
+  };
+}
+
+export function startCircuit({ still = false, resume = false } = {}) {
+  return startCanvas({
+    className: 'bg-circuit',
+    still,
+    resume,
+    scene: (context) => {
+      const board = el('canvas');
+      const boardContext = board.getContext('2d');
+      let width = 0;
+      let height = 0;
+      let chips = [];
+      let traces = [];
+      let pours = [];
+      let stitches = [];
+      let chamfers = [];
+      let holes = [];
+      let ambient = []; // pulses on stubs, resistors and escaping buses
+      let flashes = [];
+      let spawnIn = 0;
+      let traffic = makeTraffic([]);
+      let quiet = []; // traces that are not part-to-part nets
+      // The board is planned for the whole screen, not just the window (owner report,
+      // October 14, 2026: resizing redrew a new random board on every resize event, so it
+      // flickered). Resizing within it only shows more or less of the same board; a window
+      // bigger than the board, or a new zoom level, re-plans it once resizing settles.
+      let boardW = 0;
+      let boardH = 0;
+      let boardRatio = 0;
+      let rebuild = 0;
+      let redraw = () => {};
+
+      function drawBoard() {
+        const ratio = boardRatio;
+        board.width = Math.floor(boardW * ratio);
+        board.height = Math.floor(boardH * ratio);
+        const b = boardContext;
+        b.setTransform(ratio, 0, 0, ratio, 0, 0);
+        b.lineJoin = 'round';
+        b.lineCap = 'round';
+        // Copper pour: one faint sheet (each pour point fills its cell, so neighbours join
+        // up), filled once so overlaps never double up, with its stitching vias.
+        b.beginPath();
+        for (const [x, y] of pours) b.rect(x * CELL - CELL / 2, y * CELL - CELL / 2, CELL, CELL);
+        for (const tri of chamfers) {
+          tri.forEach(([x, y], i) => (i ? b.lineTo(x * CELL, y * CELL) : b.moveTo(x * CELL, y * CELL)));
+          b.closePath();
+        }
+        b.fillStyle = 'rgba(95, 207, 128, 0.05)';
+        b.fill();
+        b.strokeStyle = 'rgba(95, 207, 128, 0.2)';
+        b.lineWidth = 1;
+        for (const [x, y] of stitches) {
+          b.beginPath();
+          b.arc(x * CELL, y * CELL, 1.7, 0, Math.PI * 2);
+          b.stroke();
+        }
+        // Mounting holes.
+        for (const [hx, hy] of holes) {
+          b.strokeStyle = 'rgba(79, 209, 224, 0.22)';
+          b.lineWidth = 1.2;
+          b.beginPath();
+          b.arc(hx * CELL, hy * CELL, CELL * 1.9, 0, Math.PI * 2);
+          b.stroke();
+          b.beginPath();
+          b.arc(hx * CELL, hy * CELL, CELL * 1.1, 0, Math.PI * 2);
+          b.stroke();
+          b.fillStyle = 'rgba(79, 209, 224, 0.22)';
+          for (let k = 0; k < 8; k += 1) {
+            const a = (k / 8) * Math.PI * 2;
+            b.beginPath();
+            b.arc(hx * CELL + Math.cos(a) * CELL * 1.5, hy * CELL + Math.sin(a) * CELL * 1.5, 1.1, 0, Math.PI * 2);
+            b.fill();
+          }
+        }
+        // Traces.
+        b.strokeStyle = 'rgba(79, 209, 224, 0.16)';
+        b.lineWidth = 1.2;
+        b.beginPath();
+        for (const trace of traces) trace.points.forEach(([x, y], i) => (i ? b.lineTo(x, y) : b.moveTo(x, y)));
+        b.stroke();
+        // Vias where traces end.
+        b.strokeStyle = 'rgba(79, 209, 224, 0.3)';
+        b.lineWidth = 1.1;
+        for (const trace of traces) {
+          if (!trace.via) continue;
+          const [x, y] = trace.points[trace.points.length - 1];
+          b.beginPath();
+          b.arc(x, y, 2.4, 0, Math.PI * 2);
+          b.stroke();
+        }
+        // Parts.
+        b.font = '9px ui-monospace, Consolas, monospace';
+        b.textAlign = 'center';
+        b.textBaseline = 'middle';
+        for (const part of chips) drawPart(b, part);
+      }
+
+
+      function build() {
+        rebuild = 0;
+        const screen = window.screen || {};
+        boardW = Math.max(width, screen.width || 0);
+        boardH = Math.max(height, screen.height || 0);
+        boardRatio = Math.min(window.devicePixelRatio || 1, 2);
+        const count = Math.max(MIN_PARTS, Math.min(MAX_PARTS, Math.round((boardW * boardH) / AREA_PER_PART)));
+        const plan = planBoard(Math.ceil(boardW / CELL), Math.ceil(boardH / CELL), count);
+        chips = plan.chips;
+        pours = plan.pours;
+        stitches = plan.stitches;
+        chamfers = plan.chamfers;
+        holes = plan.holes;
+        traces = plan.traces.map(toPixels);
+        // Each trace's bundle, in pixels.
+        const byPlan = new Map(plan.traces.map((trace, i) => [trace, traces[i]]));
+        traces.forEach((trace) => { trace.bus = trace.bus.map((t) => byPlan.get(t)).filter(Boolean); });
+        // The links between parts (resistors excepted) carry the data; the rest is ambient.
+        const links = new Map();
+        plan.traces.forEach((trace, i) => {
+          if (!trace.end || trace.end.kind === 'passive') return;
+          if (!links.has(trace.bus)) links.set(trace.bus, { a: trace.chip, b: trace.end, lines: [] });
+          links.get(trace.bus).lines.push(traces[i]);
+        });
+        const all = [...links.values()];
+        const seen = (link) => link.lines.some((t) => onScreen(t.points[0]) || onScreen(t.points[t.points.length - 1]));
+        const inView = all.filter(seen).length;
+        // About one chain of transfers going per net in view: a busy board.
+        traffic = makeTraffic(all, { target: Math.max(6, Math.min(30, Math.round(inView * 0.8))), visible: seen });
+        quiet = traces.filter((trace) => !trace.end || trace.end.kind === 'passive');
+        ambient = [];
+        flashes = [];
+        drawBoard();
+      }
+
+      const onScreen = ([x, y]) => x <= width && y <= height;
+
+      const view = {
+        resize(w, h) {
+          width = w;
+          height = h;
+          if (!boardW) {
+            build();
+            return;
+          }
+          const ratio = Math.min(window.devicePixelRatio || 1, 2);
+          if (w <= boardW && h <= boardH && ratio === boardRatio) return;
+          window.clearTimeout(rebuild);
+          rebuild = window.setTimeout(() => {
+            build();
+            redraw(); // a still (reduced motion) board has no loop to draw it
+          }, 250);
+        },
+        step(dt) {
+          // Data between parts (makeTraffic): each part it reaches lights up.
+          for (const { part, color } of traffic.tick(dt)) flashes.push({ part, life: 0.5, color });
+          // Ambient: a chip driving one of its stubs, resistors or escaping buses, or a
+          // signal coming in off one, now and then; a whole escaping bus sometimes at once.
+          spawnIn -= dt;
+          if (spawnIn <= 0 && ambient.length < MAX_AMBIENT && quiet.length) {
+            spawnIn = AMBIENT_EVERY;
+            let trace = quiet[Math.floor(Math.random() * quiet.length)];
+            for (let tries = 0; tries < 4 && !onScreen(trace.points[0]); tries += 1) {
+              trace = quiet[Math.floor(Math.random() * quiet.length)];
+            }
+            const speed = rand(110, 190);
+            const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+            const inward = Math.random() < 0.3;
+            const group = Math.random() < 0.35 && trace.bus.length > 1 ? trace.bus : [trace];
+            for (const t of group) ambient.push({ trace: t, d: 0, speed, color, inward });
+          }
+          for (const pulse of ambient) pulse.d += pulse.speed * dt;
+          for (const pulse of ambient.filter((p) => p.d >= p.trace.length + TAIL * TAIL_GAP)) {
+            const { trace } = pulse;
+            if (pulse.inward) flashes.push({ part: trace.chip, life: 0.4, color: pulse.color });
+            else if (trace.end) flashes.push({ part: trace.end, life: 0.4, color: pulse.color });
+            else if (trace.via) {
+              const [x, y] = trace.points[trace.points.length - 1];
+              flashes.push({ x, y, life: 0.45, color: pulse.color });
+            }
+          }
+          ambient = ambient.filter((p) => p.d < p.trace.length + TAIL * TAIL_GAP);
+          for (const flash of flashes) flash.life -= dt;
+          flashes = flashes.filter((f) => f.life > 0);
+        },
+        draw(fade) {
+          const ctx = context;
+          ctx.clearRect(0, 0, width, height);
+          ctx.globalAlpha = fade;
+          if (board.width) ctx.drawImage(board, 0, 0, boardW, boardH);
+          for (const pulse of [...traffic.pulses, ...ambient]) {
+            for (let k = TAIL; k >= 0; k -= 1) {
+              const d = pulse.d - k * TAIL_GAP;
+              if (d < 0 || d > pulse.trace.length) continue;
+              const [x, y] = pointAt(pulse.trace, pulse.inward ? pulse.trace.length - d : d);
+              const a = (1 - k / (TAIL + 1)) * 0.85;
+              const r = k === 0 ? 2.2 : 1.4;
+              ctx.fillStyle = `rgba(${pulse.color}, ${a.toFixed(3)})`;
+              ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            }
+          }
+          ctx.lineWidth = 1.5;
+          for (const flash of flashes) {
+            if (flash.part) {
+              // The part lights up as data lands on it.
+              ctx.strokeStyle = `rgba(${flash.color}, ${(flash.life / 0.5 * 0.6).toFixed(3)})`;
+              ctx.strokeRect(...outline(flash.part));
+              continue;
+            }
+            ctx.beginPath();
+            ctx.arc(flash.x, flash.y, 2.4 + (0.45 - flash.life) * 9, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${flash.color}, ${(flash.life / 0.45 * 0.8).toFixed(3)})`;
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        },
+      };
+      redraw = () => view.draw(1);
+      return view;
+    },
+  });
+}

@@ -1,0 +1,8 @@
+# Housekeeping only. This is not a publishing security control (see Security Doctrine section 2).
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.env
+.env.*

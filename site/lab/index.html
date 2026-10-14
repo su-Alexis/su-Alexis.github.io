@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-US" class="steps-1 lab-page" data-boot="page">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab | Alexis Pontious</title>
+  <meta name="description" content="The wafflesOS lab: virtual machines for short, simulated security missions.">
+  <link rel="icon" type="image/png" href="../assets/media/icons/logo-64.png">
+  <!-- Classic blocking script: starts the short page load sequence before first paint. -->
+  <script src="../assets/js/layers/layer1.js"></script>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/utilities.css">
+  <link rel="stylesheet" href="../assets/css/layer1.css">
+  <link rel="stylesheet" href="../assets/css/terminal.css">
+  <link rel="stylesheet" href="../assets/css/layer2.css">
+  <!-- blocking="render": the shells are restored before the first frame, so they carry across the page slide. -->
+  <script type="module" src="../assets/js/core/app.js" blocking="render"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <p class="boot-skip" id="boot-skip" aria-hidden="true"><span class="skip-key">Press <kbd>Esc</kbd> to skip</span><span class="skip-tap">Tap to skip</span></p>
+
+  <div class="site">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="../"><img src="../assets/media/icons/logo-64.png" alt="" width="28" height="28"><span>ALEXIS PONTIOUS <span class="brand-sub">// security portfolio</span></span></a>
+        <!-- Who is at the console (owner request, October 13, 2026): a prompt, not badges.
+             ui/terminal-ui.js switches it to root ($ becomes #) and back. -->
+        <p class="status" aria-label="Signed-in user"><span class="status-prompt" aria-hidden="true">&gt;_$</span> <span class="status-user">User Visitor</span></p>
+      </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+      <!-- Console window. The load log is decorative; ui/terminal-ui.js adds history and the prompt. -->
+      <section class="console" id="terminal" data-page="lab" aria-label="Console">
+        <div class="console-bar">
+          <span class="console-lights"><span></span><span></span><span></span></span>
+          <span>console · visitor@portfolio</span>
+          <span>tty1</span>
+        </div>
+        <div class="console-body">
+          <div class="console-log" aria-hidden="true">
+            <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-cd-lab">cd ~/lab</span></p>
+            <p class="console-line line-init"><span class="ok">[ ok ]</span> entered ~/lab</p>
+            <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-hypervisor">load --module hypervisor</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
+            <p class="console-line line-ready"><span class="ok">[ ok ]</span> 1 module online <span class="cursor"></span></p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../">~</a> <span aria-hidden="true">/</span> <span aria-current="page">lab</span></nav>
+
+      <div class="modules">
+        <section class="module module-wide lab-module boot-step step-1" id="module-hypervisor" aria-labelledby="hypervisor-heading">
+          <div class="module-bar"><span>module // hypervisor</span><span class="module-state state-ongoing"><span class="status-dot" aria-hidden="true"></span>under construction</span></div>
+          <div class="module-body">
+            <h1 id="hypervisor-heading" class="visually-hidden">Lab</h1>
+            <p class="visually-hidden">Virtual machines for short, simulated security missions: Winbows, ParrotOS and Ubuntu, all fictional and safe.</p>
+            <!-- No module frame here (owner request): the stage is the screen, and the VM fills it at a monitor-shaped 16:9.
+                 layers/layer2.js replaces this stage with the hypervisor. Without JavaScript it explains that the lab needs it. -->
+            <div class="lab-stage" id="lab-stage">
+              <p>The lab runs in your browser with JavaScript. The rest of the portfolio works without it.</p>
+              <ul class="link-list">
+                <li><a href="../">Back to the portfolio</a></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Static site · no trackers · no cookies · no third-party scripts</p>
+    </footer>
+  </div>
+</body>
+</html>
