@@ -25,7 +25,8 @@
 // The board is planned for the whole screen and drawn once onto an offscreen canvas, so
 // each frame only copies it and draws the pulses, and resizing the window shows more or
 // less of the same board. Data flows between parts over their nets as chains of cause and
-// effect (makeTraffic, below); stubs, resistors and escaping buses get quieter traffic.
+// effect (makeTraffic, below); each part also works through its stubs, resistors and
+// escaping buses on a slow cycle (makeAmbient), so every wire lights up now and then.
 //
 // Decorative only, on a transparent canvas; the part labels are fixed strings drawn with
 // fillText.
@@ -45,8 +46,8 @@ const NET_REACH = 90; // cells: parts further apart are not wired together
 const ROUTE_STEPS = 6000; // A* expansions per trace
 const ROUTE_BUDGET = 1200000; // A* expansions per board, so a huge screen stays quick
 const MAX_PULSES = 240; // data on the nets
-const MAX_AMBIENT = 30; // pulses on stubs, resistors and escaping buses
-const AMBIENT_EVERY = 0.3; // seconds between those
+const MAX_AMBIENT = 40; // pulses on stubs, resistors and escaping buses at once
+const AMBIENT_CYCLE = [16, 24]; // seconds for a part to light each of those once
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
 const CARRY_ON = 0.85; // chance a part passes data on once it arrives
@@ -1064,6 +1065,13 @@ function drawPart(b, part) {
 //     nets. So activity spreads as chains of cause and effect, never jumping between
 //     parts that are not wired together. A chain ends at random or after MAX_HOPS.
 //   - New chains start on links in view, enough to keep `target` chains going.
+//   - Every bus gets its turn (owner request, October 14, 2026: some wires hardly ever
+//     lit): a new chain starts on the link in view that has gone longest without data,
+//     and a part passing data on picks the bus it has used least lately, the way a
+//     controller round-robins its ports. A little jitter keeps it from looking like a
+//     sweep.
+//   - kick(part) starts a chain at a part, for input arriving on one of its other lines
+//     (makeAmbient). It only stands in for a new chain, so the board gets no busier.
 // Exported for tests; it uses no DOM.
 export function makeTraffic(links, { target = 8, visible = () => true, maxPulses = MAX_PULSES } = {}) {
   const byPart = new Map();
@@ -1078,6 +1086,26 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   const log = [];
   let clock = 0;
   let active = 0; // transfers on the wire, plus parts about to act
+  // When each link last carried data; never-used links start slightly apart, at random.
+  const lastSent = new Map(links.map((link) => [link, -1 - random()]));
+  const staleness = (link) => (lastSent.get(link) ?? 0) + random() * 0.6;
+  // The longest-unused of these links (in view, if any are); null for none.
+  function stalest(list) {
+    let best = null;
+    let bestSeen = false;
+    let bestAge = Infinity;
+    for (const link of list) {
+      const seen = visible(link);
+      if (bestSeen && !seen) continue;
+      const age = staleness(link);
+      if ((seen && !bestSeen) || age < bestAge) {
+        best = link;
+        bestSeen = seen;
+        bestAge = age;
+      }
+    }
+    return best;
+  }
 
   function send(link, forward, hops, color, cause) {
     // Data takes the colour of the bus it rides: cyan on teal, lavender on violet.
@@ -1089,17 +1117,19 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
     for (const trace of lines) pulses.push({ trace, d: 0, speed, color, inward: !forward, transfer });
     log.push(transfer);
     if (log.length > 400) log.shift();
+    lastSent.set(link, clock);
     active += 1;
   }
 
   function act({ part, came, hops, color, cause }) {
     const options = byPart.get(part) || [];
     if (!options.length) return;
-    const others = shuffle(options.filter((o) => o.link !== came));
+    const others = options.filter((o) => o.link !== came);
     const back = options.find((o) => o.link === came);
+    const onward = stalest(others.map((o) => o.link));
     const pick = !others.length || (back && random() < REPLY_CHANCE)
       ? back
-      : others.find((o) => visible(o.link)) || others[0];
+      : others.find((o) => o.link === onward);
     if (pick) send(pick.link, pick.forward, hops, color, cause);
   }
 
@@ -1132,10 +1162,13 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (pulses.length < maxPulses) act(due);
       }
       if (active < target && pulses.length < maxPulses && links.length) {
-        const fresh = shuffle(links.slice(0, 400)).find(visible) || links[Math.floor(random() * links.length)];
+        const fresh = stalest(links);
         send(fresh, random() < 0.5, 0, toneColour(fresh.lines[0]), null);
       }
       return reached;
+    },
+    kick(part) {
+      if (active < target && pulses.length < maxPulses) act({ part, came: null, hops: 0, color: COLORS[0], cause: null });
     },
     // What is on the wire, as plain numbers (owner request, October 14, 2026: the pulses
     // keep their places from page to page). Links are named by index, so this only makes
@@ -1188,6 +1221,112 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   };
 }
 
+// The other lines: stubs down to vias, resistor lines and buses escaping to the board's
+// edge, which are most of the wires on the board (owner request, October 14, 2026: every
+// wire should light up now and then, with some logic to it, without crowding the board).
+// The rules, which tests/bg-circuit.test.mjs holds us to:
+//   - Each part works through its own such lines in a fixed order on a slow cycle of its
+//     own (AMBIENT_CYCLE seconds), the way a chip polls its I/O. So every line lights
+//     once a cycle, and the parts stay out of step with each other.
+//   - A bundle goes as one word, all its lines together.
+//   - Lines out of view take their turn without a pulse (nobody would see it).
+//   - Most signals go out from the part; some come in, and the part lights up as they
+//     land. Data reaching a part over a net (poke) makes it drive its next line soon, so
+//     the quiet lines answer the traffic.
+//   - At most `cap` pulses at once. A line whose turn comes with no room waits for room
+//     instead of being skipped, so none is left dark.
+// Exported for tests; it uses no DOM. `visible` takes one trace.
+export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } = {}) {
+  const pulses = [];
+  const index = new Map(quiet.map((trace, i) => [trace, i]));
+  // Bundles: a trace's bus, keeping only its quiet lines, named by the first of them.
+  const bundles = new Map();
+  for (const trace of quiet) {
+    const lines = (trace.bus && trace.bus.length ? trace.bus : [trace]).filter((t) => index.has(t));
+    const key = lines[0] || trace;
+    if (!bundles.has(key)) bundles.set(key, { part: trace.chip, lines: lines.length ? lines : [trace] });
+  }
+  // Each part's round: its bundles in a fixed, shuffled order, one every `step` seconds.
+  const rounds = new Map();
+  for (const bundle of bundles.values()) {
+    if (!rounds.has(bundle.part)) rounds.set(bundle.part, []);
+    rounds.get(bundle.part).push(bundle);
+  }
+  let clock = 0;
+  const parts = [...rounds].map(([part, list]) => {
+    const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length;
+    return { part, list: shuffle(list), next: Math.floor(random() * list.length), step, at: random() * step, last: -Infinity };
+  });
+  const byPart = new Map(parts.map((p) => [p.part, p]));
+
+  function fire(bundle) {
+    const speed = rand(110, 190);
+    const color = toneColour(bundle.lines[0]);
+    const inward = random() < 0.3;
+    for (const trace of bundle.lines) pulses.push({ trace, d: 0, speed, color, inward });
+  }
+
+  return {
+    pulses,
+    // Moves everything on by dt seconds; returns where signals landed: { part, color,
+    // inward } for a part, or { x, y, color } for a via.
+    tick(dt) {
+      clock += dt;
+      const landed = [];
+      for (let i = pulses.length - 1; i >= 0; i -= 1) {
+        const pulse = pulses[i];
+        pulse.d += pulse.speed * dt;
+        if (pulse.d < pulse.trace.length + TAIL * TAIL_GAP) continue;
+        pulses.splice(i, 1);
+        const { trace, color } = pulse;
+        if (pulse.inward) landed.push({ part: trace.chip, color, inward: true });
+        else if (trace.end) landed.push({ part: trace.end, color, inward: false });
+        else if (trace.via) {
+          const [x, y] = trace.points[trace.points.length - 1];
+          landed.push({ x, y, color });
+        }
+      }
+      for (const p of parts) {
+        if (p.at > clock) continue;
+        const bundle = p.list[p.next];
+        if (bundle.lines.some(visible)) {
+          // Wait for room (a bundle bigger than the cap still goes once the board is clear).
+          if (pulses.length && pulses.length + bundle.lines.length > cap) continue;
+          fire(bundle);
+          p.last = clock;
+        }
+        p.next = (p.next + 1) % p.list.length;
+        // A part that fell behind (a hidden tab, a long wait for room) catches up by one
+        // turn at most, so it never bursts.
+        p.at = Math.max(p.at, clock - p.step) + p.step * rand(0.8, 1.2);
+      }
+      return landed;
+    },
+    // Data reached this part: it drives its next line shortly, unless it just did.
+    poke(part) {
+      const p = byPart.get(part);
+      if (p && clock - p.last > 1) p.at = Math.min(p.at, clock + rand(0.05, 0.25));
+    },
+    // As in makeTraffic, plain numbers: [line, distance, speed, colour, inward 0/1] per
+    // pulse, lines named by their index in `quiet`.
+    snapshot() {
+      return pulses.map((p) => [index.get(p.trace), Math.round(p.d), Math.round(p.speed), COLORS.indexOf(p.color), p.inward ? 1 : 0]);
+    },
+    // Checks every value first (it comes back from storage as untrusted).
+    restore(data) {
+      const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+      if (!Array.isArray(data)) return;
+      for (const entry of data.slice(0, cap)) {
+        if (!Array.isArray(entry) || entry.length !== 5 || pulses.length >= cap) continue;
+        const [ti, d, speed, colour, inward] = entry;
+        if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
+        if (!int(d, 0, Math.ceil(quiet[ti].length) + TAIL * TAIL_GAP)) continue;
+        pulses.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1 });
+      }
+    },
+  };
+}
+
 export function startCircuit({ still = false, resume = false } = {}) {
   return startCanvas({
     className: 'bg-circuit',
@@ -1204,10 +1343,9 @@ export function startCircuit({ still = false, resume = false } = {}) {
       let stitches = [];
       let chamfers = [];
       let holes = [];
-      let ambient = []; // pulses on stubs, resistors and escaping buses
       let flashes = [];
-      let spawnIn = 0;
       let traffic = makeTraffic([]);
+      let ambient = makeAmbient([]); // stubs, resistors and escaping buses
       let quiet = []; // traces that are not part-to-part nets
       // The board is planned for the whole screen, not just the window (owner report,
       // October 14, 2026: resizing redrew a new random board on every resize event, so it
@@ -1326,10 +1464,11 @@ export function startCircuit({ still = false, resume = false } = {}) {
         const all = [...links.values()];
         const seen = (link) => link.lines.some((t) => onScreen(t.points[0]) || onScreen(t.points[t.points.length - 1]));
         const inView = all.filter(seen).length;
-        // About one chain of transfers going per net in view: a busy board.
-        traffic = makeTraffic(all, { target: Math.max(6, Math.min(30, Math.round(inView * 0.8))), visible: seen });
+        // About two chains of transfers going for every three nets in view: busy, with room
+        // left for the quiet lines (makeAmbient) to show.
+        traffic = makeTraffic(all, { target: Math.max(5, Math.min(24, Math.round(inView * 0.65))), visible: seen });
         quiet = traces.filter((trace) => !trace.end || trace.end.kind === 'passive');
-        ambient = [];
+        ambient = makeAmbient(quiet, { visible: (trace) => onScreen(trace.points[0]) || onScreen(trace.points[trace.points.length - 1]) });
         flashes = [];
         drawBoard();
         restorePulses();
@@ -1340,36 +1479,25 @@ export function startCircuit({ still = false, resume = false } = {}) {
       // pagehide) and put back on the next page's identical board, so they pick up where
       // they stopped. Only for the same seed and board size; a refresh or reboot clears
       // them with the seed (ui/terminal-ui.js).
-      const ambientCap = MAX_AMBIENT;
       function savePulses() {
         if (!context.canvas.isConnected || !traces.length) return;
-        const index = new Map(quiet.map((trace, i) => [trace, i]));
         writeJson(sessionStore(), SESSION_KEYS.bgPulses, {
           v: 1, seed, w: boardW, h: boardH, at: Date.now(),
           ...traffic.snapshot(),
-          a: ambient.map((p) => [index.get(p.trace), Math.round(p.d), Math.round(p.speed), COLORS.indexOf(p.color), p.inward ? 1 : 0]),
+          a: ambient.snapshot(),
         });
       }
       function restorePulses() {
         const data = readJson(sessionStore(), SESSION_KEYS.bgPulses);
         if (!data || data.v !== 1 || data.seed !== seed || data.w !== boardW || data.h !== boardH) return;
         traffic.restore(data);
-        const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
-        if (!Array.isArray(data.a)) return;
-        for (const entry of data.a.slice(0, ambientCap)) {
-          if (!Array.isArray(entry) || entry.length !== 5) continue;
-          const [ti, d, speed, colour, inward] = entry;
-          if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
-          if (!int(d, 0, Math.ceil(quiet[ti].length) + TAIL * TAIL_GAP)) continue;
-          ambient.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1 });
-        }
+        ambient.restore(data.a);
         // Move everything on by the time the page change took (at most two seconds), so
         // the pulses arrive where they would be had they never stopped.
         const away = Number.isFinite(data.at) ? Math.min(2, Math.max(0, (Date.now() - data.at) / 1000)) : 0;
         if (away > 0) {
           traffic.tick(away);
-          for (const pulse of ambient) pulse.d += pulse.speed * away;
-          ambient = ambient.filter((p) => p.d < p.trace.length + TAIL * TAIL_GAP);
+          ambient.tick(away);
         }
       }
       // pageswap is the moment the slide's picture is taken; pagehide is the fallback
@@ -1408,34 +1536,20 @@ export function startCircuit({ still = false, resume = false } = {}) {
           }, 250);
         },
         step(dt) {
-          // Data between parts (makeTraffic): each part it reaches lights up.
-          for (const { part, color } of traffic.tick(dt)) flashes.push({ part, life: 0.5, color });
-          // Ambient: a chip driving one of its stubs, resistors or escaping buses, or a
-          // signal coming in off one, now and then; a whole escaping bus sometimes at once.
-          spawnIn -= dt;
-          if (spawnIn <= 0 && ambient.length < MAX_AMBIENT && quiet.length) {
-            spawnIn = AMBIENT_EVERY;
-            let trace = quiet[Math.floor(random() * quiet.length)];
-            for (let tries = 0; tries < 4 && !onScreen(trace.points[0]); tries += 1) {
-              trace = quiet[Math.floor(random() * quiet.length)];
-            }
-            const speed = rand(110, 190);
-            const color = toneColour(trace);
-            const inward = random() < 0.3;
-            const group = random() < 0.35 && trace.bus.length > 1 ? trace.bus : [trace];
-            for (const t of group) ambient.push({ trace: t, d: 0, speed, color, inward });
+          // Data between parts (makeTraffic): each part it reaches lights up, and soon
+          // drives one of its quiet lines.
+          for (const { part, color } of traffic.tick(dt)) {
+            flashes.push({ part, life: 0.5, color });
+            ambient.poke(part);
           }
-          for (const pulse of ambient) pulse.d += pulse.speed * dt;
-          for (const pulse of ambient.filter((p) => p.d >= p.trace.length + TAIL * TAIL_GAP)) {
-            const { trace } = pulse;
-            if (pulse.inward) flashes.push({ part: trace.chip, life: 0.4, color: pulse.color });
-            else if (trace.end) flashes.push({ part: trace.end, life: 0.4, color: pulse.color });
-            else if (trace.via) {
-              const [x, y] = trace.points[trace.points.length - 1];
-              flashes.push({ x, y, life: 0.45, color: pulse.color });
-            }
+          // The quiet lines (makeAmbient). A signal coming in to a part sometimes sets
+          // it sending data over a net, as input would.
+          for (const landed of ambient.tick(dt)) {
+            if (landed.part) {
+              flashes.push({ part: landed.part, life: 0.4, color: landed.color });
+              if (landed.inward && random() < 0.3) traffic.kick(landed.part);
+            } else flashes.push({ x: landed.x, y: landed.y, life: 0.45, color: landed.color });
           }
-          ambient = ambient.filter((p) => p.d < p.trace.length + TAIL * TAIL_GAP);
           for (const flash of flashes) flash.life -= dt;
           flashes = flashes.filter((f) => f.life > 0);
         },
@@ -1444,15 +1558,19 @@ export function startCircuit({ still = false, resume = false } = {}) {
           ctx.clearRect(0, 0, width, height);
           ctx.globalAlpha = fade;
           if (board.width) ctx.drawImage(board, 0, 0, boardW, boardH);
-          for (const pulse of [...traffic.pulses, ...ambient]) {
-            for (let k = TAIL; k >= 0; k -= 1) {
-              const d = pulse.d - k * TAIL_GAP;
-              if (d < 0 || d > pulse.trace.length) continue;
-              const [x, y] = pointAt(pulse.trace, pulse.inward ? pulse.trace.length - d : d);
-              const a = (1 - k / (TAIL + 1)) * 0.85;
-              const r = k === 0 ? 2.2 : 1.4;
-              ctx.fillStyle = `rgba(${pulse.color}, ${a.toFixed(3)})`;
-              ctx.fillRect(x - r, y - r, r * 2, r * 2);
+          // Data on the nets at full strength; the quiet lines' housekeeping a little
+          // fainter, so it fills the board in without competing with it.
+          for (const [pulses, strength] of [[traffic.pulses, 0.85], [ambient.pulses, 0.6]]) {
+            for (const pulse of pulses) {
+              for (let k = TAIL; k >= 0; k -= 1) {
+                const d = pulse.d - k * TAIL_GAP;
+                if (d < 0 || d > pulse.trace.length) continue;
+                const [x, y] = pointAt(pulse.trace, pulse.inward ? pulse.trace.length - d : d);
+                const a = (1 - k / (TAIL + 1)) * strength;
+                const r = k === 0 ? 2.2 : 1.4;
+                ctx.fillStyle = `rgba(${pulse.color}, ${a.toFixed(3)})`;
+                ctx.fillRect(x - r, y - r, r * 2, r * 2);
+              }
             }
           }
           ctx.lineWidth = 1.5;

@@ -4,7 +4,7 @@
 // requests, October 14, 2026: the board has to read as a real routed circuit).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planBoard, makeTraffic } from '../site/assets/js/ui/bg-circuit.js';
+import { planBoard, makeTraffic, makeAmbient } from '../site/assets/js/ui/bg-circuit.js';
 
 // Every grid point a trace passes through after its first, and every diagonal crossing.
 function walk(points) {
@@ -166,5 +166,64 @@ test('a traffic snapshot puts every pulse back where it was, and bad values are 
   hostile.restore({ t: [[999, 1, 0, 0, 200, [[0, 5]]], ['x'], [0, 1, 0, 0, 200, [[999, 5]]], [0, 2, 0, 0, 200, [[0, 5]]]], q: [[0, 1, 99999, 0, 0], null] });
   hostile.restore(null);
   hostile.restore({ t: 'nope', q: [] });
+  assert.equal(hostile.pulses.length, 0);
+});
+
+// Every wire lights up now and then (owner request, October 14, 2026: some hardly ever
+// did): the nets by fair turns of the traffic, the quiet lines by each part's cycle.
+function quietOf(board) {
+  const quiet = board.traces.filter((trace) => !trace.end || trace.end.kind === 'passive');
+  const copies = new Map(quiet.map((trace) => [trace, { ...trace, length: trace.points.length * 10 }]));
+  for (const copy of copies.values()) copy.bus = copy.bus.map((t) => copies.get(t)).filter(Boolean);
+  return [...copies.values()];
+}
+
+test('every wire on the board lights up within a cycle, and never too many at once', () => {
+  for (const board of boards.filter((b) => b.cols >= 96)) {
+    const links = linksOf(board);
+    const quiet = quietOf(board);
+    const traffic = makeTraffic(links, { target: 10 });
+    const ambient = makeAmbient(quiet, { cap: 40 });
+    const lit = new Set();
+    for (let t = 0; t < 30 * 20; t += 1) {
+      for (const { part } of traffic.tick(0.05)) ambient.poke(part);
+      for (const landed of ambient.tick(0.05)) if (landed.inward) traffic.kick(landed.part);
+      for (const pulse of [...traffic.pulses, ...ambient.pulses]) lit.add(pulse.trace);
+      assert.ok(ambient.pulses.length <= 40, 'the quiet lines stay under their cap');
+    }
+    for (const link of links) assert.ok(link.lines.some((line) => lit.has(line)), 'every net carries data');
+    for (const trace of quiet) assert.ok(lit.has(trace), 'every quiet line lights up');
+  }
+});
+
+test('the quiet lines wait for room rather than skip a turn, and skip lines out of view', () => {
+  const board = boards.find((b) => b.cols >= 96);
+  const quiet = quietOf(board);
+  const shown = new Set(quiet.filter((_, i) => i % 3 === 0));
+  const ambient = makeAmbient(quiet, { cap: 4, visible: (trace) => shown.has(trace) });
+  const lit = new Set();
+  for (let t = 0; t < 60 * 20; t += 1) {
+    ambient.tick(0.05);
+    for (const pulse of ambient.pulses) lit.add(pulse.trace);
+    assert.ok(ambient.pulses.length <= Math.max(4, Math.max(...quiet.map((q) => q.bus.length))));
+  }
+  for (const trace of lit) assert.ok(shown.has(trace) || trace.bus.some((t) => shown.has(t)), 'only bundles in view');
+  assert.ok(lit.size > 0);
+});
+
+test('an ambient snapshot comes back the same, and bad values are skipped', () => {
+  const board = boards.find((b) => b.cols >= 96);
+  const quiet = quietOf(board);
+  const before = makeAmbient(quiet);
+  for (let t = 0; t < 80; t += 1) before.tick(0.05);
+  const data = JSON.parse(JSON.stringify(before.snapshot()));
+  const after = makeAmbient(quiet);
+  after.restore(data);
+  assert.ok(before.pulses.length > 0);
+  assert.deepEqual(after.snapshot(), data);
+  const hostile = makeAmbient(quiet);
+  hostile.restore([[99999, 5, 150, 0, 0], ['x'], [0, -1, 150, 0, 0], [0, 5, 999, 0, 0], [0, 5, 150, 7, 0], [0, 5, 150, 0, 2], null]);
+  hostile.restore('nope');
+  hostile.restore(null);
   assert.equal(hostile.pulses.length, 0);
 });
