@@ -271,9 +271,10 @@
 }
 
 /* The library's Reset missions button (layers/layer2.js), at its foot: quiet until it
-   asks for the confirming second click, then amber. */
+   asks for the confirming second click, then amber. The details above take the free
+   space (margin-top: auto), so the two sit together at the bottom (owner request,
+   October 14, 2026: splitting the space left the details stranded mid-panel). */
 .lab-library-foot {
-  margin-top: auto;
   padding: var(--space-2) var(--space-3) var(--space-3);
   border-top: 1px solid var(--color-border);
 }
