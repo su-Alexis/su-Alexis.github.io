@@ -95,19 +95,68 @@ function isMobile() {
   return window.innerWidth < 768;
 }
 
-// Desktop default: a floating window in the top-left, just under the top bar, sized to
-// sit in the margin beside the page when the screen is wide enough.
-function defaultPlacement() {
-  const docked = { floating: false, minimized: false, x: 16, y: 80, w: TERMINAL_WINDOW.defaultWidth, h: TERMINAL_WINDOW.defaultHeight };
-  if (isMobile()) return docked;
+// The free space beside the module column (owner request, October 15, 2026: the shells
+// use the space on either side of the modules and shrink with it, never covering them).
+// left/right: room for a window in each margin, a SIDE_GAP clear of the screen edge and of
+// the modules; top: just under the top bar; height: from there to the bottom, less a gap.
+const SIDE_GAP = 8;
+const SIDE_MAX_W = 720;
+function sideRoom() {
   const topbar = document.querySelector('.topbar');
   const content = document.querySelector('.site-main');
   // offsetHeight, not the bounding box: the top bar may be mid slide-in during the boot.
   // + 8: level with the first module (.site-main's top padding in layout.css).
   const top = (topbar ? topbar.offsetHeight : 48) + 8;
-  const margin = content ? Math.round(content.getBoundingClientRect().left) : 0;
-  const w = margin >= 460 ? Math.min(margin - 16, 720) : 560;
-  return clampWindow({ floating: true, minimized: false, x: 12, y: top, w, h: 430 }, window.innerWidth, window.innerHeight);
+  const width = document.documentElement.clientWidth || window.innerWidth;
+  let left = 0;
+  let right = 0;
+  // The module panels themselves where the page has them (.modules), otherwise the
+  // content box inside .site-main's padding.
+  const modules = document.querySelector('.site-main .modules');
+  if (modules) {
+    const rect = modules.getBoundingClientRect();
+    left = rect.left;
+    right = width - rect.right;
+  } else if (content) {
+    const rect = content.getBoundingClientRect();
+    const style = getComputedStyle(content);
+    left = rect.left + parseFloat(style.paddingLeft || '0');
+    right = width - (rect.right - parseFloat(style.paddingRight || '0'));
+  }
+  // During the boot the page is still short, so there is no scrollbar yet; once the
+  // modules open one appears, the window narrows and the centred modules move left by half
+  // of it (owner report: tty3 ended up under the scrollbar and the shells touched the
+  // modules). Leave room for it now.
+  let bar = window.innerWidth - (document.documentElement.clientWidth || window.innerWidth);
+  if (bar <= 0) {
+    const probe = el('div', { className: 'scrollbar-probe', attrs: { 'aria-hidden': 'true' } });
+    document.body.appendChild(probe);
+    const probeBar = probe.offsetWidth - probe.clientWidth;
+    probe.remove();
+    left -= Math.ceil(probeBar / 2);
+    right -= Math.ceil(probeBar / 2);
+    bar = probeBar;
+  } else {
+    bar = 0; // already there: the measurements above include it
+  }
+  return {
+    top,
+    width: width - bar,
+    left: Math.floor(left - SIDE_GAP * 2),
+    right: Math.floor(right - SIDE_GAP * 2),
+    height: Math.floor(window.innerHeight - top - SIDE_GAP),
+  };
+}
+const fitsSide = (room) => room >= TERMINAL_WINDOW.minWidth;
+
+// Desktop default: a floating window in the top-left, just under the top bar, sized to
+// the margin beside the modules when it fits there.
+function defaultPlacement() {
+  const docked = { floating: false, minimized: false, x: 16, y: 80, w: TERMINAL_WINDOW.defaultWidth, h: TERMINAL_WINDOW.defaultHeight };
+  if (isMobile()) return docked;
+  const room = sideRoom();
+  const w = fitsSide(room.left) ? Math.min(room.left, SIDE_MAX_W) : 560;
+  return clampWindow({ floating: true, minimized: false, x: SIDE_GAP, y: room.top, w, h: 430 }, window.innerWidth, window.innerHeight);
 }
 
 export function mountTerminal(primaryRoot) {
@@ -239,34 +288,41 @@ export function mountTerminal(primaryRoot) {
 
   // ./startup.sh on a desktop or tablet (owner requests, October 15, 2026): once per
   // machine start, as the home page's load log begins, its first two jobs open tty2 under
-  // tty1 at tty1's size running neofetch, and tty3 in the top-right corner at the same
-  // size running btop. Their windows open with tty1's own animation as their log lines
-  // print (.is-startup, layer1.css). Only when tty1 floats on its own (a phone keeps its
-  // single docked shell) and no other shell is open yet; otherwise the two log lines go.
-  // tty1 keeps the keyboard (ready() focuses it).
+  // tty1 running neofetch, and tty3 in the top-right corner running btop. Their windows
+  // open with tty1's own animation as their log lines print (.is-startup, layer1.css).
+  // They live in the space beside the modules (sideRoom): tty1 and tty2 share the left
+  // margin's height, tty3 takes the right margin at the same height, each as wide as its
+  // margin allows. Where either margin is too narrow for a shell, startup opens no extra
+  // shells rather than cover the modules. Only when tty1 floats on its own (a phone keeps
+  // its single docked shell) and no other shell is open yet; otherwise the two log lines
+  // go. tty1 keeps the keyboard (ready() focuses it).
   function startupShells() {
     const primary = shells.get('tty1');
     const tty1 = state.shells.find((shell) => shell.id === 'tty1');
     const lines = primaryRoot.querySelectorAll('.console-log .line-startup');
     const win = tty1 ? tty1.window : null;
+    const room = sideRoom();
     const go = page === 'home' && readJson(store, SESSION_KEYS.hintShown) !== true && !isMobile()
-      && primary && win && win.floating && !win.minimized && shells.size === 1 && lines.length > 0;
+      && primary && win && win.floating && !win.minimized && shells.size === 1 && lines.length > 0
+      && fitsSide(room.left) && fitsSide(room.right);
     if (!go) {
       for (const line of lines) line.remove();
       return;
     }
     // The boot makes room for them: modules start once tty3 has opened (layer1.css).
     html.classList.add('startup-shells');
-    const gap = 8;
+    const h = Math.max(TERMINAL_WINDOW.minHeight, Math.floor((room.height - SIDE_GAP) / 2));
+    const leftW = Math.min(room.left, SIDE_MAX_W);
+    const rightW = Math.min(room.right, SIDE_MAX_W);
+    primary.place(SIDE_GAP, room.top, leftW, h);
     const second = spawn(primary, { quiet: true });
     if (second) {
       second.root.classList.add('is-startup');
-      second.place(win.x, win.y + win.h + gap, win.w, win.h);
+      second.place(SIDE_GAP, room.top + h + SIDE_GAP, leftW, h);
       second.runCommand('neofetch');
     }
-    // Mirrored into the right-hand margin, inside any page scrollbar.
-    const right = document.documentElement.clientWidth || window.innerWidth;
-    openBtop(primary, null, { x: right - win.w - win.x, y: win.y, w: win.w, h: win.h });
+    // The right-hand margin, inside any page scrollbar.
+    openBtop(primary, null, { x: room.width - SIDE_GAP - rightW, y: room.top, w: rightW, h });
     const third = shells.get('tty3');
     if (third) third.root.classList.add('is-startup');
     bringToFront('tty1');

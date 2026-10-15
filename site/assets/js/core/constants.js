@@ -54,7 +54,8 @@ export const SHELL_IDS = Object.freeze(['tty1', 'tty2', 'tty3']);
 export const TERMINAL_USER = 'visitor';
 export const TERMINAL_HOST = 'portfolio';
 export const TERMINAL_WINDOW = Object.freeze({
-  minWidth: 280,
+  // 240: a shell still fits the margin beside the modules on a 1600px-wide screen.
+  minWidth: 240,
   minHeight: 160,
   defaultWidth: 620,
   defaultHeight: 360,
