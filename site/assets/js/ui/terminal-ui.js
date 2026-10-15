@@ -101,7 +101,6 @@ function isMobile() {
 // the modules; top: just under the top bar; height: from there to the bottom, less a gap.
 const SIDE_GAP = 8;
 const SIDE_MAX_W = 720;
-const STARTUP_SHELL_H = 430; // tty1's usual floating height
 function sideRoom() {
   const topbar = document.querySelector('.topbar');
   const content = document.querySelector('.site-main');
@@ -149,12 +148,43 @@ function sideRoom() {
   };
 }
 const fitsSide = (room) => room >= TERMINAL_WINDOW.minWidth;
+const STARTUP_SHELL_H = 430; // tty1's usual floating height
+
+// A touch tablet (owner request, October 15, 2026: Android tablets and iPads are used like
+// computers): with no room beside the modules it gets the phone's docked tty1.
+function touchTablet() {
+  return Boolean(window.matchMedia) && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+// Where the three shells go when the screen has room beside the modules: tty1 and tty2
+// down the left margin at the console's usual height (less on a short screen), tty3 in
+// the right margin at 80% of half the screen's height (owner requests, October 15, 2026).
+// null when either margin is too narrow for a shell.
+function sideLayout(room = sideRoom()) {
+  if (isMobile() || !fitsSide(room.left) || !fitsSide(room.right)) return null;
+  const half = Math.max(TERMINAL_WINDOW.minHeight, Math.floor((room.height - SIDE_GAP) / 2));
+  const h = Math.min(STARTUP_SHELL_H, half);
+  const leftW = Math.min(room.left, SIDE_MAX_W);
+  const rightW = Math.min(room.right, SIDE_MAX_W);
+  return {
+    tty1: { x: SIDE_GAP, y: room.top, w: leftW, h },
+    tty2: { x: SIDE_GAP, y: room.top + h + SIDE_GAP, w: leftW, h },
+    tty3: { x: room.width - SIDE_GAP - rightW, y: room.top, w: rightW, h: Math.max(TERMINAL_WINDOW.minHeight, Math.round(half * 0.8)) },
+  };
+}
+
+// With no room beside the modules, tty2 and tty3 wait as title bars in the bottom-left
+// corner, like a taskbar; restoring one opens it where it was.
+function taskSlot(id) {
+  const i = Math.max(0, SHELL_IDS.indexOf(id) - 1);
+  return { x: SIDE_GAP + i * (TERMINAL_WINDOW.minWidth + SIDE_GAP), y: window.innerHeight - TERMINAL_WINDOW.barHeight - SIDE_GAP, w: TERMINAL_WINDOW.minWidth };
+}
 
 // Desktop default: a floating window in the top-left, just under the top bar, sized to
 // the margin beside the modules when it fits there.
 function defaultPlacement() {
   const docked = { floating: false, minimized: false, x: 16, y: 80, w: TERMINAL_WINDOW.defaultWidth, h: TERMINAL_WINDOW.defaultHeight };
-  if (isMobile()) return docked;
+  if (isMobile() || (touchTablet() && !sideLayout())) return docked;
   const room = sideRoom();
   const w = fitsSide(room.left) ? Math.min(room.left, SIDE_MAX_W) : 560;
   return clampWindow({ floating: true, minimized: false, x: SIDE_GAP, y: room.top, w, h: 430 }, window.innerWidth, window.innerHeight);
@@ -302,38 +332,63 @@ export function mountTerminal(primaryRoot) {
     const tty1 = state.shells.find((shell) => shell.id === 'tty1');
     const lines = primaryRoot.querySelectorAll('.console-log .line-startup');
     const win = tty1 ? tty1.window : null;
-    const room = sideRoom();
     const go = page === 'home' && readJson(store, SESSION_KEYS.hintShown) !== true && !isMobile()
-      && primary && win && win.floating && !win.minimized && shells.size === 1 && lines.length > 0
-      && fitsSide(room.left) && fitsSide(room.right);
+      && primary && win && !win.minimized && shells.size === 1 && lines.length > 0;
     if (!go) {
       for (const line of lines) line.remove();
       return;
     }
     // The boot makes room for them: modules start once tty3 has opened (layer1.css).
     html.classList.add('startup-shells');
-    // tty1 and tty2 stay at the console's usual height, less where the screen is too short
-    // for two of them; tty3 takes 80% of half the screen's height (owner requests, October
-    // 15, 2026: stretched to fill the sides they looked too tall, and the board behind them
-    // should show).
-    const half = Math.max(TERMINAL_WINDOW.minHeight, Math.floor((room.height - SIDE_GAP) / 2));
-    const h = Math.min(STARTUP_SHELL_H, half);
-    const leftW = Math.min(room.left, SIDE_MAX_W);
-    const rightW = Math.min(room.right, SIDE_MAX_W);
-    primary.place(SIDE_GAP, room.top, leftW, h);
+    // All three follow the automatic layout from here on (arrange), until the visitor
+    // moves one. With no room beside the modules, tty2 and tty3 open as bars instead.
+    const layout = sideLayout();
+    win.auto = true;
+    if (layout) primary.place(layout.tty1.x, layout.tty1.y, layout.tty1.w, layout.tty1.h);
     const second = spawn(primary, { quiet: true });
     if (second) {
       second.root.classList.add('is-startup');
-      second.place(SIDE_GAP, room.top + h + SIDE_GAP, leftW, h);
+      second.setAuto();
+      if (layout) second.place(layout.tty2.x, layout.tty2.y, layout.tty2.w, layout.tty2.h);
+      else second.tuckTo(taskSlot('tty2'), { instant: true });
       second.runCommand('neofetch');
     }
-    // The right-hand margin, inside any page scrollbar.
-    const tallH = Math.max(TERMINAL_WINDOW.minHeight, Math.round(half * 0.8));
-    openBtop(primary, null, { x: room.width - SIDE_GAP - rightW, y: room.top, w: rightW, h: tallH });
+    openBtop(primary, null, layout ? layout.tty3 : { ...taskSlot('tty3'), h: STARTUP_SHELL_H });
     const third = shells.get('tty3');
-    if (third) third.root.classList.add('is-startup');
+    if (third) {
+      third.root.classList.add('is-startup');
+      third.setAuto();
+      if (!layout) third.tuckTo(taskSlot('tty3'), { instant: true });
+    }
     bringToFront('tty1');
+    save();
   }
+
+  // The automatic layout (owner request, October 15, 2026: rotate a tablet, or resize the
+  // window, and the shells glide into their right places). Only shells still where the
+  // layout put them (window.auto) move. With room beside the modules: sideLayout. Without:
+  // tty2 and tty3 tuck into bars in the bottom-left corner, and on a touch tablet tty1
+  // docks at the top as on a phone (a desktop keeps its floating tty1, a deliberate part of
+  // the design). Not on phones, and not in the lab, which arranges its own bars (parkAll).
+  function arrange() {
+    if (page === 'lab' || isMobile()) return;
+    const layout = sideLayout();
+    for (const id of SHELL_IDS) {
+      const shell = shells.get(id);
+      const shellState = state.shells.find((s) => s.id === id);
+      if (!shell || !shellState || !shellState.window.auto || shellState.window.parked) continue;
+      if (layout) shell.arrangeTo(layout[id]);
+      else if (id === 'tty1') { if (touchTablet()) shell.dock(); }
+      else shell.tuckTo(taskSlot(id));
+    }
+  }
+  let arrangeTimer = 0;
+  const onViewport = () => {
+    window.clearTimeout(arrangeTimer);
+    arrangeTimer = window.setTimeout(arrange, 250);
+  };
+  window.addEventListener('resize', onViewport);
+  window.addEventListener('orientationchange', onViewport);
 
   // Easter egg: play "hello world" in a fresh shell, or here when every shell is open.
   function helloWorld(from) {
@@ -1010,6 +1065,45 @@ export function mountTerminal(primaryRoot) {
       });
     }
 
+    // Where the window shows now: a minimized one is just its title bar.
+    function displayed() {
+      const win = shellState.window;
+      return { x: win.x, y: win.y, w: win.w, h: win.minimized ? barHeight() : win.h };
+    }
+
+    // The automatic layout's moves (arrange): open (or move) to a frame, gliding there.
+    function arrangeTo(frame) {
+      // A docked tty1 pops out first (applyWindow replaces the window object, so it is
+      // read again after).
+      if (primary && !shellState.window.floating) setFloating(true);
+      const win = shellState.window;
+      const from = displayed();
+      delete win.home;
+      Object.assign(win, { minimized: false, parked: false, x: frame.x, y: frame.y, w: frame.w, h: frame.h });
+      applyWindow();
+      save();
+      const now = shellState.window;
+      if (from.x === now.x && from.y === now.y && from.w === now.w && from.h === now.h) return;
+      glide(from, { x: now.x, y: now.y, w: now.w, h: now.h }, () => applyWindow());
+    }
+
+    // ... or tuck into a title bar at slot { x, y, w }, keeping where it was as home.
+    function tuckTo(slot, { instant = false } = {}) {
+      const win = shellState.window;
+      if (!win.floating) return;
+      const from = displayed();
+      const home = win.minimized ? win.home : { x: win.x, y: win.y, w: win.w, h: win.h };
+      const to = clampWindow({ ...win, x: slot.x, y: slot.y, w: slot.w }, window.innerWidth, window.innerHeight);
+      const settle = () => {
+        Object.assign(shellState.window, { x: to.x, y: to.y, w: to.w, minimized: true, parked: false });
+        if (home) shellState.window.home = home;
+        applyWindow();
+        save();
+      };
+      if (instant) settle();
+      else glide(from, { x: to.x, y: to.y, w: to.w, h: barHeight() }, settle);
+    }
+
     // The way back: from its bar to where it was, opening up as it goes.
     function unparkHome() {
       const win = shellState.window;
@@ -1024,8 +1118,13 @@ export function mountTerminal(primaryRoot) {
       glide(from, to, () => applyWindow());
     }
 
-    listen(secondButton, 'click', () => (primary ? setFloating(!shellState.window.floating) : close(id)));
+    listen(secondButton, 'click', () => {
+      shellState.window.auto = false;
+      if (primary) setFloating(!shellState.window.floating);
+      else close(id);
+    });
     listen(minimizeButton, 'click', () => {
+      shellState.window.auto = false;
       // A shell the lab tucked beside tty1 opens back where it came from.
       if (shellState.window.minimized && shellState.window.home) {
         unparkHome();
@@ -1063,6 +1162,7 @@ export function mountTerminal(primaryRoot) {
     });
     listen(bar, 'pointermove', (event) => {
       if (!drag || event.pointerId !== drag.id) return;
+      shellState.window.auto = false; // the visitor placed it: the layout leaves it alone
       shellState.window.x = event.clientX - drag.dx;
       shellState.window.y = event.clientY - drag.dy;
       applyWindow();
@@ -1089,6 +1189,7 @@ export function mountTerminal(primaryRoot) {
         const win = shellState.window;
         if (event.button !== 0 || !win.floating || win.minimized) return;
         sizing = { id: event.pointerId, edge, x0: event.clientX, y0: event.clientY, start: { ...win } };
+        win.auto = false;
         try {
           grip.setPointerCapture(event.pointerId);
         } catch {
@@ -1587,6 +1688,13 @@ export function mountTerminal(primaryRoot) {
         else wait();
       },
       parkBeside,
+      arrangeTo,
+      tuckTo,
+      setAuto: () => { shellState.window.auto = true; },
+      // tty1 into the page, as on a phone (arrange, on a touch tablet with no side room).
+      dock() {
+        if (primary && shellState.window.floating) setFloating(false);
+      },
       // Where this window is (or, tucked away, where its bar is), for lining bars up.
       frame: () => ({ ...shellState.window }),
       // The reverse of park() (owner request, October 12, 2026): back on a Layer 1 page
@@ -1712,7 +1820,11 @@ export function mountTerminal(primaryRoot) {
     // The lab gives the VM the screen: once the page has loaded, tty1 parks itself
     // (owner request). It stays one click away on its title bar.
     if (page === 'lab') parkAll();
-    else for (const shell of shells.values()) shell.unpark();
+    else {
+      for (const shell of shells.values()) shell.unpark();
+      // The screen may have turned while in the lab: once the bars are home, re-lay them.
+      window.setTimeout(arrange, 700);
+    }
   };
   // The idle screensaver is an easter egg too: waking from it counts for "hunt".
   startScreensaver({

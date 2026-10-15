@@ -20,6 +20,9 @@ function defaultWindow(floating = false, offset = 0) {
     minimized: false,
     // parked: minimized by the lab page (not the visitor), so a Layer 1 page restores it.
     parked: false,
+    // auto: still where the automatic layout put it (terminal-ui.js arrange), so it follows
+    // a rotate or resize; the visitor moving, resizing or minimizing it clears this.
+    auto: false,
     x: 80 + offset * 36,
     y: 110 + offset * 36,
     w: TERMINAL_WINDOW.defaultWidth,
@@ -69,11 +72,12 @@ function restoreTranscript(transcript) {
   return out;
 }
 
-// home: where a shell the lab tucked beside tty1 goes back to (terminal-ui.js parkBeside).
-// Kept only with parked, and only as four finite numbers in range.
+// home: where a shell tucked into a bar goes back to (terminal-ui.js parkBeside, tuckTo):
+// the lab's bars beside tty1, or the layout's bars when there is no room. Kept only while
+// minimized, and only as four finite numbers in range.
 function restoreHome(win) {
   const home = ownField(win, 'home');
-  if (!isPlainObject(home) || ownField(win, 'parked') !== true) return undefined;
+  if (!isPlainObject(home) || ownField(win, 'minimized') !== true) return undefined;
   const max = TERMINAL_WINDOW.maxCoordinate;
   const x = finiteIn(ownField(home, 'x'), 0, max, null);
   const y = finiteIn(ownField(home, 'y'), 0, max, null);
@@ -91,6 +95,7 @@ function restoreWindow(win, fallback) {
     floating: ownField(win, 'floating') === true,
     minimized: ownField(win, 'minimized') === true,
     parked: ownField(win, 'parked') === true && ownField(win, 'minimized') === true,
+    auto: ownField(win, 'auto') === true,
     x: finiteIn(ownField(win, 'x'), 0, max, fallback.x),
     y: finiteIn(ownField(win, 'y'), 0, max, fallback.y),
     w: finiteIn(ownField(win, 'w'), TERMINAL_WINDOW.minWidth, max, TERMINAL_WINDOW.defaultWidth),
