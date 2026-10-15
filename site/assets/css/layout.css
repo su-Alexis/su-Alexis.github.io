@@ -287,25 +287,45 @@ body {
 /* The identity module's name, role and summary sit as one centred column (owner request,
    October 15, 2026: left-aligned, the empty right side looked off). The text itself
    stays left-aligned within the column. */
+#module-identity {
+  container-type: inline-size;
+}
+
 #module-identity .module-body {
-  /* The summary's 72ch line plus the body's own padding, in the body's font, so the name,
-     role and summary all start on one left edge. */
-  max-width: calc(72ch + 2 * var(--space-4));
+  /* A wider column (owner request: fill the sides out more) plus the body's own padding,
+     in the body's font, so the name, role and summary all start on one left edge. */
+  --identity-measure: 88ch;
+  /* How far the divider reaches past the text on each side: up to 2.5rem, never closer
+     than 0.75rem to the module's sides (100cqw is the module's width). */
+  --identity-rule-out: clamp(0px, (100cqw - var(--identity-measure)) / 2 - 0.75rem, 2.5rem);
+  max-width: calc(var(--identity-measure) + 2 * var(--space-4));
   margin-inline: auto;
 }
 
 .identity-name {
   margin-bottom: var(--space-2);
+  text-align: center; /* name and role centred over the summary (owner request) */
   letter-spacing: 0.02em;
 }
 
 .identity-role {
   color: var(--color-text-muted);
+  text-align: center;
 }
 
 .identity-summary {
-  max-width: 72ch;
+  position: relative;
+  max-width: var(--identity-measure, 72ch);
   padding-top: var(--space-3);
+}
+
+/* The divider above the summary, a little wider than the text below it. */
+.identity-summary::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: calc(-1 * var(--identity-rule-out, 0px));
+  left: calc(-1 * var(--identity-rule-out, 0px));
   border-top: 1px solid var(--color-border);
 }
 
