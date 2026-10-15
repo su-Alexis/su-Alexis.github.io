@@ -294,10 +294,11 @@ body {
 #module-identity .module-body {
   /* A wider column (owner request: fill the sides out more) plus the body's own padding,
      in the body's font, so the name, role and summary all start on one left edge. */
-  --identity-measure: 88ch;
-  /* How far the divider reaches past the text on each side: up to 2.5rem, never closer
-     than 0.75rem to the module's sides (100cqw is the module's width). */
-  --identity-rule-out: clamp(0px, (100cqw - var(--identity-measure)) / 2 - 0.75rem, 2.5rem);
+  --identity-measure: 101ch; /* 88ch, then 15% wider (owner request) */
+  /* How far the divider reaches past the text on each side: up to 4.25rem (a divider 20%
+     longer than before, owner request), never closer than 0.75rem to the module's sides
+     (100cqw is the module's width). */
+  --identity-rule-out: clamp(0px, (100cqw - var(--identity-measure)) / 2 - 0.75rem, 4.25rem);
   max-width: calc(var(--identity-measure) + 2 * var(--space-4));
   margin-inline: auto;
 }
