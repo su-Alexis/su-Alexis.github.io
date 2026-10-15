@@ -50,7 +50,9 @@ export const UNLOCK_IDS = Object.freeze(['vm-parrot01', 'vm-ubuntu-blue', 'vm-ub
 export const TERMINAL_STORAGE_KEY = `${STORAGE_PREFIX}terminal`;
 export const TERMINAL_STATE_VERSION = 2;
 // Shell windows: tty1 is the login shell docked on every page; spawn opens up to two more.
-export const SHELL_IDS = Object.freeze(['tty1', 'tty2', 'tty3']);
+// tty1 and up to 13 spawned shells (owner decision, October 15, 2026: enough for the fork
+// bomb to fill the screen; doctrine 1.10). Storage stays bounded by fitToBudget.
+export const SHELL_IDS = Object.freeze(Array.from({ length: 14 }, (_, i) => `tty${i + 1}`));
 export const TERMINAL_USER = 'visitor';
 export const TERMINAL_HOST = 'portfolio';
 export const TERMINAL_WINDOW = Object.freeze({

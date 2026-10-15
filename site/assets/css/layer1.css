@@ -619,12 +619,57 @@
   view-transition-name: tty1;
 }
 
+/* Every shell keeps its own name, so each one holds still through a page change. */
 .shell-tty2 {
   view-transition-name: tty2;
 }
 
 .shell-tty3 {
   view-transition-name: tty3;
+}
+
+.shell-tty4 {
+  view-transition-name: tty4;
+}
+
+.shell-tty5 {
+  view-transition-name: tty5;
+}
+
+.shell-tty6 {
+  view-transition-name: tty6;
+}
+
+.shell-tty7 {
+  view-transition-name: tty7;
+}
+
+.shell-tty8 {
+  view-transition-name: tty8;
+}
+
+.shell-tty9 {
+  view-transition-name: tty9;
+}
+
+.shell-tty10 {
+  view-transition-name: tty10;
+}
+
+.shell-tty11 {
+  view-transition-name: tty11;
+}
+
+.shell-tty12 {
+  view-transition-name: tty12;
+}
+
+.shell-tty13 {
+  view-transition-name: tty13;
+}
+
+.shell-tty14 {
+  view-transition-name: tty14;
 }
 
 .bg-canvas {
@@ -680,6 +725,17 @@ html:active-view-transition-type(back)::view-transition-new(desktop) {
 ::view-transition-group(tty1),
 ::view-transition-group(tty2),
 ::view-transition-group(tty3),
+::view-transition-group(tty4),
+::view-transition-group(tty5),
+::view-transition-group(tty6),
+::view-transition-group(tty7),
+::view-transition-group(tty8),
+::view-transition-group(tty9),
+::view-transition-group(tty10),
+::view-transition-group(tty11),
+::view-transition-group(tty12),
+::view-transition-group(tty13),
+::view-transition-group(tty14),
 ::view-transition-group(topbar) {
   animation-duration: 0.5s;
   animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
@@ -691,14 +747,36 @@ html:active-view-transition-type(back)::view-transition-new(desktop) {
    ghosts the old and new text over each other. */
 ::view-transition-old(tty1),
 ::view-transition-old(tty2),
-::view-transition-old(tty3) {
+::view-transition-old(tty3),
+::view-transition-old(tty4),
+::view-transition-old(tty5),
+::view-transition-old(tty6),
+::view-transition-old(tty7),
+::view-transition-old(tty8),
+::view-transition-old(tty9),
+::view-transition-old(tty10),
+::view-transition-old(tty11),
+::view-transition-old(tty12),
+::view-transition-old(tty13),
+::view-transition-old(tty14) {
   animation: none;
   opacity: 0;
 }
 
 ::view-transition-new(tty1),
 ::view-transition-new(tty2),
-::view-transition-new(tty3) {
+::view-transition-new(tty3),
+::view-transition-new(tty4),
+::view-transition-new(tty5),
+::view-transition-new(tty6),
+::view-transition-new(tty7),
+::view-transition-new(tty8),
+::view-transition-new(tty9),
+::view-transition-new(tty10),
+::view-transition-new(tty11),
+::view-transition-new(tty12),
+::view-transition-new(tty13),
+::view-transition-new(tty14) {
   animation: none;
 }
 

@@ -32,12 +32,12 @@ test('version 1 state migrates into tty1', () => {
   assert.equal(tty1(state).window.floating, true);
 });
 
-test('shell lists are checked: known ids, no duplicates, tty1 first, at most three', () => {
+test('shell lists are checked: known ids, no duplicates, tty1 first, at most fourteen', () => {
   const shell = (id) => ({ id, transcript: [], window: {} });
   const bad = [
     [shell('tty2')],
     [shell('tty1'), shell('tty1')],
-    [shell('tty1'), shell('tty9')],
+    [shell('tty1'), shell('tty15')],
     [shell('tty1'), shell('constructor')],
     [shell('tty1'), shell('tty2'), shell('tty3'), shell('tty3')],
     [shell('tty1'), 'tty2'],
@@ -47,7 +47,11 @@ test('shell lists are checked: known ids, no duplicates, tty1 first, at most thr
   assert.deepEqual(ok.shells.map((s) => s.id), ['tty1', 'tty3']);
   assert.equal(ok.shells[1].window.floating, true); // spawned shells never dock
   assert.equal(nextShellId(ok), 'tty2');
-  assert.equal(nextShellId({ shells: [shell('tty1'), shell('tty2'), shell('tty3')] }), null);
+  assert.equal(nextShellId({ shells: [shell('tty1'), shell('tty2'), shell('tty3')] }), 'tty4');
+  const all = Array.from({ length: 14 }, (_, i) => shell(`tty${i + 1}`));
+  assert.deepEqual(restoreTerminalState({ v: 2, shells: all }).shells.length, 14);
+  assert.equal(nextShellId({ shells: all }), null);
+  assert.deepEqual(restoreTerminalState({ v: 2, shells: [...all, shell('tty15')] }), defaultTerminalState(), 'no fifteenth');
 });
 
 test('transcripts are rebuilt from known kinds and bounded text only', () => {
@@ -90,9 +94,9 @@ test('prototype pollution attempts are ignored', () => {
   assert.equal(tty1(state).window.h, TERMINAL_WINDOW.defaultHeight);
 });
 
-test('three full shells are trimmed to fit the storage budget, oldest lines first', () => {
+test('fourteen full shells are trimmed to fit the storage budget, oldest lines first', () => {
   const full = (id) => ({ id, transcript: Array.from({ length: LIMITS.terminalLines }, (_, i) => ({ kind: 'out', text: `${id} line ${i} `.padEnd(120, '.') })), window: defaultShell(id).window });
-  const state = { v: 2, shells: [full('tty1'), full('tty2'), full('tty3')] };
+  const state = { v: 2, shells: Array.from({ length: 14 }, (_, i) => full(`tty${i + 1}`)) };
   fitToBudget(state);
   const bytes = new TextEncoder().encode(JSON.stringify(state)).length;
   assert.ok(bytes <= LIMITS.storageBytes, `${bytes} bytes`);

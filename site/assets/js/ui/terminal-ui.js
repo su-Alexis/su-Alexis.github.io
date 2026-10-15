@@ -3,7 +3,7 @@
 // - Input goes through features/command-engine.js only; output renders as text.
 // - tty1 is the login shell, docked at the top of every page; it can pop out, be dragged
 //   by its title bar, resized from any edge or corner, docked and minimized. "spawn" opens
-//   up to two more floating shells (tty2, tty3); "exit" or their close button closes them.
+//   up to 13 more floating shells (tty2 to tty14); "exit" or their close button closes them.
 //   On desktops and tablets the home page's startup opens them first: tty2 under tty1
 //   running neofetch, tty3 in the top-right corner running btop (startupShells).
 //   Positions and sizes are finite numbers clamped to the viewport and applied to fixed
@@ -306,11 +306,18 @@ export function mountTerminal(primaryRoot) {
     const one = primary.frame();
     if (!one.floating) return;
     let x = one.x + (one.home ? one.home.w : one.w) + BAR_SLOT.gap;
+    let y = one.y;
     let delay = BAR_SLOT.after;
+    // Up to 13 bars: a row that would run off the screen carries on under tty1's bar.
+    const right = (document.documentElement.clientWidth || window.innerWidth) - SIDE_GAP;
     for (const id of SHELL_IDS) {
       const shell = shells.get(id);
       if (id === 'tty1' || !shell) continue;
-      const slot = { x, y: one.y, w: BAR_SLOT.w };
+      if (x + BAR_SLOT.w > right) {
+        x = one.x;
+        y += TERMINAL_WINDOW.barHeight + BAR_SLOT.gap;
+      }
+      const slot = { x, y, w: BAR_SLOT.w };
       window.setTimeout(() => shell.parkBeside(slot), delay);
       x += BAR_SLOT.w + BAR_SLOT.gap;
       delay += BAR_SLOT.stagger;
@@ -377,7 +384,8 @@ export function mountTerminal(primaryRoot) {
       const shell = shells.get(id);
       const shellState = state.shells.find((s) => s.id === id);
       if (!shell || !shellState || !shellState.window.auto || shellState.window.parked) continue;
-      if (layout) shell.arrangeTo(layout[id]);
+      if (layout && layout[id]) shell.arrangeTo(layout[id]);
+      else if (layout) continue;
       else if (id === 'tty1') { if (touchTablet()) shell.dock(); }
       else shell.tuckTo(taskSlot(id));
     }
@@ -389,6 +397,23 @@ export function mountTerminal(primaryRoot) {
   };
   window.addEventListener('resize', onViewport);
   window.addEventListener('orientationchange', onViewport);
+
+  // The fork bomb's shells (owner request, October 15, 2026: the screen fills up): each new
+  // one lands somewhere else on the screen, scattered by the golden ratio so they spread
+  // out rather than stack, and shows the fork that made it. null when every shell is open.
+  let forkCount = 0;
+  function forkShell(from) {
+    const fresh = spawn(from, { quiet: true });
+    if (!fresh) return null;
+    forkCount += 1;
+    const width = document.documentElement.clientWidth || window.innerWidth;
+    const w = Math.min(460, Math.max(TERMINAL_WINDOW.minWidth, Math.round(width * 0.3)));
+    const h = Math.min(300, Math.max(TERMINAL_WINDOW.minHeight, Math.round(window.innerHeight * 0.32)));
+    const spread = (n, k) => ((n * k) % 1);
+    fresh.place(Math.round(spread(forkCount, 0.618034) * Math.max(0, width - w)), Math.round(40 + spread(forkCount, 0.381966 + 0.1) * Math.max(0, window.innerHeight - h - 40)), w, h);
+    fresh.print([{ kind: 'err', text: ':(){ :|:& };:' }, { kind: 'err', text: `bash: fork() -> ${fresh.id}` }]);
+    return fresh;
+  }
 
   // Easter egg: play "hello world" in a fresh shell, or here when every shell is open.
   function helloWorld(from) {
@@ -1360,7 +1385,7 @@ export function mountTerminal(primaryRoot) {
         }
       }
       else if (action.type === 'forkbomb') {
-        runForkBomb({ shell: api, spawn: () => spawn(api, { quiet: true }), reboot: () => reboot({ home: true }), reducedMotion });
+        runForkBomb({ shell: api, spawn: () => forkShell(api), reboot: () => reboot({ home: true }), reducedMotion });
       }
       else if (action.type === 'exit') window.setTimeout(() => close(id), 300);
     }

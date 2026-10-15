@@ -1,8 +1,9 @@
 // Fork bomb easter egg (owner request): typing ":(){ :|:& };:" in any shell "crashes" the
 // simulated machine. Pure theatre on a fixed, short timeline; nothing forks, loops
 // without bound or touches anything real:
-//   1. Bomb (~2.8s): the shell prints ever-faster fork lines, spawned shells pop open up
-//      to the limit, the top bar's user prompt reads fork() / CPU 100% / PROCESSES and the whole site
+//   1. Bomb (~2.8s): the shell prints ever-faster fork lines, spawned shells pop open all
+//      over the screen up to the limit (13 of them, owner request, October 15, 2026: the
+//      screen fills up), the top bar's user prompt reads fork() / CPU 100% / PROCESSES and the whole site
 //      glitches (html.fork-bomb, terminal.css).
 //   2. Crash (~4.5s): a full-screen blue "wafflesOS" stop screen with a 0-100% counter.
 //   3. Power off, then reboot: the stop screen collapses like a CRT switching off (a bright
@@ -147,7 +148,7 @@ export function runForkBomb({ shell, spawn, reboot, reducedMotion = false }) {
   for (let i = 0; i < FORK_LINES; i += 1) {
     at += Math.max(40, 260 - i * 14); // each line a little faster than the last
     later(() => line.set(forkLine(i)), at);
-    if (i % 5 === 2) later(() => spawn(), at);
+    if (i >= 2) later(() => spawn(), at); // a new shell with almost every fork line
   }
   later(() => {
     shell.clearLive();
