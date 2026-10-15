@@ -81,7 +81,7 @@ const INK = Object.freeze({
 // lines (toneColour).
 const COLORS = ['103, 220, 232', '185, 154, 255', '232, 180, 91'];
 const VIOLET_SHARE = 0.32;
-const toneColour = (trace) => COLORS[!trace ? 0 : trace.signal === 'power' || trace.signal === 'control' ? 2 : trace.tone === 'violet' ? 1 : 0];
+const toneColour = (trace) => COLORS[!trace ? 0 : trace.tone === 'gold' || trace.signal === 'power' || trace.signal === 'control' ? 2 : trace.tone === 'violet' ? 1 : 0];
 const LABELS = ['SoC', 'NIC', 'TPM', 'FPGA', 'ROM', 'WAFF-1', 'HSM', 'DSP', 'GPU', 'MCU', 'PHY', 'PMIC'];
 
 // What sits on a grid point.
@@ -927,34 +927,28 @@ function layOut(cols, rows, partCount, view) {
   return { chips: kept, traces, pours, chamfers, stitches, holes };
 }
 
-// MKb<3's wires (owner request, October 15, 2026): one side of the chip in violet, one in
-// teal, and gold data always flowing in as well. The side with the most lines goes
-// violet, the next teal, and any others carry power (gold pulses on teal copper); with
-// only two sides wired, every third bundle on the teal side carries power instead.
+// MKb<3's wires (owner requests, October 15, 2026), by the side of the chip they leave
+// from: left always violet, top always teal, bottom always gold copper carrying only gold
+// (power) data, and the right a mix of all three, bundle by bundle. The left and top
+// lines carry data in their own colour; the gold lines carry power.
 function heroColours(hero, traces) {
   if (!hero) return;
   const pinOf = (trace) => (trace.chip === hero ? trace.points[0] : trace.points[trace.points.length - 1]);
   const sideOf = ([x, y]) => (x < hero.x0 ? 'left' : x > hero.x1 ? 'right' : y < hero.y0 ? 'top' : 'bottom');
-  const bySide = new Map();
+  const FIXED = { left: 'violet', top: 'teal', bottom: 'gold' };
+  const MIX = ['violet', 'teal', 'gold'];
+  const rightBuses = new Map();
   for (const trace of traces) {
     if (trace.chip !== hero && trace.end !== hero) continue;
     const side = sideOf(pinOf(trace));
-    if (!bySide.has(side)) bySide.set(side, []);
-    bySide.get(side).push(trace);
+    let tone = FIXED[side];
+    if (!tone) {
+      if (!rightBuses.has(trace.bus)) rightBuses.set(trace.bus, MIX[rightBuses.size % MIX.length]);
+      tone = rightBuses.get(trace.bus);
+    }
+    trace.tone = tone;
+    trace.signal = tone === 'gold' ? 'power' : 'data';
   }
-  const sides = [...bySide.values()].sort((a, b) => b.length - a.length);
-  sides.forEach((group, i) => {
-    const buses = [...new Set(group.map((trace) => trace.bus))];
-    buses.forEach((bus, k) => {
-      const tone = i === 0 ? 'violet' : 'teal';
-      const power = i >= 2 || (i === 1 && sides.length < 3 && k % 3 === 2);
-      for (const trace of group) {
-        if (trace.bus !== bus) continue;
-        trace.tone = tone;
-        if (power) trace.signal = 'power';
-      }
-    });
-  });
 }
 
 // The little dots inside a chip, in pixels: a ball-grid processor's balls (all but those
@@ -1581,7 +1575,8 @@ export function startCircuit({ still = false, resume = false } = {}) {
         }
         // Traces, teal then violet, and the vias where they end (purple rings on violet).
         b.lineWidth = 1.2;
-        for (const [tone, ink] of [['teal', `rgba(${INK.path}, 0.55)`], ['violet', `rgba(${INK.violet}, 0.95)`]]) {
+        // Gold copper only on MKb<3's power lines (heroColours).
+        for (const [tone, ink] of [['teal', `rgba(${INK.path}, 0.55)`], ['violet', `rgba(${INK.violet}, 0.95)`], ['gold', `rgba(${INK.gold}, 0.42)`]]) {
           b.strokeStyle = ink;
           b.beginPath();
           for (const trace of traces) {
@@ -1594,7 +1589,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         for (const trace of traces) {
           if (!trace.via) continue;
           const [x, y] = trace.points[trace.points.length - 1];
-          b.strokeStyle = trace.tone === 'violet' ? `rgba(${INK.ring}, 0.7)` : `rgba(${INK.path}, 0.8)`;
+          b.strokeStyle = trace.tone === 'violet' ? `rgba(${INK.ring}, 0.7)` : trace.tone === 'gold' ? `rgba(${INK.gold}, 0.65)` : `rgba(${INK.path}, 0.8)`;
           b.beginPath();
           b.arc(x, y, 2.4, 0, Math.PI * 2);
           b.stroke();
@@ -1766,6 +1761,10 @@ export function startCircuit({ still = false, resume = false } = {}) {
             ctx.shadowBlur = 4 + 8 * glow;
             ctx.fillStyle = `rgba(255, 214, 140, ${(0.25 + 0.75 * glow).toFixed(3)})`;
             ctx.fillText(hero.label, cx, cy);
+            // Its border breathes gold with it (owner request, October 15, 2026).
+            ctx.strokeStyle = `rgba(255, 214, 140, ${(0.15 + 0.6 * glow).toFixed(3)})`;
+            ctx.lineWidth = 1.4;
+            ctx.strokeRect(...outline(hero));
             ctx.restore();
           }
           // The chips' dots at work: a soft gold halo and a bright core.

@@ -233,9 +233,8 @@ test('lines are coloured by what they carry: power and control in amber, data by
     for (const trace of board.traces) {
       const touches = (kind) => trace.chip.kind === kind || (trace.end && trace.end.kind === kind);
       const expected = touches('inductor') ? 'power' : touches('passive') ? 'control' : 'data';
-      // MKb<3's own lines may also carry power, so it always gets gold data (below).
-      const hero = trace.chip.hero || (trace.end && trace.end.hero);
-      if (hero && trace.signal === 'power') continue;
+      // MKb<3's lines follow their own rule, by side (tested below).
+      if (trace.chip.hero || (trace.end && trace.end.hero)) continue;
       assert.equal(trace.signal, expected);
     }
   }
@@ -251,7 +250,7 @@ test('lines are coloured by what they carry: power and control in amber, data by
 // MKb<3 (owner requests, October 15, 2026): the processor is always named MKb<3, sits in
 // the bottom-right of the window, has one side in violet and one in teal, and always has
 // gold (power) data among its lines.
-test('MKb<3 is named, placed bottom-right of the view, and wired violet, teal and gold', () => {
+test('MKb<3 is named, placed bottom-right of the view, and wired by side: violet, teal, gold, mixed', () => {
   let placed = 0;
   for (let seed = 1; seed <= 12; seed += 1) {
     const board = planBoard(192, 108, 28, seed, { cols: 192, rows: 108 });
@@ -261,9 +260,16 @@ test('MKb<3 is named, placed bottom-right of the view, and wired violet, teal an
     assert.ok(hero.hero);
     if (hero.x1 >= 192 - 12 && hero.y1 >= 108 - 12) placed += 1;
     const lines = board.traces.filter((t) => t.chip === hero || t.end === hero);
-    const tones = new Set(lines.map((t) => t.tone));
-    assert.ok(tones.has('violet') && tones.has('teal'), 'one side violet, one side teal');
-    assert.ok(lines.some((t) => t.signal === 'power'), 'gold data among its lines');
+    const pinOf = (t) => (t.chip === hero ? t.points[0] : t.points[t.points.length - 1]);
+    const sideOf = ([x, y]) => (x < hero.x0 ? 'left' : x > hero.x1 ? 'right' : y < hero.y0 ? 'top' : 'bottom');
+    const bySide = { left: [], top: [], bottom: [], right: [] };
+    for (const t of lines) bySide[sideOf(pinOf(t))].push(t);
+    assert.ok(bySide.left.every((t) => t.tone === 'violet' && t.signal === 'data'), 'left: violet');
+    assert.ok(bySide.top.every((t) => t.tone === 'teal' && t.signal === 'data'), 'top: teal');
+    assert.ok(bySide.bottom.length > 0, 'its bottom side always has wires');
+    assert.ok(bySide.bottom.every((t) => t.tone === 'gold' && t.signal === 'power'), 'bottom: gold, power only');
+    const rightBuses = new Set(bySide.right.map((t) => t.bus));
+    if (rightBuses.size >= 3) assert.equal(new Set(bySide.right.map((t) => t.tone)).size, 3, 'right: all three');
   }
   assert.ok(placed >= 11, `bottom-right on ${placed} of 12 boards`);
 });
