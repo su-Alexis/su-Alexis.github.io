@@ -284,6 +284,16 @@ body {
 .module-body > :nth-child(7) { --fill-i: 6; }
 .module-body > :nth-child(n + 8) { --fill-i: 7; }
 
+/* The identity module's name, role and summary sit as one centred column (owner request,
+   October 15, 2026: left-aligned, the empty right side looked off). The text itself
+   stays left-aligned within the column. */
+#module-identity .module-body {
+  /* The summary's 72ch line plus the body's own padding, in the body's font, so the name,
+     role and summary all start on one left edge. */
+  max-width: calc(72ch + 2 * var(--space-4));
+  margin-inline: auto;
+}
+
 .identity-name {
   margin-bottom: var(--space-2);
   letter-spacing: 0.02em;
