@@ -445,26 +445,35 @@
   clear: left;
 }
 
-/* neofetch's colour blocks under the info: the board's own colours, black to white. */
+/* neofetch's colour blocks under the info, two rows of eight in the owner's reference
+   palette (October 15, 2026): the normal colours, then their bright versions. */
 .term-swatch {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(8, 3ch);
   margin-top: 0.6lh;
   margin-bottom: 0.4lh;
 }
 
 .term-swatch span {
-  width: 3ch;
-  height: 1.4lh;
+  height: 1lh;
 }
 
-.term-swatch span:nth-child(1) { background: #2a3138; }
-.term-swatch span:nth-child(2) { background: #d65f5f; }
-.term-swatch span:nth-child(3) { background: var(--color-ok); }
-.term-swatch span:nth-child(4) { background: #e8b45b; }
-.term-swatch span:nth-child(5) { background: #4a78d6; }
-.term-swatch span:nth-child(6) { background: #8870b5; }
-.term-swatch span:nth-child(7) { background: var(--color-accent); }
-.term-swatch span:nth-child(8) { background: #c9d1d9; }
+.term-swatch span:nth-child(1) { background: #242424; }
+.term-swatch span:nth-child(2) { background: #f62b5a; }
+.term-swatch span:nth-child(3) { background: #47b413; }
+.term-swatch span:nth-child(4) { background: #e3c401; }
+.term-swatch span:nth-child(5) { background: #24acd4; }
+.term-swatch span:nth-child(6) { background: #f2affd; }
+.term-swatch span:nth-child(7) { background: #13c299; }
+.term-swatch span:nth-child(8) { background: #e6e6e6; }
+.term-swatch span:nth-child(9) { background: #616161; }
+.term-swatch span:nth-child(10) { background: #ff4d51; }
+.term-swatch span:nth-child(11) { background: #35d450; }
+.term-swatch span:nth-child(12) { background: #e9e836; }
+.term-swatch span:nth-child(13) { background: #5dc5f8; }
+.term-swatch span:nth-child(14) { background: #feabf2; }
+.term-swatch span:nth-child(15) { background: #24dfc4; }
+.term-swatch span:nth-child(16) { background: #ffffff; }
 
 .term-fetch {
   overflow-wrap: anywhere;

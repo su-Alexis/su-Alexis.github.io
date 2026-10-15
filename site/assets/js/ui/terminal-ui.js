@@ -727,7 +727,7 @@ export function mountTerminal(primaryRoot) {
       // neofetch's colour blocks: fixed, empty spans (terminal.css colours them).
       if (entry.kind === 'swatch') {
         return el('p', { className: 'term-line term-fetch term-swatch', attrs: { 'aria-hidden': 'true' } },
-          Array.from({ length: 8 }, () => el('span')));
+          Array.from({ length: 16 }, () => el('span')));
       }
       // git log: the commit hash in the brand color.
       if (entry.kind === 'git') {
