@@ -1610,8 +1610,10 @@ export function mountTerminal(primaryRoot) {
   const ready = () => {
     if (isReady) return;
     isReady = true;
-    // The startup boot's extra room is for that one boot only (startupShells).
+    // The startup boot's extra room and opening are for that one boot only
+    // (startupShells): a later page's load sequence must not open these windows again.
     html.classList.remove('startup-shells');
+    for (const shell of shells.values()) shell.root.classList.remove('is-startup');
     for (const shell of shells.values()) shell.ready();
     for (const hook of readyHooks.splice(0)) hook();
     const finePointer = Boolean(window.matchMedia) && window.matchMedia('(pointer: fine)').matches;
@@ -1668,6 +1670,11 @@ export function mountTerminal(primaryRoot) {
     removeKey(store, SESSION_KEYS.shellNav);
     mountedAt = performance.now();
     primaryRoot.dataset.page = page;
+    // The shells are the same windows, carried over: the new page's load sequence must
+    // not replay their window-open animation (terminal.css, .shells-resumed). Without
+    // this, the first swap into a page not yet loaded this session (the lab, say) blinked
+    // every shell out and back in before the lab tucked them away.
+    html.classList.add('shells-resumed');
     for (const shell of shells.values()) shell.refreshPrompt();
     const primary = shells.get('tty1');
     // startup.sh's spawn lines belong to a machine start only (startupShells).
