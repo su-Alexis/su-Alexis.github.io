@@ -1750,6 +1750,24 @@ export function startCircuit({ still = false, resume = false } = {}) {
               }
             }
           }
+          // MKb<3's name pulses gold, in time with nothing but itself (owner request,
+          // October 15, 2026: to go with the dots switching on and off). It is drawn over
+          // the board's own teal label, so at the bottom of each breath the teal shows.
+          const hero = chips.find((part) => part.hero);
+          if (hero && hero.x0 * CELL <= width && hero.y0 * CELL <= height) {
+            const glow = 0.5 + 0.5 * Math.sin((performance.now() / 1000) * ((Math.PI * 2) / 2.6));
+            const cx = ((hero.x0 + hero.x1) / 2) * CELL;
+            const cy = ((hero.y0 + hero.y1) / 2) * CELL;
+            ctx.save();
+            ctx.font = '9px ui-monospace, Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = `rgba(${INK.gold}, ${(0.8 * glow).toFixed(3)})`;
+            ctx.shadowBlur = 4 + 8 * glow;
+            ctx.fillStyle = `rgba(255, 214, 140, ${(0.25 + 0.75 * glow).toFixed(3)})`;
+            ctx.fillText(hero.label, cx, cy);
+            ctx.restore();
+          }
           // The chips' dots at work: a soft gold halo and a bright core.
           for (const [x, y, level] of lights.lit()) {
             ctx.fillStyle = `rgba(${INK.gold}, ${(level * 0.22).toFixed(3)})`;
