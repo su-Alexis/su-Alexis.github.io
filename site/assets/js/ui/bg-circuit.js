@@ -1771,6 +1771,22 @@ export function startCircuit({ still = false, resume = false } = {}) {
             ctx.strokeRect(hx + hw * 0.3, hy + hh * 0.42, hw * 0.4, hh * 0.16);
             ctx.restore();
           }
+          // The other quad chips' thermal pads (the inner square round their vias) breathe
+          // gold the same way (owner request, October 15, 2026), each a little out of step
+          // with the next so the board never flashes as one.
+          ctx.save();
+          ctx.lineWidth = 1.1;
+          chips.forEach((part, i) => {
+            if (part.kind !== 'qfp' || part.x0 * CELL > width || part.y0 * CELL > height) return;
+            const pulse = 0.5 + 0.5 * Math.sin((performance.now() / 1000) * ((Math.PI * 2) / 2.6) + i * 1.7);
+            const [px, py, pw, ph] = outline(part);
+            const inset = Math.round(pw * 0.28);
+            ctx.shadowColor = `rgba(${INK.gold}, ${(0.6 * pulse).toFixed(3)})`;
+            ctx.shadowBlur = 2 + 5 * pulse;
+            ctx.strokeStyle = `rgba(255, 214, 140, ${(0.1 + 0.5 * pulse).toFixed(3)})`;
+            ctx.strokeRect(px + inset, py + inset, pw - inset * 2, ph - inset * 2);
+          });
+          ctx.restore();
           // The chips' dots at work: a soft gold halo and a bright core.
           for (const [x, y, level] of lights.lit()) {
             ctx.fillStyle = `rgba(${INK.gold}, ${(level * 0.22).toFixed(3)})`;
