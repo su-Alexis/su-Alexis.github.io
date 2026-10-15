@@ -15,7 +15,7 @@
 //   stored as a fixed placeholder, and raw command history stays in memory.
 
 import { el, byId } from '../utils/dom.js';
-import { execute, complete } from '../features/command-engine.js';
+import { execute, complete, neofetchUptime } from '../features/command-engine.js';
 import { sessionStore, readJson, writeJson, removeKey } from '../core/storage.js';
 import { restoreTerminalState, appendLines, clampWindow, defaultShell, nextShellId, fitToBudget } from '../core/state.js';
 import { LIMITS, TERMINAL_STORAGE_KEY, TERMINAL_USER, TERMINAL_HOST, TERMINAL_WINDOW, SESSION_KEYS, SHELL_IDS } from '../core/constants.js';
@@ -219,6 +219,13 @@ export function mountTerminal(primaryRoot) {
     writeJson(store, SESSION_KEYS.bootedAt, now);
     return now;
   })();
+  // Every neofetch uptime on screen ticks once a second from the boot time.
+  window.setInterval(() => {
+    const nodes = document.querySelectorAll('.term-uptime');
+    if (!nodes.length) return;
+    const text = neofetchUptime((Date.now() - bootedAt) / 1000);
+    for (const node of nodes) node.textContent = text;
+  }, 1000);
   // The color theme picked with "theme", applied before first paint.
   resumeTheme();
   // Root (the right sudo password, cosmetic only), shared by every shell this session.
@@ -911,6 +918,14 @@ export function mountTerminal(primaryRoot) {
       // (user@host and its underline) take the brand color.
       if (entry.kind === 'fetch') {
         const colon = entry.text.indexOf(':');
+        // The uptime line ticks live (owner request, October 15, 2026): its value is kept
+        // current from the machine's boot time by the clock below, not the stored text.
+        if (entry.text.startsWith('Uptime:')) {
+          return el('p', { className: 'term-line term-fetch' }, [
+            el('span', { className: 'term-key', text: 'Uptime:' }), ' ',
+            el('span', { className: 'term-uptime', text: neofetchUptime((Date.now() - bootedAt) / 1000) }),
+          ]);
+        }
         return el('p', { className: 'term-line term-fetch' }, colon > 0 && colon < 16
           ? [el('span', { className: 'term-key', text: entry.text.slice(0, colon + 1) }), entry.text.slice(colon + 1)]
           : [el('span', { className: 'term-lead', text: entry.text })]);

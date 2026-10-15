@@ -120,6 +120,24 @@ function pad(text, width) {
 }
 
 // "4 min", "1:07" (hours:minutes) or "2 days, 3:15", like uptime(1).
+// neofetch's uptime, as neofetch writes it but down to the second, so it visibly ticks
+// (owner request, October 15, 2026): "42 secs", "3 mins, 12 secs", "1 hour, 3 mins, 12
+// secs", "2 days, 1 hour, 3 mins, 12 secs". ui/terminal-ui.js keeps every one on screen
+// live from the machine's boot time, which only a refresh or reboot resets.
+export function neofetchUptime(seconds) {
+  const s = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
+  const unit = (n, name) => `${n} ${name}${n === 1 ? '' : 's'}`;
+  const parts = [];
+  const days = Math.floor(s / 86400);
+  const hours = Math.floor((s % 86400) / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  if (days) parts.push(unit(days, 'day'));
+  if (days || hours) parts.push(unit(hours, 'hour'));
+  if (days || hours || mins) parts.push(unit(mins, 'min'));
+  parts.push(unit(s % 60, 'sec'));
+  return parts.join(', ');
+}
+
 function formatUptime(seconds) {
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min`;
@@ -332,7 +350,7 @@ const HANDLERS = new Map([
       'OS: wafflesOS x86_64 (simulated)',
       'Host: remote hypervisor',
       'Kernel: 6.1.0-waffle',
-      `Uptime: ${formatUptime(context.uptime)}`,
+      `Uptime: ${neofetchUptime(context.uptime)}`,
       `Packages: ${PROJECTS.length} projects`,
       `Shell: wsh (${context.shell})`,
       `Theme: ${context.theme}`,

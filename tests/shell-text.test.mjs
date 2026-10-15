@@ -78,14 +78,14 @@ test('neofetch shows the logo image and reports the context it is given', () => 
   const text = texts(execute('neofetch', { theme: 'amber', background: 'bubbles', uptime: 125, shell: 'tty2' }));
   assert.match(text, /Theme: amber/);
   assert.match(text, /Background: bubbles/);
-  assert.match(text, /Uptime: 2 min/);
+  assert.match(text, /Uptime: 2 mins, 5 secs/);
   assert.match(text, /Shell: wsh \(tty2\)/);
   assert.match(text, /Packages: 6 projects/);
   // Hostile context falls back to safe defaults.
   const hostile = texts(execute('neofetch', { theme: '<script>', background: '__proto__', uptime: -5, shell: 'root' }));
   assert.match(hostile, /Theme: cyan/);
   assert.match(hostile, /Background: default/);
-  assert.match(hostile, /Uptime: 0 min/);
+  assert.match(hostile, /Uptime: 0 secs/);
   assert.match(hostile, /wsh \(tty1\)/);
 });
 
