@@ -4,7 +4,7 @@
 // requests, October 14, 2026: the board has to read as a real routed circuit).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planBoard, makeTraffic, makeAmbient } from '../site/assets/js/ui/bg-circuit.js';
+import { planBoard, makeTraffic, makeAmbient, makeLights, chipDots } from '../site/assets/js/ui/bg-circuit.js';
 
 // Every grid point a trace passes through after its first, and every diagonal crossing.
 function walk(points) {
@@ -233,6 +233,9 @@ test('lines are coloured by what they carry: power and control in amber, data by
     for (const trace of board.traces) {
       const touches = (kind) => trace.chip.kind === kind || (trace.end && trace.end.kind === kind);
       const expected = touches('inductor') ? 'power' : touches('passive') ? 'control' : 'data';
+      // MKb<3's own lines may also carry power, so it always gets gold data (below).
+      const hero = trace.chip.hero || (trace.end && trace.end.hero);
+      if (hero && trace.signal === 'power') continue;
       assert.equal(trace.signal, expected);
     }
   }
@@ -243,4 +246,42 @@ test('lines are coloured by what they carry: power and control in amber, data by
     const amber = pulse.trace.signal !== 'data';
     assert.equal(pulse.color === '232, 180, 91', amber, 'amber exactly on power and control lines');
   }
+});
+
+// MKb<3 (owner requests, October 15, 2026): the processor is always named MKb<3, sits in
+// the bottom-right of the window, has one side in violet and one in teal, and always has
+// gold (power) data among its lines.
+test('MKb<3 is named, placed bottom-right of the view, and wired violet, teal and gold', () => {
+  let placed = 0;
+  for (let seed = 1; seed <= 12; seed += 1) {
+    const board = planBoard(192, 108, 28, seed, { cols: 192, rows: 108 });
+    const hero = board.chips.find((c) => c.kind === 'bga');
+    assert.ok(hero, 'every desktop board has the processor');
+    assert.equal(hero.label, 'MKb<3');
+    assert.ok(hero.hero);
+    if (hero.x1 >= 192 - 12 && hero.y1 >= 108 - 12) placed += 1;
+    const lines = board.traces.filter((t) => t.chip === hero || t.end === hero);
+    const tones = new Set(lines.map((t) => t.tone));
+    assert.ok(tones.has('violet') && tones.has('teal'), 'one side violet, one side teal');
+    assert.ok(lines.some((t) => t.signal === 'power'), 'gold data among its lines');
+  }
+  assert.ok(placed >= 11, `bottom-right on ${placed} of 12 boards`);
+});
+
+test('chip dots light up and go out at random, and data arriving sets a burst going', () => {
+  const board = planBoard(192, 108, 28, 7, { cols: 192, rows: 108 });
+  const hero = board.chips.find((c) => c.kind === 'bga');
+  assert.ok(chipDots(hero).length > 100, 'the processor has its ball grid');
+  const lights = makeLights(board.chips);
+  let peak = 0;
+  let seenOn = new Set();
+  for (let t = 0; t < 400; t += 1) {
+    lights.tick(0.05);
+    if (t === 200) lights.poke(hero);
+    const lit = lights.dots.filter((d) => d.level > 0);
+    peak = Math.max(peak, lit.length / lights.dots.length);
+    for (const d of lit) seenOn.add(d);
+  }
+  assert.ok(seenOn.size > lights.dots.length * 0.5, 'most dots light up within 20 seconds');
+  assert.ok(peak < 0.35, `never more than about a third lit at once (${peak.toFixed(2)})`);
 });

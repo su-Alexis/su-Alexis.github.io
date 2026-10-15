@@ -581,7 +581,8 @@ function layOut(cols, rows, partCount, view) {
   const keyOf = (pin) => `${pin}`;
 
   function addPart(part) {
-    if (part.kind === 'bga') part.label = 'SoC';
+    // The processor is always MKb<3 (owner request, October 15, 2026: a permanent name).
+    if (part.kind === 'bga') part.label = 'MKb<3';
     else if (part.kind === 'qfp') part.label = labels[parts.length % labels.length];
     else if (part.kind === 'soic') part.label = part.x1 - part.x0 <= 3 && part.y1 - part.y0 <= 3 ? `Q${(chipNumber += 1)}` : `U${(chipNumber += 1)}`;
     else if (part.kind === 'inductor') part.label = `L${(chipNumber += 1)}`;
@@ -746,11 +747,21 @@ function layOut(cols, rows, partCount, view) {
   const seenCols = view ? Math.min(cols, Math.max(40, view.cols)) : cols;
   const seenRows = view ? Math.min(rows, Math.max(40, view.rows)) : rows;
   let cpu = null;
+  // MKb<3 sits in the bottom-right corner of the window (owner request, October 15, 2026):
+  // on a desktop's home page that corner is clear of the modules and the shells, so its
+  // data and its processing lights are in plain view. A few cells of jitter keep each
+  // boot's board its own. Where it does not fit there (a small window), anywhere in view.
+  for (let tries = 0; tries < 30 && !cpu; tries += 1) {
+    const n = randInt(16, 22);
+    if (n + 16 > cols || n + 16 > rows) break;
+    cpu = place(makeBga(seenCols - n - between(6, 9), seenRows - n - between(6, 9), n), 6);
+  }
   for (let tries = 0; tries < 40 && !cpu; tries += 1) {
     const n = randInt(16, 22);
     if (n + 16 > cols || n + 16 > rows) break;
     cpu = place(makeBga(between(Math.round(seenCols * 0.15), Math.round(seenCols * 0.85) - n), between(Math.round(seenRows * 0.12), Math.round(seenRows * 0.88) - n), n), 6);
   }
+  if (cpu) cpu.hero = true;
   if (cpu) {
     // Memory: two to four identical chips side by side, a bus's width from the processor.
     const count = randInt(2, 4);
@@ -912,7 +923,120 @@ function layOut(cols, rows, partCount, view) {
     const touches = (kind) => trace.chip.kind === kind || (trace.end && trace.end.kind === kind);
     trace.signal = touches('inductor') ? 'power' : touches('passive') ? 'control' : 'data';
   }
+  heroColours(kept.find((part) => part.hero), traces);
   return { chips: kept, traces, pours, chamfers, stitches, holes };
+}
+
+// MKb<3's wires (owner request, October 15, 2026): one side of the chip in violet, one in
+// teal, and gold data always flowing in as well. The side with the most lines goes
+// violet, the next teal, and any others carry power (gold pulses on teal copper); with
+// only two sides wired, every third bundle on the teal side carries power instead.
+function heroColours(hero, traces) {
+  if (!hero) return;
+  const pinOf = (trace) => (trace.chip === hero ? trace.points[0] : trace.points[trace.points.length - 1]);
+  const sideOf = ([x, y]) => (x < hero.x0 ? 'left' : x > hero.x1 ? 'right' : y < hero.y0 ? 'top' : 'bottom');
+  const bySide = new Map();
+  for (const trace of traces) {
+    if (trace.chip !== hero && trace.end !== hero) continue;
+    const side = sideOf(pinOf(trace));
+    if (!bySide.has(side)) bySide.set(side, []);
+    bySide.get(side).push(trace);
+  }
+  const sides = [...bySide.values()].sort((a, b) => b.length - a.length);
+  sides.forEach((group, i) => {
+    const buses = [...new Set(group.map((trace) => trace.bus))];
+    buses.forEach((bus, k) => {
+      const tone = i === 0 ? 'violet' : 'teal';
+      const power = i >= 2 || (i === 1 && sides.length < 3 && k % 3 === 2);
+      for (const trace of group) {
+        if (trace.bus !== bus) continue;
+        trace.tone = tone;
+        if (power) trace.signal = 'power';
+      }
+    });
+  });
+}
+
+// The little dots inside a chip, in pixels: a ball-grid processor's balls (all but those
+// under its label) and a quad package's thermal vias. They light up gold as the chip
+// works (makeLights). Exported for tests; it uses no DOM.
+export function chipDots(part) {
+  const x = part.x0 * CELL;
+  const y = part.y0 * CELL;
+  const w = (part.x1 - part.x0) * CELL;
+  const h = (part.y1 - part.y0) * CELL;
+  const dots = [];
+  if (part.kind === 'bga') {
+    for (let bx = x + CELL; bx < x + w - 2; bx += CELL) {
+      for (let by = y + CELL; by < y + h - 2; by += CELL) {
+        const underLabel = bx > x + w * 0.3 - 2 && bx < x + w * 0.7 + 2 && by > y + h * 0.42 - 2 && by < y + h * 0.58 + 2;
+        if (!underLabel) dots.push([bx, by]);
+      }
+    }
+  } else if (part.kind === 'qfp') {
+    const inset = Math.round(w * 0.28);
+    for (let i = 1; i <= 3; i += 1) {
+      for (let j = 1; j <= 3; j += 1) dots.push([x + inset + ((w - inset * 2) * i) / 4, y + inset + ((h - inset * 2) * j) / 4]);
+    }
+  }
+  return dots;
+}
+
+// The chips at work (owner request, October 15, 2026): their dots switch on and off in
+// gold, at random, like a processor's activity, and a run of them lights in sequence
+// now and then. Data arriving at a chip (poke) sets a burst going there. Each dot fades
+// in and out over LIGHT_FADE seconds. Exported for tests; it uses no DOM.
+const LIGHT_FADE = 0.09;
+export function makeLights(parts, { visible = () => true } = {}) {
+  const chips = parts.map((part) => ({ part, dots: chipDots(part) })).filter((chip) => chip.dots.length);
+  const dots = [];
+  for (const chip of chips) {
+    chip.first = dots.length;
+    for (const [x, y] of chip.dots) dots.push({ x, y, chip, on: false, level: 0, next: random() * 4 });
+  }
+  const byPart = new Map(chips.map((chip) => [chip.part, chip]));
+  const toggle = (dot, on) => {
+    dot.on = on;
+    dot.next = on ? rand(0.12, 0.7) : rand(1.5, 7);
+  };
+  function burst(chip, size) {
+    // A short run along a row of the grid, one dot after another, like a signal walking
+    // across the die.
+    const start = Math.floor(random() * chip.dots.length);
+    for (let k = 0; k < size && start + k < chip.dots.length; k += 1) {
+      const dot = dots[chip.first + start + k];
+      dot.on = false;
+      dot.next = k * 0.06;
+      dot.burst = true;
+    }
+  }
+  return {
+    dots,
+    tick(dt) {
+      for (const dot of dots) {
+        dot.next -= dt;
+        if (dot.next <= 0) {
+          if (dot.burst) {
+            dot.burst = false;
+            dot.on = true;
+            dot.next = rand(0.15, 0.4);
+          } else toggle(dot, !dot.on);
+        }
+        const target = dot.on ? 1 : 0;
+        const step = dt / LIGHT_FADE;
+        dot.level = dot.level < target ? Math.min(target, dot.level + step) : Math.max(target, dot.level - step);
+      }
+      for (const chip of chips) if (chip.dots.length > 20 && random() < dt * 0.5) burst(chip, 4 + Math.floor(random() * 6));
+    },
+    poke(part) {
+      const chip = byPart.get(part);
+      if (chip) burst(chip, Math.min(chip.dots.length, 3 + Math.floor(random() * 5)));
+    },
+    // The lit ones, for drawing: [x, y, level].
+    lit() {
+      return dots.filter((dot) => dot.level > 0.02 && visible(dot)).map((dot) => [dot.x, dot.y, dot.level]);
+    },
+  };
 }
 
 // ---------- Drawing and pulses ----------
@@ -1314,7 +1438,8 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   function fire(bundle) {
     const speed = rand(160, 240);
     const color = toneColour(bundle.lines[0]);
-    const inward = random() < 0.3;
+    // MKb<3 mostly takes data in (owner request): its lines run toward it.
+    const inward = random() < (bundle.part && bundle.part.hero ? 0.75 : 0.3);
     for (const trace of bundle.lines) pulses.push({ trace, d: 0, speed, color, inward, tail: AMBIENT_TAIL });
   }
 
@@ -1389,6 +1514,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
       let chamfers = [];
       let holes = [];
       let flashes = [];
+      let lights = makeLights([]); // the chips' processing dots
       let traffic = makeTraffic([]);
       let ambient = makeAmbient([]); // stubs, resistors and escaping buses
       let quiet = []; // traces that are not part-to-part nets
@@ -1514,6 +1640,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         traffic = makeTraffic(all, { target: Math.max(5, Math.min(24, Math.round(netsInView * 0.65))), visible: seen });
         quiet = traces.filter((trace) => !trace.end || trace.end.kind === 'passive');
         ambient = makeAmbient(quiet, { visible: inView });
+        lights = makeLights(chips, { visible: (dot) => dot.x <= width + 4 && dot.y <= height + 4 });
         flashes = [];
         drawBoard();
         restorePulses();
@@ -1588,7 +1715,9 @@ export function startCircuit({ still = false, resume = false } = {}) {
           for (const { part, color } of traffic.tick(dt)) {
             flashes.push({ part, life: 0.5, color });
             ambient.poke(part);
+            lights.poke(part);
           }
+          lights.tick(dt);
           // The quiet lines (makeAmbient). A signal coming in to a part sometimes sets
           // it sending data over a net, as input would.
           for (const landed of ambient.tick(dt)) {
@@ -1620,6 +1749,17 @@ export function startCircuit({ still = false, resume = false } = {}) {
                 ctx.fillRect(x - r, y - r, r * 2, r * 2);
               }
             }
+          }
+          // The chips' dots at work: a soft gold halo and a bright core.
+          for (const [x, y, level] of lights.lit()) {
+            ctx.fillStyle = `rgba(${INK.gold}, ${(level * 0.22).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 3.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(255, 214, 140, ${(level * 0.95).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 1.7, 0, Math.PI * 2);
+            ctx.fill();
           }
           ctx.lineWidth = 1.5;
           for (const flash of flashes) {
