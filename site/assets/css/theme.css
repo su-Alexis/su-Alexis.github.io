@@ -56,6 +56,17 @@
   }
 }
 
+/* Desktops and laptops, where the shells float beside the modules (owner request, October
+   15, 2026): on smaller screens the module column gives up width to the margins, so the
+   shells beside it (ui/terminal-ui.js sideRoom) get room to work instead of the modules
+   holding empty space. It keeps 50rem free for the two margins, never narrows past 48rem,
+   and is the full 68rem from about 1890px wide. */
+@media (min-width: 80em) {
+  :root {
+    --content-width: clamp(48rem, calc(100vw - 50rem), 68rem);
+  }
+}
+
 /* ---------- Color themes (ui/theme.js, the "theme" command) ----------
    One class on <html> recolors the accent site-wide and the console text like CRT
    phosphor. cyan, the default above, adds no class. Status colors outside the console

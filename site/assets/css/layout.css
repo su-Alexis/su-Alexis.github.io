@@ -1485,7 +1485,7 @@ a.project-shot-placeholder {
   border-top: 1px dashed var(--color-border);
 }
 
-@container (min-width: 54rem) {
+@container (min-width: 44rem) {
   .tool-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     row-gap: var(--space-4);
