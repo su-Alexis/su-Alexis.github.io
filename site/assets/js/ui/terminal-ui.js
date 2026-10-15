@@ -415,12 +415,10 @@ export function mountTerminal(primaryRoot) {
     return fresh;
   }
 
-  // Easter egg: play "hello world" in a fresh shell, or here when every shell is open.
+  // Easter egg: "hello world" plays right in the shell it was typed in (owner request,
+  // October 15, 2026; it used to open a fresh shell for it).
   function helloWorld(from) {
-    const fresh = spawn(from, { quiet: true });
-    // A roomier window so the banner and the cup fit without scrolling.
-    if (fresh) fresh.resize(760, 620);
-    playHello(fresh || from, { reducedMotion });
+    playHello(from, { reducedMotion });
   }
 
   // Root on or off for every shell: the prompts, the top bar's user chip, and the session
