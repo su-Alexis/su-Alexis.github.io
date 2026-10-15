@@ -450,6 +450,25 @@
   animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at)) both;
 }
 
+/* startup.sh's first two jobs (owner request, October 15, 2026): just after the session
+   starts, tty2 (neofetch) and tty3 (btop) open with tty1's own window-open animation, each
+   as its log line prints, still ahead of the first module (--steps-at). */
+.boot-run .line-startup-1 {
+  animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at) + 0.07s) both;
+}
+
+.boot-run .line-startup-2 {
+  animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at) + 0.14s) both;
+}
+
+.boot-run .console-spawned.is-startup.shell-tty2 {
+  animation: window-open 0.3s ease-out calc(var(--page-start) + var(--init-at) + 0.07s) both;
+}
+
+.boot-run .console-spawned.is-startup.shell-tty3 {
+  animation: window-open 0.3s ease-out calc(var(--page-start) + var(--init-at) + 0.14s) both;
+}
+
 .boot-run .console-line.boot-step {
   animation: boot-print 0.01s linear var(--t) both;
 }

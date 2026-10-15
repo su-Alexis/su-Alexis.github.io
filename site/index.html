@@ -70,6 +70,10 @@
           <div class="console-log" aria-hidden="true">
           <p class="console-line line-prompt"><span class="console-user">visitor@portfolio</span>:~$ <span class="typed typed-startup">./startup.sh</span></p>
           <p class="console-line line-init"><span class="ok">[ ok ]</span> secure session initialized</p>
+          <!-- startup.sh's first two jobs on desktops and tablets (ui/terminal-ui.js
+               startupShells opens the windows, and removes these lines where it does not). -->
+          <p class="console-line line-startup line-startup-1"><span class="ok">[ ok ]</span> tty2 spawned: neofetch</p>
+          <p class="console-line line-startup line-startup-2"><span class="ok">[ ok ]</span> tty3 spawned: btop</p>
           <p class="console-line boot-step step-1"><span class="cmd-prompt">$</span> <span class="typed typed-identity">load --module identity</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
           <p class="console-line boot-step step-2"><span class="cmd-prompt">$</span> <span class="typed typed-certifications">load --module certifications</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>
           <p class="console-line boot-step step-3"><span class="cmd-prompt">$</span> <span class="typed typed-core-areas">load --module core-areas</span> <span class="bar"><span class="bar-fill">####################</span><span class="bar-empty">....................</span></span> <span class="pct"></span></p>

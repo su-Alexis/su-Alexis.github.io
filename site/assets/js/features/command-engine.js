@@ -342,7 +342,9 @@ const HANDLERS = new Map([
     ];
     // The logo is the wafflesOS image, like a riced terminal's neofetch (owner request):
     // a "logo" line the console renders as that image, with the info beside it.
-    return { lines: [line('logo', ''), ...info.map((text) => line('fetch', text))] };
+    // Then the colour blocks under the info, as neofetch prints them (owner request,
+    // October 15, 2026): a "swatch" line the console renders as a row of colours.
+    return { lines: [line('logo', ''), ...info.map((text) => line('fetch', text)), line('swatch', '')] };
   }],
   ['uptime', (args, context) => {
     const clock = new Date(context.now);

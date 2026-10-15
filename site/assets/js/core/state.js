@@ -7,7 +7,7 @@ import { isPlainObject, ownField, hasControlChars } from '../utils/validate.js';
 
 // fetch (neofetch info) and git (git log) lines get extra coloring when rendered; logo is
 // neofetch's wafflesOS image (its text is unused).
-export const LINE_KINDS = Object.freeze(['cmd', 'out', 'ok', 'err', 'art', 'fetch', 'git', 'logo']);
+export const LINE_KINDS = Object.freeze(['cmd', 'out', 'ok', 'err', 'art', 'fetch', 'git', 'logo', 'swatch']);
 const KIND_SET = new Set(LINE_KINDS);
 const SHELL_SET = new Set(SHELL_IDS);
 

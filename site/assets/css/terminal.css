@@ -247,7 +247,7 @@
 
 /* Spawned shells stay out of sight during the full startup boot only. On other pages
    they are already open and simply carry over. */
-.boot-run:not(.page-boot) .console-spawned {
+.boot-run:not(.page-boot) .console-spawned:not(.is-startup) {
   visibility: hidden;
 }
 
@@ -444,6 +444,27 @@
 .term-logo ~ .term-line:not(.term-fetch) {
   clear: left;
 }
+
+/* neofetch's colour blocks under the info: the board's own colours, black to white. */
+.term-swatch {
+  display: flex;
+  margin-top: 0.6lh;
+  margin-bottom: 0.4lh;
+}
+
+.term-swatch span {
+  width: 3ch;
+  height: 1.4lh;
+}
+
+.term-swatch span:nth-child(1) { background: #2a3138; }
+.term-swatch span:nth-child(2) { background: #d65f5f; }
+.term-swatch span:nth-child(3) { background: var(--color-ok); }
+.term-swatch span:nth-child(4) { background: #e8b45b; }
+.term-swatch span:nth-child(5) { background: #4a78d6; }
+.term-swatch span:nth-child(6) { background: #8870b5; }
+.term-swatch span:nth-child(7) { background: var(--color-accent); }
+.term-swatch span:nth-child(8) { background: #c9d1d9; }
 
 .term-fetch {
   overflow-wrap: anywhere;

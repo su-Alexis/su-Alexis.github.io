@@ -73,7 +73,8 @@ test('every visible command has a man page; hidden ones do not', () => {
 test('neofetch shows the logo image and reports the context it is given', () => {
   const lines = execute('neofetch').lines;
   assert.deepEqual({ ...lines[0] }, { kind: 'logo', text: '' }, 'the logo is a line kind, not text');
-  assert.ok(lines.slice(1).every((l) => l.kind === 'fetch'));
+  assert.ok(lines.slice(1, -1).every((l) => l.kind === 'fetch'));
+  assert.deepEqual({ ...lines[lines.length - 1] }, { kind: 'swatch', text: '' }, 'the colour blocks close it, as a line kind');
   const text = texts(execute('neofetch', { theme: 'amber', background: 'bubbles', uptime: 125, shell: 'tty2' }));
   assert.match(text, /Theme: amber/);
   assert.match(text, /Background: bubbles/);

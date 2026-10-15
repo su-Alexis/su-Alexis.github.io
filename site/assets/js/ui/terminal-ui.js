@@ -4,7 +4,7 @@
 // - tty1 is the login shell, docked at the top of every page; it can pop out, be dragged
 //   by its title bar, resized from any edge or corner, docked and minimized. "spawn" opens
 //   up to two more floating shells (tty2, tty3); "exit" or their close button closes them.
-//   On desktops and tablets the home page's startup also opens them: tty2 under tty1
+//   On desktops and tablets the home page's startup opens them first: tty2 under tty1
 //   running neofetch, tty3 in the top-right corner running btop (startupShells).
 //   Positions and sizes are finite numbers clamped to the viewport and applied to fixed
 //   individual style properties only (doctrine section 9).
@@ -215,33 +215,37 @@ export function mountTerminal(primaryRoot) {
     return shell;
   }
 
-  // ./startup.sh on a desktop or tablet (owner request, October 15, 2026): once per
-  // machine start, after the home page's load log, it opens tty2 under tty1 at tty1's size
-  // running neofetch, and tty3 in the top-right corner at the same size running btop.
-  // Only when tty1 floats on its own (a phone keeps its single docked shell) and no other
-  // shell is open yet. tty1 keeps the keyboard.
+  // ./startup.sh on a desktop or tablet (owner requests, October 15, 2026): once per
+  // machine start, as the home page's load log begins, its first two jobs open tty2 under
+  // tty1 at tty1's size running neofetch, and tty3 in the top-right corner at the same
+  // size running btop. Their windows open with tty1's own animation as their log lines
+  // print (.is-startup, layer1.css). Only when tty1 floats on its own (a phone keeps its
+  // single docked shell) and no other shell is open yet; otherwise the two log lines go.
+  // tty1 keeps the keyboard (ready() focuses it).
   function startupShells() {
     const primary = shells.get('tty1');
     const tty1 = state.shells.find((shell) => shell.id === 'tty1');
-    if (isMobile() || !primary || !tty1 || shells.size > 1) return;
-    const win = tty1.window;
-    if (!win.floating || win.minimized) return;
+    const lines = primaryRoot.querySelectorAll('.console-log .line-startup');
+    const win = tty1 ? tty1.window : null;
+    const go = page === 'home' && readJson(store, SESSION_KEYS.hintShown) !== true && !isMobile()
+      && primary && win && win.floating && !win.minimized && shells.size === 1 && lines.length > 0;
+    if (!go) {
+      for (const line of lines) line.remove();
+      return;
+    }
     const gap = 8;
-    primary.print([
-      { kind: 'ok', text: '[ ok ] tty2 spawned: neofetch' },
-      { kind: 'ok', text: '[ ok ] tty3 spawned: btop' },
-    ]);
     const second = spawn(primary, { quiet: true });
     if (second) {
+      second.root.classList.add('is-startup');
       second.place(win.x, win.y + win.h + gap, win.w, win.h);
       second.runCommand('neofetch');
     }
     // Mirrored into the right-hand margin, inside any page scrollbar.
     const right = document.documentElement.clientWidth || window.innerWidth;
     openBtop(primary, null, { x: right - win.w - win.x, y: win.y, w: win.w, h: win.h });
+    const third = shells.get('tty3');
+    if (third) third.root.classList.add('is-startup');
     bringToFront('tty1');
-    const finePointer = Boolean(window.matchMedia) && window.matchMedia('(pointer: fine)').matches;
-    if (finePointer) primary.focus();
   }
 
   // Easter egg: play "hello world" in a fresh shell, or here when every shell is open.
@@ -717,6 +721,11 @@ export function mountTerminal(primaryRoot) {
         return el('p', { className: 'term-line term-fetch' }, colon > 0 && colon < 16
           ? [el('span', { className: 'term-key', text: entry.text.slice(0, colon + 1) }), entry.text.slice(colon + 1)]
           : [el('span', { className: 'term-lead', text: entry.text })]);
+      }
+      // neofetch's colour blocks: fixed, empty spans (terminal.css colours them).
+      if (entry.kind === 'swatch') {
+        return el('p', { className: 'term-line term-fetch term-swatch', attrs: { 'aria-hidden': 'true' } },
+          Array.from({ length: 8 }, () => el('span')));
       }
       // git log: the commit hash in the brand color.
       if (entry.kind === 'git') {
@@ -1449,10 +1458,7 @@ export function mountTerminal(primaryRoot) {
           // Once per machine start: a tip under the home page's startup log.
           if (page === 'home' && readJson(store, SESSION_KEYS.hintShown) !== true) {
             writeJson(store, SESSION_KEYS.hintShown, true);
-            shown.then(() => {
-              startupShells();
-              print([{ kind: 'out', text: "tip: type 'help' or '?' to see commands. Curious? Try 'hello world'." }]);
-            });
+            shown.then(() => print([{ kind: 'out', text: "tip: type 'help' or '?' to see commands. Curious? Try 'hello world'." }]));
           }
         }
         root.classList.add('is-ready');
@@ -1498,6 +1504,9 @@ export function mountTerminal(primaryRoot) {
   const runningBtop = savedBtop();
   if (runningBtop) openBtop(shells.get(runningBtop.shell), runningBtop);
   else removeKey(store, SESSION_KEYS.btop);
+
+  // startup.sh's first jobs, as the home page's load sequence starts.
+  startupShells();
 
   const ready = () => {
     if (isReady) return;
@@ -1560,6 +1569,8 @@ export function mountTerminal(primaryRoot) {
     primaryRoot.dataset.page = page;
     for (const shell of shells.values()) shell.refreshPrompt();
     const primary = shells.get('tty1');
+    // startup.sh's spawn lines belong to a machine start only (startupShells).
+    if (logNode) for (const line of logNode.querySelectorAll('.line-startup')) line.remove();
     if (primary && logNode) primary.adoptLog(logNode);
     showUser();
     save();
