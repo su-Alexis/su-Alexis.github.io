@@ -233,6 +233,8 @@ export function mountTerminal(primaryRoot) {
       for (const line of lines) line.remove();
       return;
     }
+    // The boot makes room for them: modules start once tty3 has opened (layer1.css).
+    html.classList.add('startup-shells');
     const gap = 8;
     const second = spawn(primary, { quiet: true });
     if (second) {
@@ -1511,6 +1513,8 @@ export function mountTerminal(primaryRoot) {
   const ready = () => {
     if (isReady) return;
     isReady = true;
+    // The startup boot's extra room is for that one boot only (startupShells).
+    html.classList.remove('startup-shells');
     for (const shell of shells.values()) shell.ready();
     for (const hook of readyHooks.splice(0)) hook();
     const finePointer = Boolean(window.matchMedia) && window.matchMedia('(pointer: fine)').matches;

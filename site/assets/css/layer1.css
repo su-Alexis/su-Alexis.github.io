@@ -450,23 +450,36 @@
   animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at)) both;
 }
 
-/* startup.sh's first two jobs (owner request, October 15, 2026): just after the session
-   starts, tty2 (neofetch) and tty3 (btop) open with tty1's own window-open animation, each
-   as its log line prints, still ahead of the first module (--steps-at). */
+/* startup.sh's first two jobs (owner requests, October 15, 2026): after the session
+   starts, tty2 (neofetch) opens with tty1's own window-open animation as its log line
+   prints; once it has finished opening, tty3 (btop) does the same; and once tty3 has
+   finished, the modules start loading. html.startup-shells (ui/terminal-ui.js, set only
+   when the two shells really open) moves the first module back to make room; every later
+   step and the end of the boot follow from --steps-at. */
+:root {
+  --spawn-dur: 0.3s;
+  --tty2-at: calc(var(--init-at) + 0.45s);
+  --tty3-at: calc(var(--tty2-at) + var(--spawn-dur) + 0.25s);
+}
+
+:root.startup-shells {
+  --steps-at: calc(var(--tty3-at) + var(--spawn-dur) + 0.3s);
+}
+
 .boot-run .line-startup-1 {
-  animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at) + 0.07s) both;
+  animation: boot-print 0.01s linear calc(var(--page-start) + var(--tty2-at)) both;
 }
 
 .boot-run .line-startup-2 {
-  animation: boot-print 0.01s linear calc(var(--page-start) + var(--init-at) + 0.14s) both;
+  animation: boot-print 0.01s linear calc(var(--page-start) + var(--tty3-at)) both;
 }
 
 .boot-run .console-spawned.is-startup.shell-tty2 {
-  animation: window-open 0.3s ease-out calc(var(--page-start) + var(--init-at) + 0.07s) both;
+  animation: window-open var(--spawn-dur) ease-out calc(var(--page-start) + var(--tty2-at)) both;
 }
 
 .boot-run .console-spawned.is-startup.shell-tty3 {
-  animation: window-open 0.3s ease-out calc(var(--page-start) + var(--init-at) + 0.14s) both;
+  animation: window-open var(--spawn-dur) ease-out calc(var(--page-start) + var(--tty3-at)) both;
 }
 
 .boot-run .console-line.boot-step {
