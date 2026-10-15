@@ -186,7 +186,8 @@ export function runBtop({ shell, processes, kill, uptime, cache = () => ({ pages
     if (!narrow) {
       const memWidth = Math.floor(width * 0.45);
       const netWidth = width - memWidth;
-      const used = clamp(0.24 + procs.length * 0.011 + total * 0.2, 0, 0.9);
+      // What the processes hold (a running VM takes a real share), plus some for the load.
+      const used = clamp(0.22 + procs.reduce((n, p) => n + (Number.isFinite(p.mem) ? p.mem : 0), 0) / 100 + total * 0.12, 0, 0.9);
       // Pages loaded once stay in the page cache, so revisits resume instead of loading.
       const { pages, mib } = cache();
       const cached = clamp(mib / 1024, 0, 0.98 - used);

@@ -318,6 +318,17 @@ export function mountTerminal(primaryRoot) {
   const BTOP_SAMPLES = 240;
   const BG_PROCESS = Object.freeze({ default: 'circuit', hex_float: 'hexfloat', bubbles: 'bubbles', synthwave: 'synthwave', starfield: 'starfield' });
   const est = (base, spread) => Math.round(Math.max(0, base + (Math.random() - 0.5) * spread) * 10) / 10;
+  // The lab's own work, so btop reads true across the swap (owner request, October 15,
+  // 2026). hypervisor: a short job the hypervisor is doing now (resuming the VMs as the
+  // lab comes in, suspending them as it goes), easing off over its few seconds. guestSeen:
+  // when each running VM was first seen, so a VM that has just booted works hardest.
+  let hypervisorJob = null; // { cmd, cpu, mem, at, ms }
+  const guestSeen = new Map();
+  const HYPERVISOR_JOB_MS = 3200;
+  const GUEST_BOOT_MS = 6000;
+  function hypervisorWork(cmd, cpu, mem) {
+    hypervisorJob = { cmd, cpu, mem, at: performance.now(), ms: HYPERVISOR_JOB_MS };
+  }
 
   function processTable() {
     const list = [
@@ -342,6 +353,23 @@ export function mountTerminal(primaryRoot) {
     if (screensaverRunning()) {
       const awake = !document.querySelector('.screensaver');
       list.push({ pid: 2201, user: TERMINAL_USER, name: 'xscreensaver', cmd: 'xscreensaver -no-splash', tty: '?', cpu: awake ? 0 : est(6, 2), mem: 0.9, kind: 'screensaver' });
+    }
+    // The lab's virtual machines: one QEMU process each while they run, busy as they boot
+    // and settling to a light load. They are suspended off the lab page.
+    const guests = page === 'lab' && layer2 ? layer2.runningGuests().filter((g) => typeof g === 'string').slice(0, 8) : [];
+    for (const id of [...guestSeen.keys()]) if (!guests.includes(id)) guestSeen.delete(id);
+    guests.forEach((id, i) => {
+      if (!guestSeen.has(id)) guestSeen.set(id, performance.now());
+      const booting = Math.max(0, 1 - (performance.now() - guestSeen.get(id)) / GUEST_BOOT_MS);
+      list.push({
+        pid: 6101 + i, user: 'root', name: 'qemu-kvm', cmd: `qemu-system-x86_64 -name ${id} -m 2048 -enable-kvm`, tty: '?',
+        cpu: est(3 + booting * 32, 2 + booting * 6), mem: 9.4, kind: 'guest',
+      });
+    });
+    if (hypervisorJob) {
+      const left = 1 - (performance.now() - hypervisorJob.at) / hypervisorJob.ms;
+      if (left <= 0) hypervisorJob = null;
+      else list.push({ pid: 310, user: 'root', name: 'vmm', cmd: hypervisorJob.cmd, tty: '?', cpu: est(hypervisorJob.cpu * left, 4), mem: hypervisorJob.mem, kind: 'vmm' });
     }
     const scramble = scrambleProcess();
     if (scramble) list.push({ pid: 2301, user: TERMINAL_USER, name: 'statusd', cmd: `statusd --tags ${scramble.tags}`, tty: '?', cpu: est(0.4 * scramble.tags, 0.3), mem: 0.2, kind: 'scramble' });
@@ -1684,12 +1712,14 @@ export function mountTerminal(primaryRoot) {
     save();
     isReady = false;
     // The lab builds its hypervisor again (Layer 2), as on a page load.
+    if (page === 'lab') hypervisorWork('hypervisord --resume --vms saved', 38, 4.2);
     mountLab();
     whenLoaded();
   }
 
   // Leaving the lab for a page swapped in place: the hypervisor saves and comes down.
   function leave() {
+    if (page === 'lab') hypervisorWork('hypervisord --suspend --vms running', 30, 3.6);
     if (page === 'lab' && layer2 && typeof layer2.unmountLab === 'function') layer2.unmountLab();
   }
 
