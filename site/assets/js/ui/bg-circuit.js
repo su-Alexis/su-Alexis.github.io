@@ -1765,6 +1765,10 @@ export function startCircuit({ still = false, resume = false } = {}) {
             ctx.strokeStyle = `rgba(255, 214, 140, ${(0.15 + 0.6 * glow).toFixed(3)})`;
             ctx.lineWidth = 1.4;
             ctx.strokeRect(...outline(hero));
+            // ... and so does the plate its name sits on (drawPart's label plate).
+            const [hx, hy, hw, hh] = outline(hero);
+            ctx.lineWidth = 1.2;
+            ctx.strokeRect(hx + hw * 0.3, hy + hh * 0.42, hw * 0.4, hh * 0.16);
             ctx.restore();
           }
           // The chips' dots at work: a soft gold halo and a bright core.
