@@ -258,9 +258,8 @@
   animation: none;
 }
 
-.console-spawned .console-bar {
-  background: var(--color-surface-raised);
-}
+/* Spawned shells wear exactly tty1's frame (owner request, October 15, 2026): the same
+   border, title bar and edge, so no shell looks different from another. */
 
 /* A page already loaded this session resumes: its load log is not replayed. */
 .page-cached .console-log {
