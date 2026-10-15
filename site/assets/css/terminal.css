@@ -127,7 +127,8 @@
   resize: vertical;
 }
 
-/* Floating: a window above the page, dragged by its bar, resized from the corner. */
+/* Floating: a window above the page, dragged by its bar, resized from any edge or corner
+   by the grips below (ui/terminal-ui.js). */
 .console.is-floating {
   position: fixed;
   z-index: 40;
@@ -139,7 +140,6 @@
   max-height: 100vh;
   margin: 0;
   overflow: hidden;
-  resize: both;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--color-border-strong);
 }
 
@@ -157,7 +157,59 @@
 .console.is-floating.is-minimized {
   height: auto !important;
   min-height: 0;
-  resize: none;
+}
+
+/* Resize grips: thin strips along the inside of each edge and squares at the corners,
+   invisible, with the matching resize cursor. Only while floating and open. */
+.console-grip {
+  position: absolute;
+  z-index: 2;
+  display: none;
+  touch-action: none;
+}
+
+.console.is-floating:not(.is-minimized) .console-grip {
+  display: block;
+}
+
+.console-grip-n,
+.console-grip-s {
+  right: 10px;
+  left: 10px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.console-grip-n { top: 0; }
+.console-grip-s { bottom: 0; }
+
+.console-grip-e,
+.console-grip-w {
+  top: 10px;
+  bottom: 10px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.console-grip-e { right: 0; }
+.console-grip-w { left: 0; }
+
+.console-grip-ne,
+.console-grip-nw,
+.console-grip-se,
+.console-grip-sw {
+  width: 12px;
+  height: 12px;
+}
+
+.console-grip-ne { top: 0; right: 0; cursor: nesw-resize; }
+.console-grip-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.console-grip-nw { top: 0; left: 0; cursor: nwse-resize; }
+.console-grip-se { right: 0; bottom: 0; cursor: nwse-resize; }
+
+/* No text selection or stray drags while a window is being resized. */
+.console.is-resizing {
+  user-select: none;
 }
 
 /* ---------- Module highlight after "open" ---------- */

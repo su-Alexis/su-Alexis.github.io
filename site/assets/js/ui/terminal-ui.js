@@ -2,8 +2,10 @@
 //
 // - Input goes through features/command-engine.js only; output renders as text.
 // - tty1 is the login shell, docked at the top of every page; it can pop out, be dragged
-//   by its title bar, resized (CSS resize), docked and minimized. "spawn" opens up to two
-//   more floating shells (tty2, tty3); "exit" or their close button closes them.
+//   by its title bar, resized from any edge or corner, docked and minimized. "spawn" opens
+//   up to two more floating shells (tty2, tty3); "exit" or their close button closes them.
+//   On desktops and tablets the home page's startup also opens them: tty2 under tty1
+//   running neofetch, tty3 in the top-right corner running btop (startupShells).
 //   Positions and sizes are finite numbers clamped to the viewport and applied to fixed
 //   individual style properties only (doctrine section 9).
 // - Persistence standard: every shell keeps what it shows as the visitor moves through
@@ -213,6 +215,35 @@ export function mountTerminal(primaryRoot) {
     return shell;
   }
 
+  // ./startup.sh on a desktop or tablet (owner request, October 15, 2026): once per
+  // machine start, after the home page's load log, it opens tty2 under tty1 at tty1's size
+  // running neofetch, and tty3 in the top-right corner at the same size running btop.
+  // Only when tty1 floats on its own (a phone keeps its single docked shell) and no other
+  // shell is open yet. tty1 keeps the keyboard.
+  function startupShells() {
+    const primary = shells.get('tty1');
+    const tty1 = state.shells.find((shell) => shell.id === 'tty1');
+    if (isMobile() || !primary || !tty1 || shells.size > 1) return;
+    const win = tty1.window;
+    if (!win.floating || win.minimized) return;
+    const gap = 8;
+    primary.print([
+      { kind: 'ok', text: '[ ok ] tty2 spawned: neofetch' },
+      { kind: 'ok', text: '[ ok ] tty3 spawned: btop' },
+    ]);
+    const second = spawn(primary, { quiet: true });
+    if (second) {
+      second.place(win.x, win.y + win.h + gap, win.w, win.h);
+      second.runCommand('neofetch');
+    }
+    // Mirrored into the right-hand margin, inside any page scrollbar.
+    const right = document.documentElement.clientWidth || window.innerWidth;
+    openBtop(primary, null, { x: right - win.w - win.x, y: win.y, w: win.w, h: win.h });
+    bringToFront('tty1');
+    const finePointer = Boolean(window.matchMedia) && window.matchMedia('(pointer: fine)').matches;
+    if (finePointer) primary.focus();
+  }
+
   // Easter egg: play "hello world" in a fresh shell, or here when every shell is open.
   function helloWorld(from) {
     const fresh = spawn(from, { quiet: true });
@@ -386,7 +417,8 @@ export function mountTerminal(primaryRoot) {
 
   // btop opens in a big new shell window (like hello world), or here when all are open.
   // restore: { shell, pid, samples } to carry a running btop over from the last page.
-  function openBtop(from, restore = null) {
+  // at: { x, y, w, h } places its window (startupShells); otherwise it opens big.
+  function openBtop(from, restore = null, at = null) {
     if (btop) {
       from.print([{ kind: 'err', text: 'btop: already running. Press q in its window to quit it.' }]);
       return;
@@ -395,7 +427,8 @@ export function mountTerminal(primaryRoot) {
     if (!restore) {
       const fresh = spawn(from, { quiet: true });
       if (fresh) {
-        fresh.resize(Math.min(1000, window.innerWidth - 40), Math.min(680, window.innerHeight - 110));
+        if (at) fresh.place(at.x, at.y, at.w, at.h);
+        else fresh.resize(Math.min(1000, window.innerWidth - 40), Math.min(680, window.innerHeight - 110));
         host = fresh;
       }
     }
@@ -853,11 +886,64 @@ export function mountTerminal(primaryRoot) {
     listen(bar, 'pointerup', endDrag);
     listen(bar, 'pointercancel', endDrag);
 
-    // CSS resize changes the size; record it while floating.
+    // Resize from any edge or corner while floating (owner request, October 15, 2026):
+    // eight grips along the window's inside edge (terminal.css shows them only while it
+    // floats and is open). The opposite edge stays put; sizes stop at the minimum and are
+    // clamped to the viewport like every window value (doctrine section 9).
+    let sizing = null;
+    const EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    for (const edge of EDGES) {
+      const grip = el('span', { className: `console-grip console-grip-${edge}`, attrs: { 'aria-hidden': 'true' } });
+      root.appendChild(grip);
+      listen(grip, 'pointerdown', (event) => {
+        const win = shellState.window;
+        if (event.button !== 0 || !win.floating || win.minimized) return;
+        sizing = { id: event.pointerId, edge, x0: event.clientX, y0: event.clientY, start: { ...win } };
+        try {
+          grip.setPointerCapture(event.pointerId);
+        } catch {
+          // Pointer already released; the resize simply ends on the next pointerup.
+        }
+        root.classList.add('is-resizing');
+        event.preventDefault();
+      });
+      listen(grip, 'pointermove', (event) => {
+        if (!sizing || event.pointerId !== sizing.id) return;
+        const { start } = sizing;
+        const dx = event.clientX - sizing.x0;
+        const dy = event.clientY - sizing.y0;
+        const win = shellState.window;
+        const minW = TERMINAL_WINDOW.minWidth;
+        const minH = TERMINAL_WINDOW.minHeight;
+        if (edge.includes('e')) win.w = Math.max(minW, start.w + dx);
+        if (edge.includes('s')) win.h = Math.max(minH, start.h + dy);
+        if (edge.includes('w')) {
+          // No further left than the viewport's edge, so the right edge holds still.
+          win.w = Math.max(minW, Math.min(start.w - dx, start.x + start.w));
+          win.x = start.x + start.w - win.w;
+        }
+        if (edge.includes('n')) {
+          win.h = Math.max(minH, Math.min(start.h - dy, start.y + start.h));
+          win.y = start.y + start.h - win.h;
+        }
+        applyWindow();
+      });
+      const endSizing = (event) => {
+        if (!sizing || event.pointerId !== sizing.id) return;
+        sizing = null;
+        root.classList.remove('is-resizing');
+        save();
+      };
+      listen(grip, 'pointerup', endSizing);
+      listen(grip, 'pointercancel', endSizing);
+    }
+
+    // Record a size change made any other way while floating (a docked tty1's CSS resize
+    // handle is the vertical one on its output, so this mostly catches layout changes).
     if (typeof ResizeObserver === 'function') {
       const observer = new ResizeObserver(() => {
         const win = shellState.window;
-        if (!win.floating || win.minimized || drag) return;
+        if (!win.floating || win.minimized || drag || sizing) return;
         const w = root.offsetWidth;
         const h = root.offsetHeight;
         if (w !== win.w || h !== win.h) {
@@ -1256,6 +1342,13 @@ export function mountTerminal(primaryRoot) {
       clearLive() {
         for (const node of liveNodes.splice(0)) node.remove();
       },
+      // Moves and resizes a floating window (clamped to the viewport).
+      place(x, y, w, h) {
+        if (!shellState.window.floating) return;
+        Object.assign(shellState.window, { x, y, w, h });
+        applyWindow();
+        save();
+      },
       // Resizes a floating window (clamped to the viewport).
       resize(w, h) {
         if (!shellState.window.floating) return;
@@ -1356,7 +1449,10 @@ export function mountTerminal(primaryRoot) {
           // Once per machine start: a tip under the home page's startup log.
           if (page === 'home' && readJson(store, SESSION_KEYS.hintShown) !== true) {
             writeJson(store, SESSION_KEYS.hintShown, true);
-            shown.then(() => print([{ kind: 'out', text: "tip: type 'help' or '?' to see commands. Curious? Try 'hello world'." }]));
+            shown.then(() => {
+              startupShells();
+              print([{ kind: 'out', text: "tip: type 'help' or '?' to see commands. Curious? Try 'hello world'." }]);
+            });
           }
         }
         root.classList.add('is-ready');
