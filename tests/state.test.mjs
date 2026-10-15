@@ -158,3 +158,16 @@ test("the lab's parked flag survives storage only on a minimized tty1", () => {
   assert.equal(read({}), false);
   assert.equal(defaultShell('tty1').window.parked, false);
 });
+
+test('a shell tucked beside tty1 keeps where it came from, checked like any window value', () => {
+  const tucked = (home, extra = {}) => restoreTerminalState({
+    v: TERMINAL_STATE_VERSION,
+    shells: [{ id: 'tty1', transcript: [] }, { id: 'tty2', transcript: [], window: { floating: true, minimized: true, parked: true, x: 580, y: 52, w: 260, h: 300, home, ...extra } }],
+  }).shells[1].window;
+  assert.deepEqual(tucked({ x: 12, y: 490, w: 560, h: 430 }).home, { x: 12, y: 490, w: 560, h: 430 });
+  assert.equal(tucked({ x: 12, y: 490, w: 560, h: 430 }, { parked: false }).home, undefined, 'only while the lab has it parked');
+  assert.equal(tucked({ x: 12, y: 490, w: 560, h: 430 }, { minimized: false }).home, undefined, 'only while minimized');
+  for (const bad of [null, 'home', { x: 12, y: 490, w: 10, h: 430 }, { x: Infinity, y: 0, w: 560, h: 430 }, { x: 12, y: 490, w: 560 }, { x: -5, y: 0, w: 560, h: 430 }]) {
+    assert.equal(tucked(bad).home, undefined);
+  }
+});

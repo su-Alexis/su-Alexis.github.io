@@ -710,6 +710,14 @@
   opacity: 0;
 }
 
+/* Spawned shells gliding to or from their bar beside tty1 on the lab page
+   (ui/terminal-ui.js, parkBeside): the body stays clipped by the window as it shrinks or
+   grows, and nothing inside takes clicks mid-flight. */
+.console.is-gliding {
+  pointer-events: none;
+  overflow: hidden;
+}
+
 /* ---------- tty1 parking itself on the lab page (ui/terminal-ui.js, park()) ----------
    It folds toward its title bar while drifting up and left, then the minimized bar
    settles back into place. Reduced motion: it simply minimizes. */

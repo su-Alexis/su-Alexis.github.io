@@ -215,6 +215,28 @@ export function mountTerminal(primaryRoot) {
     return shell;
   }
 
+  // The lab page: tty1 parks itself as before, and tty2 and tty3 tuck in beside its bar,
+  // in order, a moment apart (owner request, October 15, 2026). Bars after tty1's are a
+  // compact width; a narrow window clamps them onto the screen.
+  const BAR_SLOT = { w: TERMINAL_WINDOW.minWidth, gap: 8, stagger: 160, after: 450 };
+  function parkAll() {
+    const primary = shells.get('tty1');
+    if (!primary) return;
+    primary.park();
+    const one = primary.frame();
+    if (!one.floating) return;
+    let x = one.x + (one.home ? one.home.w : one.w) + BAR_SLOT.gap;
+    let delay = BAR_SLOT.after;
+    for (const id of SHELL_IDS) {
+      const shell = shells.get(id);
+      if (id === 'tty1' || !shell) continue;
+      const slot = { x, y: one.y, w: BAR_SLOT.w };
+      window.setTimeout(() => shell.parkBeside(slot), delay);
+      x += BAR_SLOT.w + BAR_SLOT.gap;
+      delay += BAR_SLOT.stagger;
+    }
+  }
+
   // ./startup.sh on a desktop or tablet (owner requests, October 15, 2026): once per
   // machine start, as the home page's load log begins, its first two jobs open tty2 under
   // tty1 at tty1's size running neofetch, and tty3 in the top-right corner at the same
@@ -853,8 +875,74 @@ export function mountTerminal(primaryRoot) {
       save();
     }
 
+    // Spawned shells on the lab page (owner request, October 15, 2026): each one shrinks
+    // into its title bar while gliding to a spot beside tty1's minimized bar (tty1, tty2,
+    // tty3 in a row), and on the way back to Layer 1 glides home and opens up again. The
+    // glide animates the window's own left, top, width and height (the Web Animations
+    // API, no extra styles), then the stored window takes over. home keeps where it was.
+    const GLIDE_MS = 600;
+    function glide(from, to, done) {
+      if (reducedMotion || typeof root.animate !== 'function') {
+        done();
+        return;
+      }
+      const frame = (r) => ({ left: `${r.x}px`, top: `${r.y}px`, width: `${r.w}px`, height: `${r.h}px` });
+      root.classList.add('is-gliding');
+      let finished = false;
+      const end = () => {
+        if (finished || !alive) return;
+        finished = true;
+        root.classList.remove('is-gliding');
+        done();
+      };
+      const animation = root.animate([frame(from), frame(to)], { duration: GLIDE_MS, easing: 'cubic-bezier(0.5, 0, 0.2, 1)' });
+      animation.onfinish = end;
+      animation.oncancel = end;
+      // Safety net if the animation never reports its end (a hidden tab, say).
+      window.setTimeout(end, GLIDE_MS + 600);
+    }
+
+    function barHeight() {
+      return bar.offsetHeight || TERMINAL_WINDOW.barHeight;
+    }
+
+    // Tucks this (floating, open) shell into a bar at slot { x, y, w }.
+    function parkBeside(slot) {
+      const win = shellState.window;
+      if (!win.floating || win.minimized) return;
+      const from = { x: win.x, y: win.y, w: win.w, h: win.h };
+      const to = clampWindow({ ...win, x: slot.x, y: slot.y, w: slot.w, h: barHeight() }, window.innerWidth, window.innerHeight);
+      glide(from, { x: to.x, y: to.y, w: to.w, h: barHeight() }, () => {
+        Object.assign(shellState.window, { home: from, x: to.x, y: to.y, w: to.w, minimized: true, parked: true });
+        applyWindow();
+        save();
+      });
+    }
+
+    // The way back: from its bar to where it was, opening up as it goes.
+    function unparkHome() {
+      const win = shellState.window;
+      const home = win.home;
+      if (!home) return;
+      const from = { x: win.x, y: win.y, w: win.w, h: barHeight() };
+      delete win.home;
+      Object.assign(win, { minimized: false, parked: false, x: home.x, y: home.y, w: home.w, h: home.h });
+      applyWindow();
+      save();
+      const to = { x: shellState.window.x, y: shellState.window.y, w: shellState.window.w, h: shellState.window.h };
+      glide(from, to, () => applyWindow());
+    }
+
     listen(secondButton, 'click', () => (primary ? setFloating(!shellState.window.floating) : close(id)));
     listen(minimizeButton, 'click', () => {
+      // A shell the lab tucked beside tty1 opens back where it came from.
+      if (shellState.window.minimized && shellState.window.home) {
+        unparkHome();
+        shellState.window.parked = false;
+        save();
+        input.focus({ preventScroll: true });
+        return;
+      }
       shellState.window.minimized = !shellState.window.minimized;
       // The visitor's own choice: a later Layer 1 page leaves it as they set it.
       shellState.window.parked = false;
@@ -954,7 +1042,8 @@ export function mountTerminal(primaryRoot) {
     if (typeof ResizeObserver === 'function') {
       const observer = new ResizeObserver(() => {
         const win = shellState.window;
-        if (!win.floating || win.minimized || drag || sizing) return;
+        // Not mid-glide either: those sizes are the animation's, not the window's.
+        if (!win.floating || win.minimized || drag || sizing || root.classList.contains('is-gliding')) return;
         const w = root.offsetWidth;
         const h = root.offsetHeight;
         if (w !== win.w || h !== win.h) {
@@ -1406,11 +1495,19 @@ export function mountTerminal(primaryRoot) {
         if (typing) typing.then(wait);
         else wait();
       },
+      parkBeside,
+      // Where this window is (or, tucked away, where its bar is), for lining bars up.
+      frame: () => ({ ...shellState.window }),
       // The reverse of park() (owner request, October 12, 2026): back on a Layer 1 page
       // from the lab, a tty1 the lab minimized opens again with a short expand
       // (terminal.css, console-unpark). A shell the visitor minimized stays minimized.
       unpark() {
         if (!shellState.window.minimized || !shellState.window.parked) return;
+        // A spawned shell tucked beside tty1 glides home instead.
+        if (shellState.window.home) {
+          unparkHome();
+          return;
+        }
         shellState.window.minimized = false;
         shellState.window.parked = false;
         applyWindow();
@@ -1521,8 +1618,8 @@ export function mountTerminal(primaryRoot) {
     if (finePointer) shells.get('tty1').focus();
     // The lab gives the VM the screen: once the page has loaded, tty1 parks itself
     // (owner request). It stays one click away on its title bar.
-    if (page === 'lab') shells.get('tty1').park();
-    else shells.get('tty1').unpark();
+    if (page === 'lab') parkAll();
+    else for (const shell of shells.values()) shell.unpark();
   };
   // The idle screensaver is an easter egg too: waking from it counts for "hunt".
   startScreensaver({

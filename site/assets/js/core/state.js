@@ -69,10 +69,25 @@ function restoreTranscript(transcript) {
   return out;
 }
 
+// home: where a shell the lab tucked beside tty1 goes back to (terminal-ui.js parkBeside).
+// Kept only with parked, and only as four finite numbers in range.
+function restoreHome(win) {
+  const home = ownField(win, 'home');
+  if (!isPlainObject(home) || ownField(win, 'parked') !== true) return undefined;
+  const max = TERMINAL_WINDOW.maxCoordinate;
+  const x = finiteIn(ownField(home, 'x'), 0, max, null);
+  const y = finiteIn(ownField(home, 'y'), 0, max, null);
+  const w = finiteIn(ownField(home, 'w'), TERMINAL_WINDOW.minWidth, max, null);
+  const h = finiteIn(ownField(home, 'h'), TERMINAL_WINDOW.minHeight, max, null);
+  return [x, y, w, h].includes(null) ? undefined : { x, y, w, h };
+}
+
 function restoreWindow(win, fallback) {
   if (!isPlainObject(win)) return fallback;
   const max = TERMINAL_WINDOW.maxCoordinate;
+  const home = restoreHome(win);
   return {
+    ...(home && ownField(win, 'minimized') === true ? { home } : {}),
     floating: ownField(win, 'floating') === true,
     minimized: ownField(win, 'minimized') === true,
     parked: ownField(win, 'parked') === true && ownField(win, 'minimized') === true,
