@@ -101,6 +101,7 @@ function isMobile() {
 // the modules; top: just under the top bar; height: from there to the bottom, less a gap.
 const SIDE_GAP = 8;
 const SIDE_MAX_W = 720;
+const STARTUP_SHELL_H = 430; // tty1's usual floating height
 function sideRoom() {
   const topbar = document.querySelector('.topbar');
   const content = document.querySelector('.site-main');
@@ -311,7 +312,12 @@ export function mountTerminal(primaryRoot) {
     }
     // The boot makes room for them: modules start once tty3 has opened (layer1.css).
     html.classList.add('startup-shells');
-    const h = Math.max(TERMINAL_WINDOW.minHeight, Math.floor((room.height - SIDE_GAP) / 2));
+    // tty1 and tty2 stay at the console's usual height, less where the screen is too short
+    // for two of them; tty3 takes 80% of half the screen's height (owner requests, October
+    // 15, 2026: stretched to fill the sides they looked too tall, and the board behind them
+    // should show).
+    const half = Math.max(TERMINAL_WINDOW.minHeight, Math.floor((room.height - SIDE_GAP) / 2));
+    const h = Math.min(STARTUP_SHELL_H, half);
     const leftW = Math.min(room.left, SIDE_MAX_W);
     const rightW = Math.min(room.right, SIDE_MAX_W);
     primary.place(SIDE_GAP, room.top, leftW, h);
@@ -322,7 +328,8 @@ export function mountTerminal(primaryRoot) {
       second.runCommand('neofetch');
     }
     // The right-hand margin, inside any page scrollbar.
-    openBtop(primary, null, { x: room.width - SIDE_GAP - rightW, y: room.top, w: rightW, h });
+    const tallH = Math.max(TERMINAL_WINDOW.minHeight, Math.round(half * 0.8));
+    openBtop(primary, null, { x: room.width - SIDE_GAP - rightW, y: room.top, w: rightW, h: tallH });
     const third = shells.get('tty3');
     if (third) third.root.classList.add('is-startup');
     bringToFront('tty1');
