@@ -922,6 +922,9 @@ function layOut(cols, rows, partCount, view) {
     // control through the resistors (pull-ups, enables, status), data everywhere else.
     const touches = (kind) => trace.chip.kind === kind || (trace.end && trace.end.kind === kind);
     trace.signal = touches('inductor') ? 'power' : touches('passive') ? 'control' : 'data';
+    // Gold data runs in gold lanes (owner request, October 15, 2026): every power and
+    // control line is laid in gold copper, so the board shows where gold data can travel.
+    if (trace.signal !== 'data') trace.tone = 'gold';
   }
   heroColours(kept.find((part) => part.hero), traces);
   return { chips: kept, traces, pours, chamfers, stitches, holes };
@@ -1575,7 +1578,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         }
         // Traces, teal then violet, and the vias where they end (purple rings on violet).
         b.lineWidth = 1.2;
-        // Gold copper only on MKb<3's power lines (heroColours).
+        // Gold copper on the power and control lines, where gold data runs.
         for (const [tone, ink] of [['teal', `rgba(${INK.path}, 0.55)`], ['violet', `rgba(${INK.violet}, 0.95)`], ['gold', `rgba(${INK.gold}, 0.42)`]]) {
           b.strokeStyle = ink;
           b.beginPath();

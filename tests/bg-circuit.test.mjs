@@ -236,6 +236,7 @@ test('lines are coloured by what they carry: power and control in amber, data by
       // MKb<3's lines follow their own rule, by side (tested below).
       if (trace.chip.hero || (trace.end && trace.end.hero)) continue;
       assert.equal(trace.signal, expected);
+      assert.equal(trace.tone === 'gold', expected !== 'data', 'gold copper exactly where gold data runs');
     }
   }
   const board = boards.find((b) => b.cols >= 96);
