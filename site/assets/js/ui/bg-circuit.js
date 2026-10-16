@@ -56,7 +56,7 @@ const FEED_GAP = 0.18; // seconds between transfers fed in on its right-side bus
 const RAIL_GAP = 0.45; // seconds between its bottom lines' beats, never varied
 const RAIL_BEATS = 2; // beats in each of those, always the same
 const RAIL_STEP = 0.12; // seconds between its quiet bottom lines' beats, in order along the side
-const RAIL_RESERVE = 14; // of the quiet lines' cap, kept for those beats so they never wait
+const RAIL_RESERVE = 24; // of the quiet lines' cap, kept for those beats so they never wait
 // Its quiet right-side lines (owner request, October 15, 2026): about two thirds of them
 // carry data at any moment, a random choice of them, the share drifting within this range.
 const FEED_SHARE = [0.55, 0.78];
@@ -575,7 +575,7 @@ export function planBoard(cols, rows, partCount, seed = null, view = null) {
     // A board whose MKb<3 neighbours could not all be wired out to the rest of it (rare:
     // a tight spot) is laid out again, a few times at most.
     let board = null;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
       board = layOut(cols, rows, partCount, view);
       if (heartIsOpen(board)) break;
     }
@@ -585,6 +585,7 @@ export function planBoard(cols, rows, partCount, seed = null, view = null) {
   }
 }
 
+const OPEN_REACH = 4;
 // True when every part beside MKb<3 (its memory and bridge) reaches the rest of the
 // board without going through MKb<3: no closed loop round the processor (owner request,
 // October 15, 2026). Exported for tests; it uses no DOM.
@@ -593,24 +594,29 @@ export function heartIsOpen({ chips, traces }) {
   if (!hero || !hero.companions) return true;
   const ring = new Set([hero, ...hero.companions]);
   const links = new Map();
+  // Logic only: resistors and power coils do not carry the board's data onward.
+  const logic = (part) => part.kind !== 'passive' && part.kind !== 'inductor';
   for (const trace of traces) {
     const { chip, end } = trace;
-    if (!end || chip === hero || end === hero || chip.kind === 'passive' || end.kind === 'passive') continue;
+    if (!end || chip === hero || end === hero || !logic(chip) || !logic(end)) continue;
     for (const [from, to] of [[chip, end], [end, chip]]) {
       if (!links.has(from)) links.set(from, new Set());
       links.get(from).add(to);
     }
   }
+  // Each one reaches at least OPEN_REACH other chips beyond the ring: a real network,
+  // not one lone part wired back to it (owner request, October 16, 2026).
   return hero.companions.filter((part) => chips.includes(part)).every((part) => {
     const seen = new Set([part]);
     const queue = [part];
+    let beyond = 0;
     while (queue.length) {
       for (const next of links.get(queue.shift()) || []) {
-        if (!ring.has(next)) return true;
-        if (!seen.has(next)) {
-          seen.add(next);
-          queue.push(next);
-        }
+        if (seen.has(next)) continue;
+        seen.add(next);
+        queue.push(next);
+        if (!ring.has(next)) beyond += 1;
+        if (beyond >= OPEN_REACH) return true;
       }
     }
     return false;
@@ -788,10 +794,10 @@ function layOut(cols, rows, partCount, view) {
         // MKb<3's left and top: real connections only (see the memory and companion).
         if (part.hero && (side.out[0] === -1 || side.out[1] === -1)) continue;
         for (const run of freeRuns(side)) {
-          // MKb<3's right side: buses running off the screen's right edge (it sits a few
-          // cells in from it), so its data comes in from off screen, as on the bottom
-          // (owner request, October 16, 2026).
-          if (part.hero && side.out[0] === 1) {
+          // MKb<3's right and bottom: buses running off the screen's edge (it sits a few
+          // cells in from both), so its data comes in from off screen (owner request,
+          // October 16, 2026).
+          if (part.hero && (side.out[0] === 1 || side.out[1] === 1)) {
             escape(part, run, side.out);
             for (const pin of run) if (!wired.has(keyOf(pin))) stub(part, pin, side.out);
             continue;
@@ -887,10 +893,10 @@ function layOut(cols, rows, partCount, view) {
       cpu.companions = [...memory, ...(companion ? [companion] : [])];
       for (const chip of memory) connect(cpu, chip, false, true);
       if (companion) connect(cpu, companion, false, true); // a second bundle comes later (below)
-      // Its right side runs off the screen's edge now, before anything else can be
-      // routed across that strip (finish() would find the way blocked).
+      // Its right and bottom sides run off the screen's edges now, before anything else
+      // can be routed across those strips (finish() would find the way blocked).
       for (const side of cpu.sides) {
-        if (side.out[0] === 1) for (const run of freeRuns(side)) escape(cpu, run, side.out);
+        if (side.out[0] === 1 || side.out[1] === 1) for (const run of freeRuns(side)) escape(cpu, run, side.out);
       }
     }
   }
@@ -949,7 +955,7 @@ function layOut(cols, rows, partCount, view) {
   if (cpu && cpu.companions) {
     const circle = new Set([cpu, ...cpu.companions]);
     const nearest = (part) => parts
-      .filter((other) => !circle.has(other) && other.kind !== 'passive')
+      .filter((other) => !circle.has(other) && other.kind !== 'passive' && other.kind !== 'inductor')
       .map((other) => ({ other, d: Math.hypot(centre(other)[0] - centre(part)[0], centre(other)[1] - centre(part)[1]) }))
       .sort((p, q) => p.d - q.d)
       .map(({ other }) => other);
@@ -1775,7 +1781,7 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   const bundles = new Map();
   for (const trace of quiet) {
     // MKb<3's rails (its bottom power lines, often one wide bus) beat one line at a time,
-    // sweeping along the side in order, and its feeds (right side) light line by line, a
+    // in a random order, and its feeds (right side) light line by line, a
     // random two thirds or so of them at once (feed() below).
     const own = heroFlow(trace) ? [trace] : trace.bus && trace.bus.length ? trace.bus : [trace];
     const lines = own.filter((t) => index.has(t));
@@ -1799,11 +1805,10 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   let clock = 0;
   const parts = [...rounds.values()].map((list) => {
     const { part, flow } = list[0];
-    // The rails sweep along the side in order, one beat every RAIL_STEP, never varied.
-    if (flow === 'rail') {
-      const along = ({ lines }) => lines[0].points[0][0];
-      return { part, flow, list: [...list].sort((a, b) => along(a) - along(b)), next: 0, step: RAIL_STEP, at: 0, last: -Infinity };
-    }
+    // The rails beat one every RAIL_STEP, never varied in time, each line once a round
+    // but in a fresh random order every round (owner request, October 16, 2026: not a
+    // uniform sweep).
+    if (flow === 'rail') return { part, flow, list: shuffle(list), next: 0, step: RAIL_STEP, at: 0, last: -Infinity };
     // MKb<3, the heart of the board (owner request, October 16, 2026), beats faster.
     const pace = part && part.hero ? HEART_PACE : 1;
     const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length / pace;
@@ -1862,7 +1867,15 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
     if (p.flow === 'rail') {
       // A rail beat that cannot go this frame (its share full, its lane not clear yet)
       // goes the next one instead.
-      if (roomFor(bundle) < bundle.lines.length * RAIL_BEATS || !fire(bundle)) {
+      // A line whose last beat is still leaving swaps places with a later one in the
+      // round that is clear, so the clock never waits on it.
+      let fired = roomFor(bundle) >= bundle.lines.length * RAIL_BEATS && fire(bundle);
+      for (let k = p.next + 1; !fired && k < p.list.length && roomFor(bundle) >= RAIL_BEATS; k += 1) {
+        if (!p.list[k].lines.some(visible) || !fire(p.list[k])) continue;
+        [p.list[p.next], p.list[k]] = [p.list[k], p.list[p.next]];
+        fired = true;
+      }
+      if (!fired) {
         p.at = clock + 0.01;
         return false;
       }
@@ -1881,6 +1894,7 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
     }
     p.last = clock;
     p.next = (p.next + 1) % p.list.length;
+    if (p.flow === 'rail' && p.next === 0) p.list = shuffle(p.list);
     // A part that fell behind (a hidden tab, a long wait for room) catches up by one turn
     // at most, so it never bursts. The rails keep exact time.
     p.at = Math.max(p.at, clock - p.step) + p.step * (p.flow === 'rail' ? 1 : rand(0.8, 1.2));

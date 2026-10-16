@@ -282,6 +282,9 @@ test('MKb<3 is named, placed bottom-right of the view, and wired by side: violet
     if (bySide.right.length >= 3) assert.equal(new Set(bySide.right.map((t) => t.tone)).size, 3, 'right: all three');
     const offScreen = bySide.right.filter((t) => t.points.some(([x]) => x >= 192)).length;
     assert.ok(offScreen >= bySide.right.length * 0.75, `right: lines come from off screen (${offScreen} of ${bySide.right.length})`);
+    // So do the bottom's.
+    const offBottom = bySide.bottom.filter((t) => t.points.some(([, y]) => y >= 108)).length;
+    assert.ok(offBottom >= bySide.bottom.length * 0.75, `bottom: lines come from off screen (${offBottom} of ${bySide.bottom.length})`);
   }
   assert.ok(placed >= 11, `bottom-right on ${placed} of 12 boards`);
 });
