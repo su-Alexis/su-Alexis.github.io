@@ -1194,6 +1194,76 @@ function drawPart(b, part) {
   b.fillText(part.label, x + w / 2, part.kind === 'qfp' ? y + h * 0.14 + 4 : y + h / 2);
 }
 
+// ---------- Lanes: one way at a time on a wire ----------
+
+// The lane rule (owner request, October 16, 2026: data meeting head-on clipped through
+// itself). While any data is on a wire, data may only follow it in the same direction:
+// it starts once the one ahead has cleared the start by LANE_GAP, and never goes faster,
+// so it can never catch up. Once the wire is empty, data may go either way. Data goes as
+// trains of pulses (beats), spaced one tail and a gap apart (burstFor, signalBeats).
+const LANE_GAP = 10; // px between a pulse's tail and the next one's head
+const tailLength = (pulse) => (pulse.tail || TAIL) * TAIL_GAP;
+const trainSpacing = (tail) => tail * TAIL_GAP + LANE_GAP;
+const MAX_TRAIN = 5;
+
+// How many beats a transfer sends on each of its lines, the way chips move data (owner
+// request, October 16, 2026: bursts as well as single bits, with some logic to them):
+// an answer back on the bus the data came by is a single acknowledging beat; a wide
+// parallel bus moves data in bursts of two to four beats, as memory does; a narrow
+// serial link streams a longer run of bits; anything else sends one to three. Now and
+// then any of them sends a single beat (a status word, a poll).
+function burstFor(link, ack) {
+  if (ack || random() < 0.2) return 1;
+  const width = link.lines.length;
+  if (width >= 6) return 2 + Math.floor(random() * 3);
+  if (width <= 2) return 2 + Math.floor(random() * 4);
+  return 1 + Math.floor(random() * 3);
+}
+
+// The quiet lines: power and control lines toggle (one beat); a bus escaping to a
+// connector sends a short word of one to three; a lone stub one or two.
+function signalBeats(bundle) {
+  const line = bundle.lines[0];
+  if (line && line.signal !== 'data') return 1;
+  if (bundle.lines.length > 1) return 1 + Math.floor(random() * 3);
+  return random() < 0.6 ? 1 : 2;
+}
+
+function makeWires() {
+  const onWire = new Map(); // trace -> its pulses
+  return {
+    add(pulse) {
+      if (!onWire.has(pulse.trace)) onWire.set(pulse.trace, []);
+      onWire.get(pulse.trace).push(pulse);
+    },
+    remove(pulse) {
+      const here = onWire.get(pulse.trace);
+      if (!here) return;
+      const i = here.indexOf(pulse);
+      if (i >= 0) here.splice(i, 1);
+      if (!here.length) onWire.delete(pulse.trace);
+    },
+    // Can data go this way (inward or not) on this wire now? { ok, speed } where speed is
+    // the most it may go (the slowest same-way pulse already on it, or Infinity).
+    lane(trace, inward) {
+      const here = onWire.get(trace);
+      if (!here) return { ok: true, speed: Infinity };
+      let speed = Infinity;
+      for (const pulse of here) {
+        if (pulse.inward !== inward) return { ok: false, speed: 0 };
+        if (pulse.d - tailLength(pulse) < LANE_GAP) return { ok: false, speed: 0 };
+        speed = Math.min(speed, pulse.speed);
+      }
+      return { ok: true, speed };
+    },
+    // Is there anything on this wire going the other way?
+    against(trace, inward) {
+      const here = onWire.get(trace);
+      return Boolean(here && here.some((pulse) => pulse.inward !== inward));
+    },
+  };
+}
+
 // ---------- Traffic ----------
 
 // Data moving between parts over the nets they share (owner request, October 14, 2026:
@@ -1214,6 +1284,10 @@ function drawPart(b, part) {
 //     sweep.
 //   - kick(part) starts a chain at a part, for input arriving on one of its other lines
 //     (makeAmbient). It only stands in for a new chain, so the board gets no busier.
+//   - The lane rule (makeWires): a bus carrying data one way takes none the other way
+//     until it is clear; a part whose bus is busy against it picks another or waits.
+//     A transfer is a train of beats on each of its lines, as many as the bus would
+//     send (burstFor).
 // Exported for tests; it uses no DOM.
 export function makeTraffic(links, { target = 8, visible = () => true, maxPulses = MAX_PULSES } = {}) {
   const byPart = new Map();
@@ -1226,6 +1300,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   const pulses = [];
   const queue = [];
   const log = [];
+  const wires = makeWires();
   let clock = 0;
   let active = 0; // transfers on the wire, plus parts about to act
   // When each link last carried data; never-used links start slightly apart, at random.
@@ -1249,30 +1324,53 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
     return best;
   }
 
-  function send(link, forward, hops, color, cause) {
+  // Sends a transfer if the lanes allow it; false when the bus is busy against it or
+  // none of the chosen lines is clear yet.
+  function send(link, forward, hops, color, cause, ack = false) {
+    const inward = !forward;
+    if (link.lines.some((trace) => wires.against(trace, inward))) return false;
     // Data takes the colour of the bus it rides: cyan on teal, lavender on violet.
     if (link.lines[0] && link.lines[0].tone) color = toneColour(link.lines[0]);
     let lines = link.lines.filter(() => random() < 0.7);
     if (!lines.length) lines = [link.lines[Math.floor(random() * link.lines.length)]];
-    const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color, cause, left: lines.length };
-    const speed = rand(170, 250);
-    for (const trace of lines) pulses.push({ trace, d: 0, speed, color, inward: !forward, transfer });
+    let speed = rand(170, 250);
+    lines = lines.filter((trace) => {
+      const lane = wires.lane(trace, inward);
+      if (lane.ok) speed = Math.min(speed, lane.speed);
+      return lane.ok;
+    });
+    if (!lines.length) return false;
+    const packets = burstFor(link, ack);
+    const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color, cause, left: lines.length * packets };
+    for (const trace of lines) {
+      for (let k = 0; k < packets; k += 1) {
+        const pulse = { trace, d: -k * trainSpacing(TAIL), speed, color, inward, transfer };
+        pulses.push(pulse);
+        wires.add(pulse);
+      }
+    }
     log.push(transfer);
     if (log.length > 400) log.shift();
     lastSent.set(link, clock);
     active += 1;
+    return true;
   }
 
+  // A part acts on data it received; true once something was sent. Its first choice
+  // busy against it, it tries its other buses, least used first.
   function act({ part, came, hops, color, cause }) {
     const options = byPart.get(part) || [];
-    if (!options.length) return;
+    if (!options.length) return true;
     const others = options.filter((o) => o.link !== came);
     const back = options.find((o) => o.link === came);
     const onward = stalest(others.map((o) => o.link));
     const pick = !others.length || (back && random() < REPLY_CHANCE)
       ? back
       : others.find((o) => o.link === onward);
-    if (pick) send(pick.link, pick.forward, hops, color, cause);
+    if (pick && send(pick.link, pick.forward, hops, color, cause, pick === back)) return true;
+    const rest = [...others].sort((x, y) => staleness(x.link) - staleness(y.link));
+    if (back) rest.push(back);
+    return rest.some((o) => o !== pick && send(o.link, o.forward, hops, color, cause, o === back));
   }
 
   return {
@@ -1287,6 +1385,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         const pulse = pulses[i];
         if (pulse.d < pulse.trace.length + TAIL * TAIL_GAP) continue;
         pulses.splice(i, 1);
+        wires.remove(pulse);
         const { transfer } = pulse;
         transfer.left -= 1;
         if (transfer.left) continue;
@@ -1301,11 +1400,22 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (queue[i].at > clock) continue;
         const [due] = queue.splice(i, 1);
         active -= 1;
-        if (pulses.length < maxPulses) act(due);
+        // Every bus busy against it: the part holds the data a moment and tries again,
+        // a few times at most.
+        if (pulses.length < maxPulses && !act(due) && (due.tries || 0) < 8) {
+          queue.push({ ...due, at: clock + rand(0.12, 0.3), tries: (due.tries || 0) + 1 });
+          active += 1;
+        }
       }
       if (active < target && pulses.length < maxPulses && links.length) {
         const fresh = stalest(links);
-        send(fresh, random() < 0.5, 0, toneColour(fresh.lines[0]), null);
+        // The stalest link busy against a new chain: a few others in view instead.
+        if (!send(fresh, random() < 0.5, 0, toneColour(fresh.lines[0]), null)) {
+          for (let k = 0; k < 4; k += 1) {
+            const other = links[Math.floor(random() * links.length)];
+            if (visible(other) && send(other, random() < 0.5, 0, toneColour(other.lines[0]), null)) break;
+          }
+        }
       }
       return reached;
     },
@@ -1345,10 +1455,16 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
           || !int(speed, 100, 300) || !Array.isArray(lines) || !lines.length) continue;
         const link = links[li];
         const placed = lines.filter((line) => Array.isArray(line) && line.length === 2 && int(line[0], 0, link.lines.length - 1)
-          && int(line[1], 0, Math.ceil(link.lines[line[0]].length) + TAIL * TAIL_GAP));
+          && int(line[1], -MAX_TRAIN * trainSpacing(TAIL), Math.ceil(link.lines[line[0]].length) + TAIL * TAIL_GAP));
         if (!placed.length || pulses.length + placed.length > maxPulses) continue;
+        // Kept only if it does not meet data already put back going the other way.
+        if (placed.some(([line]) => wires.against(link.lines[line], !forward))) continue;
         const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color: COLORS[colour], cause: null, left: placed.length };
-        for (const [line, d] of placed) pulses.push({ trace: link.lines[line], d, speed, color: transfer.color, inward: !forward, transfer });
+        for (const [line, d] of placed) {
+          const pulse = { trace: link.lines[line], d, speed, color: transfer.color, inward: !forward, transfer };
+          pulses.push(pulse);
+          wires.add(pulse);
+        }
         active += 1;
       }
       for (const entry of data.q.slice(0, 200)) {
@@ -1379,9 +1495,13 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
 //     the quiet lines answer the traffic.
 //   - At most `cap` pulses at once. A line whose turn comes with no room waits for room
 //     instead of being skipped, so none is left dark.
+//   - The lane rule (makeWires): data already on a line sets its direction until the line
+//     is clear; a bundle that cannot go either way waits a moment. A signal is one to
+//     three beats, by what the line carries (signalBeats).
 // Exported for tests; it uses no DOM. `visible` takes one trace.
 export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } = {}) {
   const pulses = [];
+  const wires = makeWires();
   const index = new Map(quiet.map((trace, i) => [trace, i]));
   // Bundles: a trace's bus, keeping only its quiet lines, named by the first of them.
   const bundles = new Map();
@@ -1425,7 +1545,11 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
       return false;
     }
     holding = null;
-    fire(bundle);
+    // Its lines busy against it both ways, or not clear yet: try again shortly.
+    if (!fire(bundle)) {
+      p.at = clock + rand(0.1, 0.25);
+      return false;
+    }
     p.last = clock;
     p.next = (p.next + 1) % p.list.length;
     // A part that fell behind (a hidden tab, a long wait for room) catches up by one turn
@@ -1435,11 +1559,28 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   }
 
   function fire(bundle) {
-    const speed = rand(160, 240);
     const color = toneColour(bundle.lines[0]);
     // MKb<3 mostly takes data in (owner request): its lines run toward it.
-    const inward = random() < (bundle.part && bundle.part.hero ? 0.75 : 0.3);
-    for (const trace of bundle.lines) pulses.push({ trace, d: 0, speed, color, inward, tail: AMBIENT_TAIL });
+    let inward = random() < (bundle.part && bundle.part.hero ? 0.75 : 0.3);
+    // Data already on the bundle sets its direction.
+    if (bundle.lines.some((trace) => wires.against(trace, inward))) inward = !inward;
+    let speed = rand(160, 240);
+    for (const trace of bundle.lines) {
+      const lane = wires.lane(trace, inward);
+      if (!lane.ok) return false;
+      speed = Math.min(speed, lane.speed);
+    }
+    // As many beats as fit under the cap (at least one: the turn already waited for room).
+    const room = Math.floor((cap - pulses.length) / bundle.lines.length);
+    const packets = Math.max(1, Math.min(signalBeats(bundle), room));
+    for (const trace of bundle.lines) {
+      for (let k = 0; k < packets; k += 1) {
+        const pulse = { trace, d: -k * trainSpacing(AMBIENT_TAIL), speed, color, inward, tail: AMBIENT_TAIL };
+        pulses.push(pulse);
+        wires.add(pulse);
+      }
+    }
+    return true;
   }
 
   return {
@@ -1454,6 +1595,7 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
         pulse.d += pulse.speed * dt;
         if (pulse.d < pulse.trace.length + AMBIENT_TAIL * TAIL_GAP) continue;
         pulses.splice(i, 1);
+        wires.remove(pulse);
         const { trace, color } = pulse;
         if (pulse.inward) landed.push({ part: trace.chip, color, inward: true });
         else if (trace.end) landed.push({ part: trace.end, color, inward: false });
@@ -1489,8 +1631,11 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
         if (!Array.isArray(entry) || entry.length !== 5 || pulses.length >= cap) continue;
         const [ti, d, speed, colour, inward] = entry;
         if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
-        if (!int(d, 0, Math.ceil(quiet[ti].length) + AMBIENT_TAIL * TAIL_GAP)) continue;
-        pulses.push({ trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL });
+        if (!int(d, -3 * trainSpacing(AMBIENT_TAIL), Math.ceil(quiet[ti].length) + AMBIENT_TAIL * TAIL_GAP)) continue;
+        if (wires.against(quiet[ti], inward === 1)) continue;
+        const pulse = { trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL };
+        pulses.push(pulse);
+        wires.add(pulse);
       }
     },
   };

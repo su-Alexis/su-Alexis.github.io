@@ -222,7 +222,7 @@ test('an ambient snapshot comes back the same, and bad values are skipped', () =
   assert.ok(before.pulses.length > 0);
   assert.deepEqual(after.snapshot(), data);
   const hostile = makeAmbient(quiet);
-  hostile.restore([[99999, 5, 150, 0, 0], ['x'], [0, -1, 150, 0, 0], [0, 5, 999, 0, 0], [0, 5, 150, 7, 0], [0, 5, 150, 0, 2], null]);
+  hostile.restore([[99999, 5, 150, 0, 0], ['x'], [0, -999, 150, 0, 0], [0, 5, 999, 0, 0], [0, 5, 150, 7, 0], [0, 5, 150, 0, 2], null]);
   hostile.restore('nope');
   hostile.restore(null);
   assert.equal(hostile.pulses.length, 0);
@@ -291,4 +291,37 @@ test('chip dots light up and go out at random, and data arriving sets a burst go
   }
   assert.ok(seenOn.size > lights.dots.length * 0.5, 'most dots light up within 20 seconds');
   assert.ok(peak < 0.5, `never more than half lit at once (${peak.toFixed(2)})`);
+});
+
+// The lane rule (owner request, October 16, 2026): data on a wire never meets data
+// going the other way, and a train following on the same wire never runs into the one
+// ahead.
+test('data never meets head-on on a wire, and trains never run into each other', () => {
+  for (const board of boards.filter((b) => b.cols >= 96)) {
+    const links = linksOf(board);
+    const quiet = quietOf(board);
+    const traffic = makeTraffic(links, { target: 16 });
+    const ambient = makeAmbient(quiet, { cap: 64 });
+    let trains = 0;
+    for (let t = 0; t < 40 * 30; t += 1) {
+      for (const { part } of traffic.tick(1 / 30)) ambient.poke(part);
+      for (const landed of ambient.tick(1 / 30)) if (landed.inward) traffic.kick(landed.part);
+      const byTrace = new Map();
+      for (const pulse of [...traffic.pulses, ...ambient.pulses]) {
+        if (!byTrace.has(pulse.trace)) byTrace.set(pulse.trace, []);
+        byTrace.get(pulse.trace).push(pulse);
+      }
+      for (const here of byTrace.values()) {
+        assert.equal(new Set(here.map((p) => p.inward)).size, 1, 'one direction per wire');
+        here.sort((a, b) => b.d - a.d);
+        if (here.length > 1) trains += 1;
+        for (let i = 1; i < here.length; i += 1) {
+          const ahead = here[i - 1];
+          const tail = (ahead.tail || 10) * 4;
+          assert.ok(here[i].d <= ahead.d - tail + 0.5, 'a following pulse stays behind the tail ahead');
+        }
+      }
+    }
+    assert.ok(trains > 0, 'data goes in trains as well as single beats');
+  }
 });
