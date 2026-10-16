@@ -280,6 +280,9 @@ test('MKb<3 is named, placed bottom-right of the view, and wired by side: violet
     assert.ok(bySide.bottom.every((t) => t.tone === 'gold' && t.signal === 'power'), 'bottom: gold, power only');
     // The right: always all three colours, and its lines run in from off the screen.
     if (bySide.right.length >= 3) assert.equal(new Set(bySide.right.map((t) => t.tone)).size, 3, 'right: all three');
+    // Line by line in turn: no two neighbours share a colour.
+    const down = [...bySide.right].sort((a, b) => pinOf(a)[1] - pinOf(b)[1]);
+    assert.ok(down.every((t, i) => i === 0 || t.tone !== down[i - 1].tone), 'right: each line its own colour, in turn');
     const offScreen = bySide.right.filter((t) => t.points.some(([x]) => x >= 192)).length;
     assert.ok(offScreen >= bySide.right.length * 0.75, `right: lines come from off screen (${offScreen} of ${bySide.right.length})`);
     // So do the bottom's.
@@ -328,7 +331,7 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
     }
     if (rightLines.length >= 6) {
       fedBoards += 1;
-      assert.ok(litShare > 0.45 && litShare < 0.9, `right: about two thirds lit at a time (${litShare.toFixed(2)})`);
+      assert.ok(litShare > 0.35 && litShare < 0.85, `right: between about 42% and 77% lit (${litShare.toFixed(2)})`);
     }
     if (railTimes.length) {
       railBoards += 1;

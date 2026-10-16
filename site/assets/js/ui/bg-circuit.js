@@ -57,9 +57,9 @@ const RAIL_GAP = 0.45; // seconds between its bottom lines' beats, never varied
 const RAIL_BEATS = 2; // beats in each of those, always the same
 const RAIL_STEP = 0.12; // seconds between its quiet bottom lines' beats, in order along the side
 const RAIL_RESERVE = 24; // of the quiet lines' cap, kept for those beats so they never wait
-// Its quiet right-side lines (owner request, October 15, 2026): about two thirds of them
-// carry data at any moment, a random choice of them, the share drifting within this range.
-const FEED_SHARE = [0.55, 0.78];
+// Its quiet right-side lines (owner requests, October 15 and 16, 2026): a random choice of
+// them carry data at any moment, the share drifting within this range.
+const FEED_SHARE = [0.42, 0.77];
 const TURNS_PER_TICK = 4; // most of those a part starts in one frame
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
@@ -1129,26 +1129,21 @@ function layOut(cols, rows, partCount, view) {
 
 // MKb<3's wires (owner requests, October 15, 2026), by the side of the chip they leave
 // from: left always violet, top always teal, bottom always gold copper carrying only gold
-// (power) data, and the right a mix of all three, a few lines of each in turn. The left and top
+// (power) data, and the right a mix of all three, line by line in turn. The left and top
 // lines carry data in their own colour; the gold lines carry power.
 function heroColours(hero, traces) {
   if (!hero) return;
   const pinOf = (trace) => (trace.chip === hero ? trace.points[0] : trace.points[trace.points.length - 1]);
   const sideOf = ([x, y]) => (x < hero.x0 ? 'left' : x > hero.x1 ? 'right' : y < hero.y0 ? 'top' : 'bottom');
   const FIXED = { left: 'violet', top: 'teal', bottom: 'gold' };
-  // The right side in runs of two to four neighbouring lines, taking the three colours in
-  // turn from a random start, so all three always show there (a single wide bus used to
-  // come out in one colour).
+  // The right side line by line, each taking the next of the three colours in turn from a
+  // random start (owner request, October 16, 2026), so all three always show there.
   const MIX = shuffle(['violet', 'teal', 'gold']);
   const right = traces
     .filter((trace) => (trace.chip === hero || trace.end === hero) && sideOf(pinOf(trace)) === 'right')
     .sort((a, b) => pinOf(a)[1] - pinOf(b)[1]);
   const rightTone = new Map();
-  for (let i = 0, k = 0; i < right.length; k += 1) {
-    const size = right.length >= 6 ? randInt(2, 4) : 1;
-    for (const trace of right.slice(i, i + size)) rightTone.set(trace, MIX[k % MIX.length]);
-    i += size;
-  }
+  right.forEach((trace, i) => rightTone.set(trace, MIX[i % MIX.length]));
   for (const trace of traces) {
     if (trace.chip !== hero && trace.end !== hero) continue;
     const side = sideOf(pinOf(trace));
