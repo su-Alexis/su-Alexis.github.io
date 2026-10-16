@@ -46,8 +46,10 @@ const NET_REACH = 90; // cells: parts further apart are not wired together
 const ROUTE_STEPS = 6000; // A* expansions per trace
 const ROUTE_BUDGET = 1200000; // A* expansions per board, so a huge screen stays quick
 const MAX_PULSES = 240; // data on the nets
-const MAX_AMBIENT = 64; // pulses on stubs, resistors and escaping buses at once
-const AMBIENT_CYCLE = [8, 12]; // seconds for a part to light each of those once
+const MAX_AMBIENT = 90; // pulses on stubs, resistors and escaping buses at once
+const AMBIENT_CYCLE = [6, 9]; // seconds for a part to light each of those once (busier, October 16)
+const HEART_PACE = 6; // MKb<3, the heart of the board, works through its lines this many times faster
+const HEART_SHARE = 0.6; // share of new chains of data that start on MKb<3's buses
 const TURNS_PER_TICK = 4; // most of those a part starts in one frame
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
@@ -1224,6 +1226,8 @@ function burstFor(link, ack) {
 // connector sends a short word of one to three; a lone stub one or two.
 function signalBeats(bundle) {
   const line = bundle.lines[0];
+  // MKb<3, the heart, streams longer trains on its own lines.
+  if (bundle.part && bundle.part.hero) return 2 + Math.floor(random() * 3);
   if (line && line.signal !== 'data') return 1;
   if (bundle.lines.length > 1) return 1 + Math.floor(random() * 3);
   return random() < 0.6 ? 1 : 2;
@@ -1301,6 +1305,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   const queue = [];
   const log = [];
   const wires = makeWires();
+  const heartLinks = links.filter((link) => (link.a && link.a.hero) || (link.b && link.b.hero));
   let clock = 0;
   let active = 0; // transfers on the wire, plus parts about to act
   // When each link last carried data; never-used links start slightly apart, at random.
@@ -1406,6 +1411,12 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
           queue.push({ ...due, at: clock + rand(0.12, 0.3), tries: (due.tries || 0) + 1 });
           active += 1;
         }
+      }
+      // The heart of the board: a good share of new chains start on MKb<3's own buses,
+      // so its wires are the busiest (owner request, October 16, 2026).
+      if (active < target && pulses.length < maxPulses && heartLinks.length && random() < HEART_SHARE) {
+        const beat = stalest(heartLinks);
+        if (beat && visible(beat)) send(beat, random() < 0.5, 0, toneColour(beat.lines[0]), null);
       }
       if (active < target && pulses.length < maxPulses && links.length) {
         const fresh = stalest(links);
@@ -1518,7 +1529,8 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   }
   let clock = 0;
   const parts = [...rounds].map(([part, list]) => {
-    const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length;
+    // MKb<3, the heart of the board (owner request, October 16, 2026), beats faster.
+    const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length / (part && part.hero ? HEART_PACE : 1);
     return { part, list: shuffle(list), next: Math.floor(random() * list.length), step, at: random() * step, last: -Infinity };
   });
   const byPart = new Map(parts.map((p) => [p.part, p]));
@@ -1782,7 +1794,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
         const netsInView = all.filter(seen).length;
         // About two chains of transfers going for every three nets in view: busy, with room
         // left for the quiet lines (makeAmbient) to show.
-        traffic = makeTraffic(all, { target: Math.max(5, Math.min(24, Math.round(netsInView * 0.65))), visible: seen });
+        traffic = makeTraffic(all, { target: Math.max(6, Math.min(34, Math.round(netsInView * 0.95))), visible: seen });
         quiet = traces.filter((trace) => !trace.end || trace.end.kind === 'passive');
         ambient = makeAmbient(quiet, { visible: inView });
         lights = makeLights(chips, { visible: (dot) => dot.x <= width + 4 && dot.y <= height + 4 });

@@ -183,13 +183,13 @@ test('every wire on the board lights up within 16 seconds, and never too many at
     const links = linksOf(board);
     const quiet = quietOf(board);
     const traffic = makeTraffic(links, { target: 10 });
-    const ambient = makeAmbient(quiet, { cap: 64 });
+    const ambient = makeAmbient(quiet, { cap: 90 });
     const lit = new Set();
     for (let t = 0; t < 16 * 20; t += 1) {
       for (const { part } of traffic.tick(0.05)) ambient.poke(part);
       for (const landed of ambient.tick(0.05)) if (landed.inward) traffic.kick(landed.part);
       for (const pulse of [...traffic.pulses, ...ambient.pulses]) lit.add(pulse.trace);
-      assert.ok(ambient.pulses.length <= 64, 'the quiet lines stay under their cap');
+      assert.ok(ambient.pulses.length <= 90, 'the quiet lines stay under their cap');
     }
     for (const link of links) assert.ok(link.lines.some((line) => lit.has(line)), 'every net carries data');
     for (const trace of quiet) assert.ok(lit.has(trace), 'every quiet line lights up');
