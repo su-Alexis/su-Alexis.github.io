@@ -146,6 +146,8 @@ export const COMMANDS = Object.freeze([
   Object.freeze({ name: 'screensaver', usage: 'screensaver', description: 'start the screensaver now', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'background', usage: 'background [name]', description: 'list or switch page backgrounds', args: Object.freeze({ min: 0, max: 1, oneOf: 'backgrounds' }) }),
   Object.freeze({ name: 'theme', usage: 'theme [name]', description: 'list or switch color themes', args: Object.freeze({ min: 0, max: 1, oneOf: 'themes' }) }),
+  // Hides everything on the page but tty1, to look at the background; hide again undoes it.
+  Object.freeze({ name: 'hide', usage: 'hide', description: 'hide all but tty1 (hide again to undo)', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'hunt', usage: 'hunt [reset]', description: 'track your easter egg hunt', args: Object.freeze({ min: 0, max: 1, oneOf: 'hunt' }) }),
   Object.freeze({ name: 'spawn', usage: 'spawn', description: 'open a new shell window', args: Object.freeze({ min: 0, max: 0 }) }),
   Object.freeze({ name: 'exit', usage: 'exit', description: 'close this shell window', args: Object.freeze({ min: 0, max: 0 }) }),

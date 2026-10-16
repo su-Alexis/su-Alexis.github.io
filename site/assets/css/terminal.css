@@ -501,6 +501,22 @@
   color: var(--color-accent);
 }
 
+/* ---------- hide (ui/terminal-ui.js, togglePageHidden) ----------
+   Everything but tty1 (#terminal) and the background goes: the top bar, the footer, the
+   rest of the main content (modules, project pages, the lab) and the spawned shells.
+   They stay in the DOM and in place, so undoing it puts everything back exactly where it
+   was. !important because the page's load animations set opacity and visibility with
+   fill-mode; opacity 0 also covers any child that an animation keeps visible, and
+   visibility takes everything out of the tab order. Instant, so no reduced-motion case. */
+html.page-hidden .site > .topbar,
+html.page-hidden .site > .site-footer,
+html.page-hidden .site-main > :not(#terminal),
+html.page-hidden .console-spawned {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* ---------- sudo rm -rf easter egg (ui/rm-rf.js) ----------
    Elements fall off the page one by one (rm-gone, tilted left or right), then fly back
    (rm-back). Classes only; nothing is removed. Reduced motion fades instead. */

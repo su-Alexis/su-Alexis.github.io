@@ -179,8 +179,9 @@ export const MANUAL = Object.freeze({
   screensaver: ['Starts the screensaver now instead of after two idle minutes. Any key, click or', 'touch wakes the screen. Waiting it out the slow way is its own reward.'],
   vm: ['Lists the virtual machines this hypervisor knows about: name, image, role, lab address and', 'state. vm start <vm> powers one on in a window, or brings a running one forward; several', 'can run, one in front. vm stop powers off the one in front, vm stop <vm> any of them. ws01', 'powers on by itself. Every other VM is encrypted until it has its own key, earned from a', 'mission: vm unlock <vm> or vm unlock --all asks for the image passphrase (root uses its', 'key file instead), and vm lock puts the encryption back. vm reset-missions clears mission', 'progress so every ticket can be played again.'],
   btop: ['A live process monitor: CPU graph, memory, network and the process list, updated', 'every second. Up and Down select a process, t sends it SIGTERM and k sends SIGKILL', '(each asks first), q quits. top and htop open it too.'],
+  hide: ['Hides everything on the page but tty1: the top bar, the modules, the footer and', 'the other shells, so you can take in the background. Type hide again to bring it all', 'back. It lasts as you move between pages, until you undo it, refresh or reboot.'],
   hunt: ['Shows the easter eggs you have found, with hints for the rest. Progress is', 'kept in this browser, even across reboots. hunt reset hides them again.'],
-  spawn: ['Opens another shell window, up to three in all. Each one keeps its own', 'history as you move between pages.'],
+  spawn: ['Opens another shell window, up to fourteen in all. Each one keeps its own', 'history as you move between pages.'],
   exit: ['Closes a spawned shell. tty1 is the login shell and stays open.'],
   reboot: ['Restarts the machine: clears every shell and replays the boot.'],
 });

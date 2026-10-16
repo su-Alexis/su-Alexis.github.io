@@ -205,6 +205,21 @@ test('every project page is reachable by cd and open, and lists its modules', as
   }
 });
 
+test('hide is a listed command with no arguments that asks the UI to toggle the page', () => {
+  const result = execute('hide');
+  assert.equal(result.valid, true);
+  assert.deepEqual({ ...result.action }, { type: 'hide' });
+  assert.equal(result.echo, 'hide');
+  assert.match(texts(execute('help')), /hide all but tty1/);
+  assert.equal(execute('HIDE').action.type, 'hide');
+  for (const raw of ['hide everything', 'hide <img src=x>']) {
+    const rejected = execute(raw);
+    assert.equal(rejected.action, null, raw);
+    assert.doesNotMatch(texts(rejected), /everything|img/, raw);
+  }
+  assert.match(texts(execute('man hide')), /Type hide again/);
+});
+
 test('31337 is a hidden easter egg that toggles the matrix rain', () => {
   for (const raw of ['31337', ' 31337 ']) {
     const result = execute(raw);

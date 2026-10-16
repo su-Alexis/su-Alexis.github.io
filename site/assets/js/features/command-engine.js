@@ -618,6 +618,8 @@ const HANDLERS = new Map([
     }
     return { lines: [out('usage: vm [list|start <vm>|stop [vm]|unlock <vm|--all>|lock <vm|--all>]')], echo: 'vm (arguments not kept)' };
   }],
+  // Hides everything but tty1, or brings it all back (ui/terminal-ui.js, togglePageHidden).
+  ['hide', () => ({ lines: [], action: Object.freeze({ type: 'hide' }) })],
   // Starts the idle screensaver at once (ui/screensaver.js).
   ['screensaver', () => ({ lines: [], action: Object.freeze({ type: 'screensaver' }) })],
   // btop, and top/htop which open it too: a live process monitor (ui/btop.js).

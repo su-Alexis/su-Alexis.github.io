@@ -737,6 +737,30 @@ export function mountTerminal(primaryRoot) {
     if (prompt) prompt.textContent = isRoot ? '>_#' : '>_$';
   }
 
+  // "hide" (owner request, October 16, 2026): everything on the page but tty1 goes, so
+  // the visitor can take in the background, and the same command brings it all back.
+  // Purely visual and reversible: <html> gets the page-hidden class and terminal.css
+  // hides the top bar, the footer, the main content around tty1 and the spawned shells
+  // (still in the DOM, out of view and out of the tab order). The class stays on <html>
+  // through in-place navigation (core/router.js only swaps the page's own classes), so a
+  // new page arrives hidden too; a refresh or reboot clears it. tty1 is opened if it was
+  // minimized and gets the focus, so the way back is always in reach, even when hide was
+  // typed in another shell.
+  const PAGE_HIDDEN = 'page-hidden';
+  function togglePageHidden() {
+    const html = document.documentElement;
+    const hide = !html.classList.contains(PAGE_HIDDEN);
+    html.classList.toggle(PAGE_HIDDEN, hide);
+    const primary = shells.get('tty1');
+    if (hide && primary) {
+      primary.open();
+      primary.focus();
+    }
+    return hide
+      ? { kind: 'ok', text: "everything but tty1 is hidden. type 'hide' again to bring it back." }
+      : { kind: 'ok', text: 'everything is back.' };
+  }
+
   function close(id) {
     const shell = shells.get(id);
     if (!shell || id === 'tty1') return;
@@ -1364,6 +1388,13 @@ export function mountTerminal(primaryRoot) {
         if (lines.length) print(lines);
       }
       else if (action.type === 'theme') setTheme(action.id);
+      else if (action.type === 'hide') {
+        const line = togglePageHidden();
+        // Said where the visitor can read it: tty1, if hide was typed in a shell it hid.
+        const primary = shells.get('tty1');
+        if (primary && primary !== api && document.documentElement.classList.contains(PAGE_HIDDEN)) primary.print([line]);
+        else print([line]);
+      }
       else if (action.type === 'hunt-reset') resetHunt();
       else if (action.type === 'rmrf') runRmRf({ shell: api });
       else if (action.type === 'sudo') sudo(action.inner, action.via === 'su' ? 'su' : 'sudo');
@@ -1735,6 +1766,14 @@ export function mountTerminal(primaryRoot) {
       },
       // Where this window is (or, tucked away, where its bar is), for lining bars up.
       frame: () => ({ ...shellState.window }),
+      // Opens a minimized window where it was ("hide" makes sure tty1 is in view).
+      open() {
+        if (!shellState.window.minimized) return;
+        shellState.window.minimized = false;
+        shellState.window.parked = false;
+        applyWindow();
+        save();
+      },
       // The reverse of park() (owner request, October 12, 2026): back on a Layer 1 page
       // from the lab, a tty1 the lab minimized opens again with a short expand
       // (terminal.css, console-unpark). A shell the visitor minimized stays minimized.
