@@ -788,6 +788,14 @@ function layOut(cols, rows, partCount, view) {
         // MKb<3's left and top: real connections only (see the memory and companion).
         if (part.hero && (side.out[0] === -1 || side.out[1] === -1)) continue;
         for (const run of freeRuns(side)) {
+          // MKb<3's right side: buses running off the screen's right edge (it sits a few
+          // cells in from it), so its data comes in from off screen, as on the bottom
+          // (owner request, October 16, 2026).
+          if (part.hero && side.out[0] === 1) {
+            escape(part, run, side.out);
+            for (const pin of run) if (!wired.has(keyOf(pin))) stub(part, pin, side.out);
+            continue;
+          }
           const roll = random();
           if (part.kind !== 'header' && run.length >= 2 && roll < 0.3) resistors(part, run, side.out);
           else if (run.length >= 2 && roll < 0.65) escape(part, run, side.out);
@@ -879,6 +887,11 @@ function layOut(cols, rows, partCount, view) {
       cpu.companions = [...memory, ...(companion ? [companion] : [])];
       for (const chip of memory) connect(cpu, chip, false, true);
       if (companion) connect(cpu, companion, false, true); // a second bundle comes later (below)
+      // Its right side runs off the screen's edge now, before anything else can be
+      // routed across that strip (finish() would find the way blocked).
+      for (const side of cpu.sides) {
+        if (side.out[0] === 1) for (const run of freeRuns(side)) escape(cpu, run, side.out);
+      }
     }
   }
   // A repeated block: identical small chips in a grid (the rows of identical modules on
@@ -1110,23 +1123,30 @@ function layOut(cols, rows, partCount, view) {
 
 // MKb<3's wires (owner requests, October 15, 2026), by the side of the chip they leave
 // from: left always violet, top always teal, bottom always gold copper carrying only gold
-// (power) data, and the right a mix of all three, bundle by bundle. The left and top
+// (power) data, and the right a mix of all three, a few lines of each in turn. The left and top
 // lines carry data in their own colour; the gold lines carry power.
 function heroColours(hero, traces) {
   if (!hero) return;
   const pinOf = (trace) => (trace.chip === hero ? trace.points[0] : trace.points[trace.points.length - 1]);
   const sideOf = ([x, y]) => (x < hero.x0 ? 'left' : x > hero.x1 ? 'right' : y < hero.y0 ? 'top' : 'bottom');
   const FIXED = { left: 'violet', top: 'teal', bottom: 'gold' };
-  const MIX = ['violet', 'teal', 'gold'];
-  const rightBuses = new Map();
+  // The right side in runs of two to four neighbouring lines, taking the three colours in
+  // turn from a random start, so all three always show there (a single wide bus used to
+  // come out in one colour).
+  const MIX = shuffle(['violet', 'teal', 'gold']);
+  const right = traces
+    .filter((trace) => (trace.chip === hero || trace.end === hero) && sideOf(pinOf(trace)) === 'right')
+    .sort((a, b) => pinOf(a)[1] - pinOf(b)[1]);
+  const rightTone = new Map();
+  for (let i = 0, k = 0; i < right.length; k += 1) {
+    const size = right.length >= 6 ? randInt(2, 4) : 1;
+    for (const trace of right.slice(i, i + size)) rightTone.set(trace, MIX[k % MIX.length]);
+    i += size;
+  }
   for (const trace of traces) {
     if (trace.chip !== hero && trace.end !== hero) continue;
     const side = sideOf(pinOf(trace));
-    let tone = FIXED[side];
-    if (!tone) {
-      if (!rightBuses.has(trace.bus)) rightBuses.set(trace.bus, MIX[rightBuses.size % MIX.length]);
-      tone = rightBuses.get(trace.bus);
-    }
+    const tone = FIXED[side] || rightTone.get(trace);
     trace.tone = tone;
     trace.signal = tone === 'gold' ? 'power' : 'data';
     trace.heroSide = side; // for heroFlow

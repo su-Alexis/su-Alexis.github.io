@@ -278,8 +278,10 @@ test('MKb<3 is named, placed bottom-right of the view, and wired by side: violet
     assert.ok(bySide.top.every((t) => t.tone === 'teal' && t.signal === 'data'), 'top: teal');
     assert.ok(bySide.bottom.length > 0, 'its bottom side always has wires');
     assert.ok(bySide.bottom.every((t) => t.tone === 'gold' && t.signal === 'power'), 'bottom: gold, power only');
-    const rightBuses = new Set(bySide.right.map((t) => t.bus));
-    if (rightBuses.size >= 3) assert.equal(new Set(bySide.right.map((t) => t.tone)).size, 3, 'right: all three');
+    // The right: always all three colours, and its lines run in from off the screen.
+    if (bySide.right.length >= 3) assert.equal(new Set(bySide.right.map((t) => t.tone)).size, 3, 'right: all three');
+    const offScreen = bySide.right.filter((t) => t.points.some(([x]) => x >= 192)).length;
+    assert.ok(offScreen >= bySide.right.length * 0.75, `right: lines come from off screen (${offScreen} of ${bySide.right.length})`);
   }
   assert.ok(placed >= 11, `bottom-right on ${placed} of 12 boards`);
 });
