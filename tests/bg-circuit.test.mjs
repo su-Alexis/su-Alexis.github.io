@@ -365,20 +365,31 @@ test('MKb<3 is no closed loop: the parts on its left and top reach the rest of t
   assert.equal(heartIsOpen({ chips: board.chips, traces: closed }), false);
 });
 
-test('MKb<3 lights up to 42% of its dots at its busiest, and never more', () => {
-  for (const seed of [7, 3, 11]) {
+test('MKb<3 has 42% of its dots lit on average, and never more than 48%', () => {
+  let total = 0;
+  const seeds = [7, 3, 11];
+  for (const seed of seeds) {
     const board = planBoard(192, 108, 28, seed, { cols: 192, rows: 108 });
     const hero = board.chips.find((c) => c.hero);
     const lights = makeLights([hero]);
     let peak = 0;
-    for (let t = 0; t < 60 * 60; t += 1) {
+    let sum = 0;
+    let frames = 0;
+    for (let t = 0; t < 90 * 60; t += 1) {
       lights.tick(1 / 60);
       if (t % 15 === 0) lights.poke(hero);
-      peak = Math.max(peak, lights.dots.filter((d) => d.on).length / lights.dots.length);
+      const on = lights.dots.filter((d) => d.on).length / lights.dots.length;
+      peak = Math.max(peak, on);
+      if (t > 300) {
+        sum += on;
+        frames += 1;
+      }
     }
-    assert.ok(peak <= 0.42, `never over 42% (${(peak * 100).toFixed(1)}%)`);
-    assert.ok(peak >= 0.41, `works up to about 42% within a minute (${(peak * 100).toFixed(1)}%)`);
+    total += sum / frames;
+    assert.ok(peak <= 0.48, `never over 48% (${(peak * 100).toFixed(1)}%)`);
   }
+  const average = total / seeds.length;
+  assert.ok(average > 0.405 && average < 0.435, `about 42% on average (${(average * 100).toFixed(1)}%)`);
 });
 
 test('chip dots light up and go out at random, and data arriving sets a burst going', () => {

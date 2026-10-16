@@ -1199,9 +1199,11 @@ export function chipDots(part) {
 // now and then. Data arriving at a chip (poke) sets a burst going there. Each dot fades
 // in and out over LIGHT_FADE seconds. Exported for tests; it uses no DOM.
 const LIGHT_FADE = 0.09;
-// MKb<3's share of dots lit at its busiest, and never more (owner request, October 16,
-// 2026: 42, the answer to life, the universe and everything).
-const HEART_PEAK = 0.42;
+// MKb<3's dots (owner requests, October 16, 2026): 42% of them lit on average, the
+// answer to life, the universe and everything. Its rests between flashes are tuned for
+// that average (measured over two minutes on eight boards); at its busiest it goes no
+// higher than HEART_PEAK.
+const HEART_PEAK = 0.48;
 export function makeLights(parts, { visible = () => true } = {}) {
   const chips = parts.map((part) => ({ part, dots: chipDots(part) })).filter((chip) => chip.dots.length);
   const dots = [];
@@ -1216,8 +1218,8 @@ export function makeLights(parts, { visible = () => true } = {}) {
     dot.on = on;
     // Busier since October 16, 2026 (owner request: more of them switching): shorter
     // rests between flashes, about a quarter of them lit at once.
-    // MKb<3 rests less, so it works right up to its HEART_PEAK.
-    dot.next = on ? rand(0.15, 0.8) : dot.chip.part.hero ? rand(0.25, 1.35) : rand(0.4, 2.2);
+    // MKb<3 rests less: these rests give its 42% average.
+    dot.next = on ? rand(0.15, 0.8) : dot.chip.part.hero ? rand(0.26, 1.02) : rand(0.4, 2.2);
   };
   function burst(chip, size) {
     // A short run along a row of the grid, one dot after another, like a signal walking
