@@ -1173,11 +1173,16 @@ export function chipDots(part) {
 // now and then. Data arriving at a chip (poke) sets a burst going there. Each dot fades
 // in and out over LIGHT_FADE seconds. Exported for tests; it uses no DOM.
 const LIGHT_FADE = 0.09;
+// MKb<3's share of dots lit at its busiest, and never more (owner request, October 16,
+// 2026: 42, the answer to life, the universe and everything).
+const HEART_PEAK = 0.42;
 export function makeLights(parts, { visible = () => true } = {}) {
   const chips = parts.map((part) => ({ part, dots: chipDots(part) })).filter((chip) => chip.dots.length);
   const dots = [];
   for (const chip of chips) {
     chip.first = dots.length;
+    chip.peak = chip.part.hero ? Math.floor(chip.dots.length * HEART_PEAK) : chip.dots.length;
+    chip.lit = 0;
     for (const [x, y] of chip.dots) dots.push({ x, y, chip, on: false, level: 0, next: random() * 4 });
   }
   const byPart = new Map(chips.map((chip) => [chip.part, chip]));
@@ -1185,7 +1190,8 @@ export function makeLights(parts, { visible = () => true } = {}) {
     dot.on = on;
     // Busier since October 16, 2026 (owner request: more of them switching): shorter
     // rests between flashes, about a quarter of them lit at once.
-    dot.next = on ? rand(0.15, 0.8) : rand(0.4, 2.2);
+    // MKb<3 rests less, so it works right up to its HEART_PEAK.
+    dot.next = on ? rand(0.15, 0.8) : dot.chip.part.hero ? rand(0.25, 1.35) : rand(0.4, 2.2);
   };
   function burst(chip, size) {
     // A short run along a row of the grid, one dot after another, like a signal walking
@@ -1201,14 +1207,25 @@ export function makeLights(parts, { visible = () => true } = {}) {
   return {
     dots,
     tick(dt) {
+      // A dot counts as lit while it is switched on (fading in or fully bright).
+      for (const chip of chips) chip.lit = 0;
+      for (const dot of dots) if (dot.on) dot.chip.lit += 1;
       for (const dot of dots) {
         dot.next -= dt;
         if (dot.next <= 0) {
-          if (dot.burst) {
+          // A chip at its peak lights no more until some go out; this one waits a moment.
+          if (!dot.on && dot.chip.lit >= dot.chip.peak) {
+            dot.next = rand(0.05, 0.3);
+            dot.burst = false;
+          } else if (dot.burst) {
+            dot.chip.lit += 1;
             dot.burst = false;
             dot.on = true;
             dot.next = rand(0.15, 0.4);
-          } else toggle(dot, !dot.on);
+          } else {
+            if (!dot.on) dot.chip.lit += 1;
+            toggle(dot, !dot.on);
+          }
         }
         const target = dot.on ? 1 : 0;
         const step = dt / LIGHT_FADE;
