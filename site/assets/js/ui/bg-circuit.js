@@ -890,6 +890,9 @@ function layOut(cols, rows, partCount, view) {
           ? place(makeChip(cpu.x0 + along, cpu.y0 - gap2 - s, s, s, true), 3)
           : place(makeChip(cpu.x0 - gap2 - s, cpu.y0 + Math.min(along, Math.max(0, cpu.y1 - cpu.y0 - s)), s, s, true), 3);
       }
+      // The bridge is the board's I/O hub, the chipset (owner request, October 16, 2026):
+      // always named PCH, a name no other part takes (it is not in LABELS).
+      if (companion) companion.label = 'PCH';
       cpu.companions = [...memory, ...(companion ? [companion] : [])];
       for (const chip of memory) connect(cpu, chip, false, true);
       if (companion) connect(cpu, companion, false, true); // a second bundle comes later (below)

@@ -353,7 +353,8 @@ test('MKb<3 is no closed loop: the parts on its left and top reach the rest of t
       const board = planBoard(cols, rows, 28, seed, { cols, rows });
       assert.ok(heartIsOpen(board), `open at ${cols}x${rows}, seed ${seed}`);
       const hero = board.chips.find((c) => c.hero);
-      assert.ok(hero.companions.some((part) => part.kind === 'qfp'), 'it has a bridge chip');
+      assert.ok(hero.companions.some((part) => part.kind === 'qfp' && part.label === 'PCH'), 'it has its PCH');
+      assert.equal(board.chips.filter((part) => part.label === 'PCH').length, 1, 'one PCH only');
     }
   }
   // And the check itself catches a closed loop.
