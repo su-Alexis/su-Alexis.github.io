@@ -290,5 +290,5 @@ test('chip dots light up and go out at random, and data arriving sets a burst go
     for (const d of lit) seenOn.add(d);
   }
   assert.ok(seenOn.size > lights.dots.length * 0.5, 'most dots light up within 20 seconds');
-  assert.ok(peak < 0.35, `never more than about a third lit at once (${peak.toFixed(2)})`);
+  assert.ok(peak < 0.5, `never more than half lit at once (${peak.toFixed(2)})`);
 });

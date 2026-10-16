@@ -995,8 +995,8 @@ export function makeLights(parts, { visible = () => true } = {}) {
   const toggle = (dot, on) => {
     dot.on = on;
     // Busier since October 16, 2026 (owner request: more of them switching): shorter
-    // rests between flashes, about twice as many lit at once.
-    dot.next = on ? rand(0.12, 0.7) : rand(0.6, 3.2);
+    // rests between flashes, about a quarter of them lit at once.
+    dot.next = on ? rand(0.15, 0.8) : rand(0.4, 2.2);
   };
   function burst(chip, size) {
     // A short run along a row of the grid, one dot after another, like a signal walking
@@ -1025,7 +1025,7 @@ export function makeLights(parts, { visible = () => true } = {}) {
         const step = dt / LIGHT_FADE;
         dot.level = dot.level < target ? Math.min(target, dot.level + step) : Math.max(target, dot.level - step);
       }
-      for (const chip of chips) if (chip.dots.length > 20 && random() < dt * 1.2) burst(chip, 4 + Math.floor(random() * 6));
+      for (const chip of chips) if (chip.dots.length > 20 && random() < dt * 1.8) burst(chip, 4 + Math.floor(random() * 6));
     },
     poke(part) {
       const chip = byPart.get(part);
