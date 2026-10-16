@@ -50,6 +50,14 @@ const MAX_AMBIENT = 110; // pulses on stubs, resistors and escaping buses at onc
 const AMBIENT_CYCLE = [5, 7.5]; // seconds for a part to light each of those once (busier, October 16)
 const HEART_PACE = 9; // MKb<3, the heart of the board, works through its lines this many times faster
 const HEART_SHARE = 0.7; // share of new chains of data that start on MKb<3's buses
+// MKb<3's inputs (owner request, October 15, 2026): its right side feeds data in at a
+// high rate, and its bottom (power) side runs like a clock. See heroFlow.
+const FEED_GAP = 0.18; // seconds between transfers fed in on its right-side buses
+const RAIL_GAP = 0.45; // seconds between its bottom lines' beats, never varied
+const RAIL_BEATS = 2; // beats in each of those, always the same
+const RAIL_STEP = 0.12; // seconds between its quiet bottom lines' beats, in order along the side
+const RAIL_RESERVE = 14; // of the quiet lines' cap, kept for those beats so they never wait
+const FEED_PACE = 2.5; // its quiet right-side lines run this much faster again than its others
 const TURNS_PER_TICK = 4; // most of those a part starts in one frame
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
@@ -984,7 +992,18 @@ function heroColours(hero, traces) {
     }
     trace.tone = tone;
     trace.signal = tone === 'gold' ? 'power' : 'data';
+    trace.heroSide = side; // for heroFlow
   }
+}
+
+// How data moves on one of MKb<3's lines, by the side it leaves from (owner request,
+// October 15, 2026): 'feed' on the right, where data streams in at a high rate in full
+// trains; 'rail' on the bottom, where power beats in toward it on a fixed clock (same
+// gap, same beats, same speed); null for the left and top, and for every other part,
+// which keep the ordinary rules. Feeds and rails only ever run toward MKb<3.
+function heroFlow(trace) {
+  if (!trace || !trace.heroSide) return null;
+  return trace.heroSide === 'right' ? 'feed' : trace.heroSide === 'bottom' ? 'rail' : null;
 }
 
 // The little dots inside a chip, in pixels: a ball-grid processor's balls (all but those
@@ -1337,6 +1356,19 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   const log = [];
   const wires = makeWires();
   const heartLinks = links.filter((link) => (link.a && link.a.hero) || (link.b && link.b.hero));
+  // MKb<3's inputs (heroFlow): feeds stream in, the stalest first, every FEED_GAP; rails
+  // take turns in a fixed order, one every RAIL_GAP. `toHero` is the direction that
+  // reaches it (send's `forward`).
+  const flowOf = (link) => heroFlow(link.lines[0]);
+  const toHero = (link) => !(link.a && link.a.hero);
+  const feeds = heartLinks.filter((link) => flowOf(link) === 'feed');
+  const rails = heartLinks.filter((link) => flowOf(link) === 'rail');
+  let feedAt = 0;
+  let railAt = 0;
+  let railNext = 0;
+  // Data fed in on those is used up by MKb<3: it does not count toward `target` or carry
+  // on, so the inputs never crowd out the chains of data on the rest of the board.
+  const counts = (link) => !flowOf(link);
   let clock = 0;
   let active = 0; // transfers on the wire, plus parts about to act
   // When each link last carried data; never-used links start slightly apart, at random.
@@ -1364,19 +1396,23 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
   // none of the chosen lines is clear yet.
   function send(link, forward, hops, color, cause, ack = false) {
     const inward = !forward;
+    const flow = flowOf(link);
+    // MKb<3's feeds and rails only ever carry data in to it.
+    if (flow && forward !== toHero(link)) return false;
     if (link.lines.some((trace) => wires.against(trace, inward))) return false;
     // Data takes the colour of the bus it rides: cyan on teal, lavender on violet.
     if (link.lines[0] && link.lines[0].tone) color = toneColour(link.lines[0]);
-    let lines = link.lines.filter(() => random() < 0.7);
+    // A rail drives all its lines at one speed; anything else a share of them.
+    let lines = flow === 'rail' ? [...link.lines] : link.lines.filter(() => random() < 0.7);
     if (!lines.length) lines = [link.lines[Math.floor(random() * link.lines.length)]];
-    let speed = rand(170, 250);
+    let speed = flow === 'rail' ? 200 : rand(170, 250);
     lines = lines.filter((trace) => {
       const lane = wires.lane(trace, inward);
       if (lane.ok) speed = Math.min(speed, lane.speed);
       return lane.ok;
     });
-    if (!lines.length) return false;
-    const packets = burstFor(link, ack);
+    if (!lines.length || (flow === 'rail' && lines.length < link.lines.length)) return false;
+    const packets = flow === 'rail' ? RAIL_BEATS : flow === 'feed' ? MAX_TRAIN : burstFor(link, ack);
     const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color, cause, left: lines.length * packets };
     for (const trace of lines) {
       for (let k = 0; k < packets; k += 1) {
@@ -1388,7 +1424,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
     log.push(transfer);
     if (log.length > 400) log.shift();
     lastSent.set(link, clock);
-    active += 1;
+    if (counts(link)) active += 1;
     return true;
   }
 
@@ -1425,8 +1461,9 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         const { transfer } = pulse;
         transfer.left -= 1;
         if (transfer.left) continue;
-        active -= 1;
         reached.push({ part: transfer.to, color: transfer.color });
+        if (!counts(transfer.link)) continue;
+        active -= 1;
         if (transfer.hops < MAX_HOPS && random() < CARRY_ON) {
           queue.push({ at: clock + rand(0.06, 0.3), part: transfer.to, came: transfer.link, hops: transfer.hops + 1, color: transfer.color, cause: transfer });
           active += 1;
@@ -1441,6 +1478,20 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (pulses.length < maxPulses && !act(due) && (due.tries || 0) < 8) {
           queue.push({ ...due, at: clock + rand(0.12, 0.3), tries: (due.tries || 0) + 1 });
           active += 1;
+        }
+      }
+      // MKb<3's inputs, on their own clocks (heroFlow), over and above the chains below.
+      // A rail that cannot go yet (data still clearing its lane) keeps its turn, so the
+      // beat comes a frame late at most instead of skipping.
+      if (feeds.length && clock >= feedAt && pulses.length < maxPulses) {
+        const feed = stalest(feeds);
+        feedAt = feed && visible(feed) && send(feed, toHero(feed), 0, COLORS[0], null) ? clock + FEED_GAP : clock + 0.05;
+      }
+      if (rails.length && clock >= railAt && pulses.length < maxPulses) {
+        const rail = rails[railNext % rails.length];
+        if (!visible(rail) || send(rail, toHero(rail), 0, COLORS[2], null)) {
+          railNext += 1;
+          railAt = Math.max(railAt, clock - RAIL_GAP) + RAIL_GAP / rails.length;
         }
       }
       // The heart of the board: a good share of new chains start on MKb<3's own buses,
@@ -1501,13 +1552,14 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (!placed.length || pulses.length + placed.length > maxPulses) continue;
         // Kept only if it does not meet data already put back going the other way.
         if (placed.some(([line]) => wires.against(link.lines[line], !forward))) continue;
+        if (flowOf(link) && forward !== toHero(link)) continue; // feeds and rails only run in
         const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color: COLORS[colour], cause: null, left: placed.length };
         for (const [line, d] of placed) {
           const pulse = { trace: link.lines[line], d, speed, color: transfer.color, inward: !forward, transfer };
           pulses.push(pulse);
           wires.add(pulse);
         }
-        active += 1;
+        if (counts(link)) active += 1;
       }
       for (const entry of data.q.slice(0, 200)) {
         if (!Array.isArray(entry) || entry.length !== 5) continue;
@@ -1548,24 +1600,46 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   // Bundles: a trace's bus, keeping only its quiet lines, named by the first of them.
   const bundles = new Map();
   for (const trace of quiet) {
-    const lines = (trace.bus && trace.bus.length ? trace.bus : [trace]).filter((t) => index.has(t));
+    // MKb<3's rails (its bottom power lines, often one wide bus) beat one line at a time,
+    // sweeping along the side in order.
+    const own = heroFlow(trace) === 'rail' ? [trace] : trace.bus && trace.bus.length ? trace.bus : [trace];
+    const lines = own.filter((t) => index.has(t));
     const key = lines[0] || trace;
-    if (!bundles.has(key)) bundles.set(key, { part: trace.chip, lines: lines.length ? lines : [trace] });
+    if (!bundles.has(key)) bundles.set(key, { part: trace.chip, lines: lines.length ? lines : [trace], flow: heroFlow(key) });
   }
   // Each part's round: its bundles in a fixed, shuffled order, one every `step` seconds.
+  // MKb<3 has three rounds (heroFlow): its right-side feeds, its bottom rails, and the
+  // rest of its lines.
   const rounds = new Map();
   for (const bundle of bundles.values()) {
-    if (!rounds.has(bundle.part)) rounds.set(bundle.part, []);
-    rounds.get(bundle.part).push(bundle);
+    const key = bundle.flow ? `${bundle.flow}` : bundle.part;
+    if (!rounds.has(key)) rounds.set(key, []);
+    rounds.get(key).push(bundle);
   }
   let clock = 0;
-  const parts = [...rounds].map(([part, list]) => {
-    // MKb<3, the heart of the board (owner request, October 16, 2026), beats faster.
-    const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length / (part && part.hero ? HEART_PACE : 1);
-    return { part, list: shuffle(list), next: Math.floor(random() * list.length), step, at: random() * step, last: -Infinity };
+  const parts = [...rounds.values()].map((list) => {
+    const { part, flow } = list[0];
+    // The rails sweep along the side in order, one beat every RAIL_STEP, never varied.
+    if (flow === 'rail') {
+      const along = ({ lines }) => lines[0].points[0][0];
+      return { part, flow, list: [...list].sort((a, b) => along(a) - along(b)), next: 0, step: RAIL_STEP, at: 0, last: -Infinity };
+    }
+    // MKb<3, the heart of the board (owner request, October 16, 2026), beats faster, and
+    // its feeds faster still.
+    const pace = part && part.hero ? HEART_PACE * (flow === 'feed' ? FEED_PACE : 1) : 1;
+    const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length / pace;
+    return { part, flow, list: shuffle(list), next: Math.floor(random() * list.length), step, at: random() * step, last: -Infinity };
   });
-  const byPart = new Map(parts.map((p) => [p.part, p]));
+  // Data reaching a part hurries its ordinary round (not MKb<3's feeds or rails).
+  const byPart = new Map(parts.filter((p) => !p.flow).map((p) => [p.part, p]));
   let holding = null; // the part waiting for room, if any
+  // The rails keep their clock: RAIL_RESERVE of the cap is theirs alone, and the other
+  // lines share the rest, so the board filling up never holds a beat back.
+  const reserve = parts.some((p) => p.flow === 'rail') ? Math.min(RAIL_RESERVE, Math.floor(cap / 4)) : 0;
+  const onRails = () => pulses.reduce((n, pulse) => n + (pulse.rail ? 1 : 0), 0);
+  const roomFor = (bundle) => (bundle.flow === 'rail'
+    ? reserve - onRails()
+    : cap - reserve - (pulses.length - onRails()));
 
   // One turn of a part's round; false when it has to wait.
   function turn(p) {
@@ -1582,43 +1656,57 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
     // Wait for room (a bundle bigger than the cap still goes once the board is clear).
     // The first part kept waiting goes before any other, so a wide bus is never starved
     // by a stream of single lines slipping into the gaps.
-    if (holding && holding !== p) return false;
-    if (pulses.length && pulses.length + bundle.lines.length > cap) {
-      holding = p;
-      return false;
-    }
-    holding = null;
-    // Its lines busy against it both ways, or not clear yet: try again shortly.
-    if (!fire(bundle)) {
-      p.at = clock + rand(0.1, 0.25);
-      return false;
+    if (p.flow === 'rail') {
+      // A rail beat that cannot go this frame (its share full, its lane not clear yet)
+      // goes the next one instead.
+      if (roomFor(bundle) < bundle.lines.length * RAIL_BEATS || !fire(bundle)) {
+        p.at = clock + 0.01;
+        return false;
+      }
+    } else {
+      if (holding && holding !== p) return false;
+      if (pulses.length && roomFor(bundle) < bundle.lines.length) {
+        holding = p;
+        return false;
+      }
+      holding = null;
+      // Its lines busy against it both ways, or not clear yet: try again shortly.
+      if (!fire(bundle)) {
+        p.at = clock + rand(0.1, 0.25);
+        return false;
+      }
     }
     p.last = clock;
     p.next = (p.next + 1) % p.list.length;
     // A part that fell behind (a hidden tab, a long wait for room) catches up by one turn
-    // at most, so it never bursts.
-    p.at = Math.max(p.at, clock - p.step) + p.step * rand(0.8, 1.2);
+    // at most, so it never bursts. The rails keep exact time.
+    p.at = Math.max(p.at, clock - p.step) + p.step * (p.flow === 'rail' ? 1 : rand(0.8, 1.2));
     return true;
   }
 
   function fire(bundle) {
     const color = toneColour(bundle.lines[0]);
-    // MKb<3 mostly takes data in (owner request): its lines run toward it.
-    let inward = random() < (bundle.part && bundle.part.hero ? 0.75 : 0.3);
+    // MKb<3 mostly takes data in (owner request): its lines run toward it, and its feeds
+    // and rails only ever do.
+    let inward = bundle.flow ? true : random() < (bundle.part && bundle.part.hero ? 0.75 : 0.3);
     // Data already on the bundle sets its direction.
-    if (bundle.lines.some((trace) => wires.against(trace, inward))) inward = !inward;
-    let speed = rand(160, 240);
+    if (bundle.lines.some((trace) => wires.against(trace, inward))) {
+      if (bundle.flow) return false;
+      inward = !inward;
+    }
+    let speed = bundle.flow === 'rail' ? 200 : rand(160, 240);
     for (const trace of bundle.lines) {
       const lane = wires.lane(trace, inward);
       if (!lane.ok) return false;
       speed = Math.min(speed, lane.speed);
     }
     // As many beats as fit under the cap (at least one: the turn already waited for room).
-    const room = Math.floor((cap - pulses.length) / bundle.lines.length);
-    const packets = Math.max(1, Math.min(signalBeats(bundle), room));
+    const room = Math.floor(roomFor(bundle) / bundle.lines.length);
+    const beats = bundle.flow === 'rail' ? RAIL_BEATS : bundle.flow === 'feed' ? MAX_TRAIN : signalBeats(bundle);
+    const packets = Math.max(1, Math.min(beats, room));
     for (const trace of bundle.lines) {
       for (let k = 0; k < packets; k += 1) {
-        const pulse = { trace, d: -k * trainSpacing(AMBIENT_TAIL), speed, color, inward, tail: AMBIENT_TAIL };
+        const pulse = { trace, d: -k * trainSpacing(AMBIENT_TAIL), speed, color, inward, tail: AMBIENT_TAIL, rail: bundle.flow === 'rail' };
         pulses.push(pulse);
         wires.add(pulse);
       }
@@ -1676,7 +1764,9 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
         if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
         if (!int(d, -MAX_TRAIN * trainSpacing(AMBIENT_TAIL), Math.ceil(quiet[ti].length) + AMBIENT_TAIL * TAIL_GAP)) continue;
         if (wires.against(quiet[ti], inward === 1)) continue;
-        const pulse = { trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL };
+        const flow = heroFlow(quiet[ti]);
+        if (flow && inward !== 1) continue; // MKb<3's feeds and rails only run in
+        const pulse = { trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL, rail: flow === 'rail' };
         pulses.push(pulse);
         wires.add(pulse);
       }

@@ -282,6 +282,60 @@ test('MKb<3 is named, placed bottom-right of the view, and wired by side: violet
   assert.ok(placed >= 11, `bottom-right on ${placed} of 12 boards`);
 });
 
+test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady clock', () => {
+  let fedBoards = 0;
+  let railBoards = 0;
+  for (let seed = 1; seed <= 8; seed += 1) {
+    const board = planBoard(192, 108, 28, seed, { cols: 192, rows: 108 });
+    const hero = board.chips.find((c) => c.hero);
+    const links = linksOf(board);
+    const quiet = quietOf(board);
+    const traffic = makeTraffic(links, { target: 10 });
+    const ambient = makeAmbient(quiet, { cap: 110 });
+    const feeds = links.filter((l) => l.lines[0].heroSide === 'right');
+    let fedFrames = 0;
+    const railTimes = [];
+    const seen = new Set();
+    let logged = 0;
+    for (let t = 0; t < 10 * 20; t += 1) {
+      traffic.tick(0.05);
+      ambient.tick(0.05);
+      // Anything on its right or bottom lines runs toward it (inward means toward the
+      // trace's own chip).
+      for (const pulse of [...traffic.pulses, ...ambient.pulses]) {
+        const side = pulse.trace.heroSide;
+        if (side !== 'right' && side !== 'bottom') continue;
+        assert.equal(pulse.inward, pulse.trace.chip === hero, `${side}: data only runs in to MKb<3`);
+      }
+      // How much of the time its right-side buses are carrying data in.
+      const busy = new Set(traffic.pulses.map((p) => p.trace.bus));
+      fedFrames += feeds.filter((l) => busy.has(l.lines[0].bus)).length;
+      // When each beat on its bottom lines (nets or quiet lines) set off.
+      const fresh = traffic.log.slice(logged).some((transfer) => transfer.link.lines[0].heroSide === 'bottom')
+        || ambient.pulses.some((p) => p.trace.heroSide === 'bottom' && !seen.has(p));
+      for (const p of ambient.pulses) seen.add(p);
+      if (fresh) railTimes.push(t);
+      logged = traffic.log.length;
+    }
+    if (feeds.length) {
+      fedBoards += 1;
+      const share = fedFrames / (feeds.length * 200);
+      assert.ok(share > 0.8, `right: data streaming in most of the time (${share.toFixed(2)})`);
+    }
+    if (railTimes.length) {
+      railBoards += 1;
+      // A beat on a fixed clock, give or take a frame.
+      const gaps = railTimes.slice(1).map((v, i) => v - railTimes[i]);
+      assert.ok(gaps.length > 5, 'bottom: beats keep coming');
+      assert.ok(Math.max(...gaps) - Math.min(...gaps) <= 2, `bottom: steady (${gaps.join(',')})`);
+    }
+    // The quiet bottom lines keep a fixed beat too: the same number of pulses each time.
+    const quietBottom = ambient.pulses.filter((p) => p.trace.heroSide === 'bottom');
+    for (const p of quietBottom) assert.equal(p.speed, 200, 'bottom: one speed');
+  }
+  assert.ok(fedBoards > 0 && railBoards > 0, 'some boards have feeds and rails to test');
+});
+
 test('chip dots light up and go out at random, and data arriving sets a burst going', () => {
   const board = planBoard(192, 108, 28, 7, { cols: 192, rows: 108 });
   const hero = board.chips.find((c) => c.kind === 'bga');
