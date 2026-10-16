@@ -4,7 +4,7 @@
 // requests, October 14, 2026: the board has to read as a real routed circuit).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planBoard, makeTraffic, makeAmbient, makeLights, chipDots } from '../site/assets/js/ui/bg-circuit.js';
+import { planBoard, makeTraffic, makeAmbient, makeLights, chipDots, heartIsOpen } from '../site/assets/js/ui/bg-circuit.js';
 
 // Every grid point a trace passes through after its first, and every diagonal crossing.
 function walk(points) {
@@ -189,7 +189,9 @@ test('every wire on the board lights up within 16 seconds, and never too many at
       for (const { part } of traffic.tick(0.05)) ambient.poke(part);
       for (const landed of ambient.tick(0.05)) if (landed.inward) traffic.kick(landed.part);
       for (const pulse of [...traffic.pulses, ...ambient.pulses]) lit.add(pulse.trace);
-      assert.ok(ambient.pulses.length <= 110, 'the quiet lines stay under their cap');
+      // MKb<3's right-side feeds sit outside the cap, bounded by their own lines.
+      assert.ok(ambient.pulses.filter((p) => !p.feed).length <= 110, 'the quiet lines stay under their cap');
+      assert.ok(ambient.pulses.filter((p) => p.feed).length <= quiet.length * 5, 'feeds bounded by their lines');
     }
     for (const link of links) assert.ok(link.lines.some((line) => lit.has(line)), 'every net carries data');
     for (const trace of quiet) assert.ok(lit.has(trace), 'every quiet line lights up');
@@ -205,7 +207,7 @@ test('the quiet lines wait for room rather than skip a turn, and skip lines out 
   for (let t = 0; t < 60 * 20; t += 1) {
     ambient.tick(0.05);
     for (const pulse of ambient.pulses) lit.add(pulse.trace);
-    assert.ok(ambient.pulses.length <= Math.max(4, Math.max(...quiet.map((q) => q.bus.length))));
+    assert.ok(ambient.pulses.filter((p) => !p.feed).length <= Math.max(4, Math.max(...quiet.map((q) => q.bus.length))));
   }
   for (const trace of lit) assert.ok(shown.has(trace) || trace.bus.some((t) => shown.has(t)), 'only bundles in view');
   assert.ok(lit.size > 0);
@@ -292,8 +294,9 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
     const quiet = quietOf(board);
     const traffic = makeTraffic(links, { target: 10 });
     const ambient = makeAmbient(quiet, { cap: 110 });
-    const feeds = links.filter((l) => l.lines[0].heroSide === 'right');
-    let fedFrames = 0;
+    // Every one of its right-side lines, on the nets and the quiet lines alike.
+    const rightLines = [...links.flatMap((l) => l.lines), ...quiet].filter((t) => t.heroSide === 'right');
+    let litShare = 0;
     const railTimes = [];
     const seen = new Set();
     let logged = 0;
@@ -307,9 +310,10 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
         if (side !== 'right' && side !== 'bottom') continue;
         assert.equal(pulse.inward, pulse.trace.chip === hero, `${side}: data only runs in to MKb<3`);
       }
-      // How much of the time its right-side buses are carrying data in.
-      const busy = new Set(traffic.pulses.map((p) => p.trace.bus));
-      fedFrames += feeds.filter((l) => busy.has(l.lines[0].bus)).length;
+      // What share of its right-side lines carry data in, frame by frame (after a second
+      // to get going).
+      const busy = new Set([...traffic.pulses, ...ambient.pulses].map((p) => p.trace));
+      if (t >= 20 && rightLines.length) litShare += rightLines.filter((line) => busy.has(line)).length / rightLines.length / 180;
       // When each beat on its bottom lines (nets or quiet lines) set off.
       const fresh = traffic.log.slice(logged).some((transfer) => transfer.link.lines[0].heroSide === 'bottom')
         || ambient.pulses.some((p) => p.trace.heroSide === 'bottom' && !seen.has(p));
@@ -317,10 +321,9 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
       if (fresh) railTimes.push(t);
       logged = traffic.log.length;
     }
-    if (feeds.length) {
+    if (rightLines.length >= 6) {
       fedBoards += 1;
-      const share = fedFrames / (feeds.length * 200);
-      assert.ok(share > 0.8, `right: data streaming in most of the time (${share.toFixed(2)})`);
+      assert.ok(litShare > 0.45 && litShare < 0.9, `right: about two thirds lit at a time (${litShare.toFixed(2)})`);
     }
     if (railTimes.length) {
       railBoards += 1;
@@ -334,6 +337,23 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
     for (const p of quietBottom) assert.equal(p.speed, 200, 'bottom: one speed');
   }
   assert.ok(fedBoards > 0 && railBoards > 0, 'some boards have feeds and rails to test');
+});
+
+test('MKb<3 is no closed loop: the parts on its left and top reach the rest of the board', () => {
+  for (const [cols, rows] of [[192, 108], [160, 90], [256, 144], [128, 72]]) {
+    for (let seed = 1; seed <= 10; seed += 1) {
+      const board = planBoard(cols, rows, 28, seed, { cols, rows });
+      assert.ok(heartIsOpen(board), `open at ${cols}x${rows}, seed ${seed}`);
+      const hero = board.chips.find((c) => c.hero);
+      assert.ok(hero.companions.some((part) => part.kind === 'qfp'), 'it has a bridge chip');
+    }
+  }
+  // And the check itself catches a closed loop.
+  const board = planBoard(192, 108, 28, 3, { cols: 192, rows: 108 });
+  const hero = board.chips.find((c) => c.hero);
+  const ring = new Set([hero, ...hero.companions]);
+  const closed = board.traces.filter((t) => !t.end || (ring.has(t.chip) === ring.has(t.end)) || t.chip === hero || t.end === hero);
+  assert.equal(heartIsOpen({ chips: board.chips, traces: closed }), false);
 });
 
 test('chip dots light up and go out at random, and data arriving sets a burst going', () => {

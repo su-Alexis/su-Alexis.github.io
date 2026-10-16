@@ -57,7 +57,9 @@ const RAIL_GAP = 0.45; // seconds between its bottom lines' beats, never varied
 const RAIL_BEATS = 2; // beats in each of those, always the same
 const RAIL_STEP = 0.12; // seconds between its quiet bottom lines' beats, in order along the side
 const RAIL_RESERVE = 14; // of the quiet lines' cap, kept for those beats so they never wait
-const FEED_PACE = 2.5; // its quiet right-side lines run this much faster again than its others
+// Its quiet right-side lines (owner request, October 15, 2026): about two thirds of them
+// carry data at any moment, a random choice of them, the share drifting within this range.
+const FEED_SHARE = [0.55, 0.78];
 const TURNS_PER_TICK = 4; // most of those a part starts in one frame
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
@@ -570,10 +572,49 @@ function corners(points) {
 export function planBoard(cols, rows, partCount, seed = null, view = null) {
   random = seed === null ? Math.random : seeded(seed);
   try {
-    return layOut(cols, rows, partCount, view);
+    // A board whose MKb<3 neighbours could not all be wired out to the rest of it (rare:
+    // a tight spot) is laid out again, a few times at most.
+    let board = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      board = layOut(cols, rows, partCount, view);
+      if (heartIsOpen(board)) break;
+    }
+    return board;
   } finally {
     random = Math.random;
   }
+}
+
+// True when every part beside MKb<3 (its memory and bridge) reaches the rest of the
+// board without going through MKb<3: no closed loop round the processor (owner request,
+// October 15, 2026). Exported for tests; it uses no DOM.
+export function heartIsOpen({ chips, traces }) {
+  const hero = chips.find((part) => part.hero);
+  if (!hero || !hero.companions) return true;
+  const ring = new Set([hero, ...hero.companions]);
+  const links = new Map();
+  for (const trace of traces) {
+    const { chip, end } = trace;
+    if (!end || chip === hero || end === hero || chip.kind === 'passive' || end.kind === 'passive') continue;
+    for (const [from, to] of [[chip, end], [end, chip]]) {
+      if (!links.has(from)) links.set(from, new Set());
+      links.get(from).add(to);
+    }
+  }
+  return hero.companions.filter((part) => chips.includes(part)).every((part) => {
+    const seen = new Set([part]);
+    const queue = [part];
+    while (queue.length) {
+      for (const next of links.get(queue.shift()) || []) {
+        if (!ring.has(next)) return true;
+        if (!seen.has(next)) {
+          seen.add(next);
+          queue.push(next);
+        }
+      }
+    }
+    return false;
+  });
 }
 
 function layOut(cols, rows, partCount, view) {
@@ -624,22 +665,35 @@ function layOut(cols, rows, partCount, view) {
     return runs;
   }
 
-  // Wires part a to part b: their facing sides, pin to pin, as one bundle.
-  function connect(a, b) {
+  // Wires part a to part b: their facing sides, pin to pin, as one bundle. With
+  // `anySide`, a's other sides are tried in turn (best first) until a bundle is laid,
+  // even one facing away (its traces then wrap around the part); true once one is.
+  // With `aligned`, only a's pins straight across from b are used, so the bundle runs
+  // straight over and never round a neighbour (MKb<3 to its memory and bridge).
+  function connect(a, b, anySide = false, aligned = false) {
     const toward = [centre(b)[0] - centre(a)[0], centre(b)[1] - centre(a)[1]];
     const back = scale(toward, -1);
     // The side facing the other part, or failing that one at right angles to it (its
     // traces then turn the corner); never one facing away.
-    const best = (part, v) => {
+    const ranked = (part, v, wide) => {
       const unit = scale(v, 1 / (Math.hypot(v[0], v[1]) || 1));
       return part.sides
-        .filter((side) => dot(side.out, unit) > -0.2 && freeRuns(side).length)
-        .sort((s, t) => dot(t.out, unit) - dot(s.out, unit))[0];
+        .filter((side) => (wide || dot(side.out, unit) > -0.2) && freeRuns(side).length)
+        .sort((s, t) => dot(t.out, unit) - dot(s.out, unit));
     };
-    const sideA = best(a, toward);
-    const sideB = best(b, back);
-    if (!sideA || !sideB) return;
-    const runA = freeRuns(sideA).sort((r, s) => s.length - r.length)[0];
+    // anySide may also be a list of a's sides to choose from.
+    const sidesB = ranked(b, back, anySide).slice(0, anySide ? 2 : 1);
+    const sidesA = Array.isArray(anySide)
+      ? anySide.filter((side) => freeRuns(side).length)
+      : ranked(a, toward, anySide).slice(0, anySide ? 4 : 1);
+    return sidesB.some((sideB) => sidesA.some((sideA) => lay(a, b, sideA, sideB, toward, aligned)));
+  }
+
+  function lay(a, b, sideA, sideB, toward, aligned) {
+    const across = ([x, y]) => (sideA.out[0] ? y >= b.y0 && y <= b.y1 : x >= b.x0 && x <= b.x1);
+    const runsA = aligned ? freeRuns(sideA).map((run) => run.filter(across)).filter((run) => run.length) : freeRuns(sideA);
+    if (!runsA.length) return false;
+    const runA = runsA.sort((r, s) => s.length - r.length)[0];
     const runB = freeRuns(sideB).sort((r, s) => s.length - r.length)[0];
     const count = Math.min(runA.length, runB.length, randInt(3, 12));
     const pick = (run) => {
@@ -647,8 +701,8 @@ function layOut(cols, rows, partCount, view) {
       return run.slice(from, from + count);
     };
     // Paired in order across the bundle, so the traces nest instead of crossing.
-    const across = [-toward[1], toward[0]];
-    const order = (pins) => pins.sort((p, q) => dot(p, across) - dot(q, across));
+    const crosswise = [-toward[1], toward[0]];
+    const order = (pins) => pins.sort((p, q) => dot(p, crosswise) - dot(q, crosswise));
     const pinsA = order(pick(runA));
     const pinsB = order(pick(runB));
     const pairs = pinsA.map((pin, i) => [pin, pinsB[i]]);
@@ -663,6 +717,7 @@ function layOut(cols, rows, partCount, view) {
       bus.push(addTrace(points, a, b, false, bus));
     }
     traces.push(...bus);
+    return bus.length > 0;
   }
 
   // Wires each of these parts to its nearest neighbours, nearest pairs first.
@@ -775,21 +830,26 @@ function layOut(cols, rows, partCount, view) {
   }
   if (cpu) cpu.hero = true;
   if (cpu) {
-    // Memory: two to four identical chips side by side, a bus's width from the processor.
-    const count = randInt(2, 4);
-    const long = randInt(9, 13);
+    // Memory: two or three identical chips in a row along one side of the processor, a
+    // bus's width from it. Each lies with one row of pins facing MKb<3 and the other facing
+    // out across the board (owner request, October 15, 2026: no closed loop round the
+    // processor), so the memory has room for both its bus to MKb<3 and its links onward.
+    const count = randInt(2, 3);
+    const long = randInt(7, 10);
     const gap = randInt(7, 10);
-    const pitch = randInt(9, 11); // room for both rows of pins and their escapes between chips
+    const pitch = long + randInt(3, 4); // room between chips for their pins' first cells
+    const span = (count - 1) * pitch + long;
     // MKb<3 keeps its memory to its left (or else above), where the board is on screen.
     let memorySide = -1;
     let memory = [];
     for (const side of cpu.hero ? [2, 0, 1, 3] : shuffle([0, 1, 2, 3])) {
       const chips = [];
       for (let i = 0; i < count; i += 1) {
-        const horizontal = side < 2; // above or below: chips stand upright in a row
-        const x0 = horizontal ? cpu.x0 + i * pitch : side === 2 ? cpu.x0 - gap - long : cpu.x1 + gap;
-        const y0 = horizontal ? (side === 0 ? cpu.y0 - gap - long : cpu.y1 + gap) : cpu.y0 + i * pitch;
-        chips.push(horizontal ? makeChip(x0, y0, 4, long, false) : makeChip(x0, y0, long, 4, false));
+        const row = side < 2; // above or below: chips lie along the side, pins up and down
+        const along = (row ? Math.round((cpu.x0 + cpu.x1 - span) / 2) : Math.round((cpu.y0 + cpu.y1 - span) / 2)) + i * pitch;
+        const x0 = row ? along : side === 2 ? cpu.x0 - gap - 4 : cpu.x1 + gap;
+        const y0 = row ? (side === 0 ? cpu.y0 - gap - 4 : cpu.y1 + gap) : along;
+        chips.push(row ? makeChip(x0, y0, long, 4, false) : makeChip(x0, y0, 4, long, false));
       }
       if (chips.every((chip) => chip.x0 >= 3 && chip.y0 >= 3 && chip.x1 <= cols - 3 && chip.y1 <= rows - 3
         && spotIsFree(grid, chip.x0, chip.y0, chip.x1, chip.y1, 2))) {
@@ -817,11 +877,8 @@ function layOut(cols, rows, partCount, view) {
           : place(makeChip(cpu.x0 - gap2 - s, cpu.y0 + Math.min(along, Math.max(0, cpu.y1 - cpu.y0 - s)), s, s, true), 3);
       }
       cpu.companions = [...memory, ...(companion ? [companion] : [])];
-      for (const chip of memory) connect(cpu, chip);
-      if (companion) {
-        connect(cpu, companion);
-        connect(cpu, companion); // a second bundle if pins are left on the facing side
-      }
+      for (const chip of memory) connect(cpu, chip, false, true);
+      if (companion) connect(cpu, companion, false, true); // a second bundle comes later (below)
     }
   }
   // A repeated block: identical small chips in a grid (the rows of identical modules on
@@ -870,6 +927,86 @@ function layOut(cols, rows, partCount, view) {
   for (let attempt = 0; attempt < partCount * 40 && parts.length < partCount; attempt += 1) {
     const part = randomPart(grid, false);
     if (spotIsFree(grid, part.x0, part.y0, part.x1, part.y1, PART_CLEARANCE)) addPart(part);
+  }
+  // MKb<3's neighbours on its left and top are not a closed loop (owner request, October
+  // 15, 2026: it processes the whole board, logically and realistically): each one is
+  // also wired to the nearest parts beyond them, the way memory shares its control and
+  // data lines with the board and a bridge chip fans out to the peripherals. This runs
+  // before connectAll, while their pins are free; the bridge gets two.
+  if (cpu && cpu.companions) {
+    const circle = new Set([cpu, ...cpu.companions]);
+    const nearest = (part) => parts
+      .filter((other) => !circle.has(other) && other.kind !== 'passive')
+      .map((other) => ({ other, d: Math.hypot(centre(other)[0] - centre(part)[0], centre(other)[1] - centre(part)[1]) }))
+      .sort((p, q) => p.d - q.d)
+      .map(({ other }) => other);
+    // While one of them routes out, a fence of kept cells (two to four cells in front of
+    // every pin) stands round the others, so its lines cannot wrap round a neighbour and
+    // shut that one in. Only cells that were free are fenced, and they are freed after.
+    const fence = (except) => {
+      const cells = [];
+      for (const other of cpu.companions) {
+        if (other === except) continue;
+        for (const side of other.sides) {
+          for (const pin of side.pins) {
+            for (const k of [2, 3, 4]) {
+              const [x, y] = add(pin, scale(side.out, k));
+              if (grid.onBoard(x, y) && grid.get(x, y) === FREE) {
+                grid.set(x, y, KEEP);
+                cells.push([x, y]);
+              }
+            }
+          }
+        }
+      }
+      return () => {
+        for (const [x, y] of cells) if (grid.get(x, y) === KEEP) grid.set(x, y, FREE);
+      };
+    };
+    // Out from the sides facing away from MKb<3 only: the side facing it is its bus.
+    const toCpu = (part) => {
+      const v = [centre(cpu)[0] - centre(part)[0], centre(cpu)[1] - centre(part)[1]];
+      return scale(v, 1 / (Math.hypot(v[0], v[1]) || 1));
+    };
+    const outward = (part, want, tries) => {
+      let joined = 0;
+      const outer = part.sides.filter((side) => dot(side.out, toCpu(part)) < 0.5);
+      const unfence = fence(part);
+      for (const other of nearest(part).slice(0, tries)) {
+        if (joined >= want) break;
+        if (connect(part, other, outer)) joined += 1;
+      }
+      unfence();
+      return joined;
+    };
+    const memory = cpu.companions.filter((part) => part.kind !== 'qfp');
+    let memoryOut = 0;
+    for (const part of cpu.companions) {
+      const joined = outward(part, part.kind === 'qfp' ? 2 : 1, 10);
+      if (part.kind !== 'qfp') memoryOut += joined;
+    }
+    // The memory also shares a fly-by bus, chip to chip down the row, as DDR memory does,
+    // so a chip hemmed in by its neighbours still reaches the board through the row. If
+    // none of the row got out, the farthest chips try further afield.
+    for (let i = 1; i < memory.length; i += 1) connect(memory[i - 1], memory[i], true);
+    for (const part of [...memory].reverse()) {
+      if (memoryOut) break;
+      memoryOut += outward(part, 1, 24);
+    }
+    // Last, any chip still joined to nothing but MKb<3 tries everything in reach: further
+    // parts, then its neighbours in the row from any side.
+    const linked = (part, ring) => traces.some((trace) => (trace.chip === part && trace.end && !ring.has(trace.end) && trace.end.kind !== 'passive')
+      || (trace.end === part && !ring.has(trace.chip) && trace.chip.kind !== 'passive'));
+    for (const part of memory) {
+      if (linked(part, new Set([cpu])) || outward(part, 1, 24)) continue;
+      memory.some((other) => other !== part && connect(part, other, true));
+    }
+    const bridgeOut = cpu.companions.find((part) => part.kind === 'qfp');
+    if (bridgeOut && !linked(bridgeOut, circle)) outward(bridgeOut, 1, 30);
+    // A second bundle to the bridge only now, so its lines cannot wrap around the bridge
+    // and shut it in before it has its own links out.
+    const bridge = cpu.companions.find((part) => part.kind === 'qfp');
+    if (bridge) connect(cpu, bridge, false, true);
   }
   connectAll(parts.slice());
   finish(parts.slice());
@@ -1552,7 +1689,7 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (!placed.length || pulses.length + placed.length > maxPulses) continue;
         // Kept only if it does not meet data already put back going the other way.
         if (placed.some(([line]) => wires.against(link.lines[line], !forward))) continue;
-        if (flowOf(link) && forward !== toHero(link)) continue; // feeds and rails only run in
+        if (flowOf(link) && (forward === 1) !== toHero(link)) continue; // feeds and rails only run in
         const transfer = { from: forward ? link.a : link.b, to: forward ? link.b : link.a, link, hops, color: COLORS[colour], cause: null, left: placed.length };
         for (const [line, d] of placed) {
           const pulse = { trace: link.lines[line], d, speed, color: transfer.color, inward: !forward, transfer };
@@ -1601,8 +1738,9 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   const bundles = new Map();
   for (const trace of quiet) {
     // MKb<3's rails (its bottom power lines, often one wide bus) beat one line at a time,
-    // sweeping along the side in order.
-    const own = heroFlow(trace) === 'rail' ? [trace] : trace.bus && trace.bus.length ? trace.bus : [trace];
+    // sweeping along the side in order, and its feeds (right side) light line by line, a
+    // random two thirds or so of them at once (feed() below).
+    const own = heroFlow(trace) ? [trace] : trace.bus && trace.bus.length ? trace.bus : [trace];
     const lines = own.filter((t) => index.has(t));
     const key = lines[0] || trace;
     if (!bundles.has(key)) bundles.set(key, { part: trace.chip, lines: lines.length ? lines : [trace], flow: heroFlow(key) });
@@ -1611,7 +1749,12 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   // MKb<3 has three rounds (heroFlow): its right-side feeds, its bottom rails, and the
   // rest of its lines.
   const rounds = new Map();
+  const feeds = []; // MKb<3's right-side bundles: no round, see feed() below
   for (const bundle of bundles.values()) {
+    if (bundle.flow === 'feed') {
+      feeds.push(bundle);
+      continue;
+    }
     const key = bundle.flow ? `${bundle.flow}` : bundle.part;
     if (!rounds.has(key)) rounds.set(key, []);
     rounds.get(key).push(bundle);
@@ -1624,9 +1767,8 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
       const along = ({ lines }) => lines[0].points[0][0];
       return { part, flow, list: [...list].sort((a, b) => along(a) - along(b)), next: 0, step: RAIL_STEP, at: 0, last: -Infinity };
     }
-    // MKb<3, the heart of the board (owner request, October 16, 2026), beats faster, and
-    // its feeds faster still.
-    const pace = part && part.hero ? HEART_PACE * (flow === 'feed' ? FEED_PACE : 1) : 1;
+    // MKb<3, the heart of the board (owner request, October 16, 2026), beats faster.
+    const pace = part && part.hero ? HEART_PACE : 1;
     const step = rand(AMBIENT_CYCLE[0], AMBIENT_CYCLE[1]) / list.length / pace;
     return { part, flow, list: shuffle(list), next: Math.floor(random() * list.length), step, at: random() * step, last: -Infinity };
   });
@@ -1636,10 +1778,34 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
   // The rails keep their clock: RAIL_RESERVE of the cap is theirs alone, and the other
   // lines share the rest, so the board filling up never holds a beat back.
   const reserve = parts.some((p) => p.flow === 'rail') ? Math.min(RAIL_RESERVE, Math.floor(cap / 4)) : 0;
+  // The feeds sit outside the cap altogether: they are bounded by their own lines.
   const onRails = () => pulses.reduce((n, pulse) => n + (pulse.rail ? 1 : 0), 0);
-  const roomFor = (bundle) => (bundle.flow === 'rail'
-    ? reserve - onRails()
-    : cap - reserve - (pulses.length - onRails()));
+  const others = () => pulses.reduce((n, pulse) => n + (pulse.rail || pulse.feed ? 0 : 1), 0);
+  const roomFor = (bundle) => (bundle.flow === 'feed'
+    ? MAX_TRAIN * bundle.lines.length
+    : bundle.flow === 'rail' ? reserve - onRails() : cap - reserve - others());
+  let feedShare = rand(FEED_SHARE[0], FEED_SHARE[1]);
+  let feedDrift = 0;
+
+  // MKb<3's right side: keeps about feedShare of its lines in view carrying data in,
+  // topping up with idle bundles picked at random, so which lines light changes all the
+  // time. The share itself wanders every second or two.
+  function feed() {
+    if (clock >= feedDrift) {
+      feedShare = rand(FEED_SHARE[0], FEED_SHARE[1]);
+      feedDrift = clock + rand(1, 2);
+    }
+    const shown = feeds.filter((bundle) => bundle.lines.some(visible));
+    if (!shown.length) return;
+    const busy = new Set();
+    for (const pulse of pulses) if (pulse.feed) busy.add(pulse.trace);
+    const total = shown.reduce((n, bundle) => n + bundle.lines.length, 0);
+    let lit = shown.reduce((n, bundle) => n + bundle.lines.filter((trace) => busy.has(trace)).length, 0);
+    for (const bundle of shuffle(shown.filter((b) => !b.lines.some((trace) => busy.has(trace))))) {
+      if (lit >= feedShare * total) break;
+      if (fire(bundle)) lit += bundle.lines.length;
+    }
+  }
 
   // One turn of a part's round; false when it has to wait.
   function turn(p) {
@@ -1706,7 +1872,7 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
     const packets = Math.max(1, Math.min(beats, room));
     for (const trace of bundle.lines) {
       for (let k = 0; k < packets; k += 1) {
-        const pulse = { trace, d: -k * trainSpacing(AMBIENT_TAIL), speed, color, inward, tail: AMBIENT_TAIL, rail: bundle.flow === 'rail' };
+        const pulse = { trace, d: -k * trainSpacing(AMBIENT_TAIL), speed, color, inward, tail: AMBIENT_TAIL, rail: bundle.flow === 'rail', feed: bundle.flow === 'feed' };
         pulses.push(pulse);
         wires.add(pulse);
       }
@@ -1742,6 +1908,7 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
           if (!turn(p)) break;
         }
       }
+      if (feeds.length) feed();
       return landed;
     },
     // Data reached this part: it drives its next line shortly, unless it just did.
@@ -1758,15 +1925,20 @@ export function makeAmbient(quiet, { visible = () => true, cap = MAX_AMBIENT } =
     restore(data) {
       const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
       if (!Array.isArray(data)) return;
-      for (const entry of data.slice(0, cap)) {
-        if (!Array.isArray(entry) || entry.length !== 5 || pulses.length >= cap) continue;
+      // The cap, plus MKb<3's feeds, which sit outside it (at most a full train per line).
+      const feedRoom = feeds.reduce((n, bundle) => n + bundle.lines.length, 0) * MAX_TRAIN;
+      let fed = 0;
+      for (const entry of data.slice(0, cap + feedRoom)) {
+        if (!Array.isArray(entry) || entry.length !== 5) continue;
         const [ti, d, speed, colour, inward] = entry;
         if (!int(ti, 0, quiet.length - 1) || !int(speed, 100, 300) || !int(colour, 0, COLORS.length - 1) || !int(inward, 0, 1)) continue;
         if (!int(d, -MAX_TRAIN * trainSpacing(AMBIENT_TAIL), Math.ceil(quiet[ti].length) + AMBIENT_TAIL * TAIL_GAP)) continue;
         if (wires.against(quiet[ti], inward === 1)) continue;
         const flow = heroFlow(quiet[ti]);
         if (flow && inward !== 1) continue; // MKb<3's feeds and rails only run in
-        const pulse = { trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL, rail: flow === 'rail' };
+        if (flow === 'feed' ? fed >= feedRoom : pulses.length - fed >= cap) continue;
+        if (flow === 'feed') fed += 1;
+        const pulse = { trace: quiet[ti], d, speed, color: COLORS[colour], inward: inward === 1, tail: AMBIENT_TAIL, rail: flow === 'rail', feed: flow === 'feed' };
         pulses.push(pulse);
         wires.add(pulse);
       }
