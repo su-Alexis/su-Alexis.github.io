@@ -74,7 +74,7 @@ const TAIL_GAP = 4; // px between tail dots
 //   muted teal-blue #327783 circuit paths and node outlines
 //   icy cyan #67DCE8        active nodes and highlights (pulses on teal paths)
 //   deep violet #40345F     subtle purple circuit paths (about a third of the buses)
-//   muted purple #8870B5    purple node rings and accents (vias, mounting holes)
+//   muted purple #8870B5    purple node rings and accents (vias on violet paths)
 //   soft lavender #B99AFF   small purple glow effects (pulses on violet paths)
 //   warm amber #E8B45B      occasional status lights: signals on power and control lines
 // Two more (owner request, October 14, 2026: the pour and its stitching vias wanted a
@@ -83,6 +83,8 @@ const TAIL_GAP = 4; // px between tail dots
 //                           the paths and pulses (picked over indigo, plum, wine,
 //                           mulberry, mauve, ocean blue, bronze and pine green)
 //   amber, faint            its stitching vias, like gold-plated vias on a real board
+// and the mounting holes, plated gold copper like the real thing (owner request, October
+// 16, 2026; they were purple).
 const INK = Object.freeze({
   board: '22, 56, 63',
   path: '50, 119, 131',
@@ -2063,9 +2065,9 @@ export function startCircuit({ still = false, resume = false } = {}) {
           b.arc(x * CELL, y * CELL, 1.7, 0, Math.PI * 2);
           b.stroke();
         }
-        // Mounting holes.
+        // Mounting holes: plated gold copper rings and their via ring.
         for (const [hx, hy] of holes) {
-          b.strokeStyle = `rgba(${INK.ring}, 0.5)`;
+          b.strokeStyle = `rgba(${INK.gold}, 0.55)`;
           b.lineWidth = 1.2;
           b.beginPath();
           b.arc(hx * CELL, hy * CELL, CELL * 1.9, 0, Math.PI * 2);
@@ -2073,7 +2075,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
           b.beginPath();
           b.arc(hx * CELL, hy * CELL, CELL * 1.1, 0, Math.PI * 2);
           b.stroke();
-          b.fillStyle = `rgba(${INK.ring}, 0.5)`;
+          b.fillStyle = `rgba(${INK.gold}, 0.6)`;
           for (let k = 0; k < 8; k += 1) {
             const a = (k / 8) * Math.PI * 2;
             b.beginPath();
