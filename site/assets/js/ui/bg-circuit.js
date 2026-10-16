@@ -722,6 +722,8 @@ function layOut(cols, rows, partCount, view) {
   function finish(group) {
     for (const part of group) {
       for (const side of part.sides) {
+        // MKb<3's left and top: real connections only (see the memory and companion).
+        if (part.hero && (side.out[0] === -1 || side.out[1] === -1)) continue;
         for (const run of freeRuns(side)) {
           const roll = random();
           if (part.kind !== 'header' && run.length >= 2 && roll < 0.3) resistors(part, run, side.out);
@@ -770,7 +772,10 @@ function layOut(cols, rows, partCount, view) {
     const long = randInt(9, 13);
     const gap = randInt(7, 10);
     const pitch = randInt(9, 11); // room for both rows of pins and their escapes between chips
-    for (const side of shuffle([0, 1, 2, 3])) {
+    // MKb<3 keeps its memory to its left (or else above), where the board is on screen.
+    let memorySide = -1;
+    let memory = [];
+    for (const side of cpu.hero ? [2, 0, 1, 3] : shuffle([0, 1, 2, 3])) {
       const chips = [];
       for (let i = 0; i < count; i += 1) {
         const horizontal = side < 2; // above or below: chips stand upright in a row
@@ -781,7 +786,33 @@ function layOut(cols, rows, partCount, view) {
       if (chips.every((chip) => chip.x0 >= 3 && chip.y0 >= 3 && chip.x1 <= cols - 3 && chip.y1 <= rows - 3
         && spotIsFree(grid, chip.x0, chip.y0, chip.x1, chip.y1, 2))) {
         for (const chip of chips) addPart(chip);
+        memorySide = side;
+        memory = chips;
         break;
+      }
+    }
+    // MKb<3's left and top sides always lead to real parts on screen (owner request,
+    // October 15, 2026: a lane wandered off from them to nowhere): its memory on one, and
+    // on the other a companion chip (a quad package, like a hub or bridge) facing it. Both
+    // are wired to it straight away, and finish() gives those two sides no stubs or
+    // escapes, so every pin left or above it is a real connection (unused pins lose their
+    // pads). The right and bottom keep their stubs, escapes and power lines.
+    if (cpu.hero) {
+      const companionSide = memorySide === 0 ? 2 : 0;
+      let companion = null;
+      for (let tries = 0; tries < 30 && !companion; tries += 1) {
+        const s = randInt(8, 11);
+        const gap2 = randInt(8, 12);
+        const along = randInt(0, Math.max(0, cpu.x1 - cpu.x0 - s));
+        companion = companionSide === 0
+          ? place(makeChip(cpu.x0 + along, cpu.y0 - gap2 - s, s, s, true), 3)
+          : place(makeChip(cpu.x0 - gap2 - s, cpu.y0 + Math.min(along, Math.max(0, cpu.y1 - cpu.y0 - s)), s, s, true), 3);
+      }
+      cpu.companions = [...memory, ...(companion ? [companion] : [])];
+      for (const chip of memory) connect(cpu, chip);
+      if (companion) {
+        connect(cpu, companion);
+        connect(cpu, companion); // a second bundle if pins are left on the facing side
       }
     }
   }

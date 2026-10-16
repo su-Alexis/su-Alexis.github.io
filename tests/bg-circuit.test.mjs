@@ -266,6 +266,13 @@ test('MKb<3 is named, placed bottom-right of the view, and wired by side: violet
     const bySide = { left: [], top: [], bottom: [], right: [] };
     for (const t of lines) bySide[sideOf(pinOf(t))].push(t);
     assert.ok(bySide.left.every((t) => t.tone === 'violet' && t.signal === 'data'), 'left: violet');
+    // Left and top always lead to a real part on screen, never a via or off the board.
+    for (const t of [...bySide.left, ...bySide.top]) {
+      const other = t.chip === hero ? t.end : t.chip;
+      assert.ok(other && other.kind !== 'passive' && !t.via, 'left and top wires end at a chip');
+      assert.ok(other.x1 <= 192 && other.y1 <= 108 && other.x0 >= 0 && other.y0 >= 0, 'that chip is on screen');
+    }
+    assert.ok(bySide.left.length + bySide.top.length > 0, 'it is wired left or above');
     assert.ok(bySide.top.every((t) => t.tone === 'teal' && t.signal === 'data'), 'top: teal');
     assert.ok(bySide.bottom.length > 0, 'its bottom side always has wires');
     assert.ok(bySide.bottom.every((t) => t.tone === 'gold' && t.signal === 'power'), 'bottom: gold, power only');
