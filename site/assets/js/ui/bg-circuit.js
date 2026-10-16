@@ -58,8 +58,10 @@ const RAIL_BEATS = 2; // beats in each of those, always the same
 const RAIL_STEP = 0.12; // seconds between its quiet bottom lines' beats, in order along the side
 const RAIL_RESERVE = 24; // of the quiet lines' cap, kept for those beats so they never wait
 // Its quiet right-side lines (owner requests, October 15 and 16, 2026): a random choice of
-// them carry data at any moment, the share drifting within this range.
-const FEED_SHARE = [0.42, 0.77];
+// them carry data at any moment, the share drifting within this range. Lines stay lit a
+// moment while their beats finish, so the real share runs about 3 points over the target:
+// this range averages 42% (measured over a minute on ten boards).
+const FEED_SHARE = [0.21, 0.55];
 const TURNS_PER_TICK = 4; // most of those a part starts in one frame
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on

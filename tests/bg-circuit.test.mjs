@@ -331,7 +331,7 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
     }
     if (rightLines.length >= 6) {
       fedBoards += 1;
-      assert.ok(litShare > 0.35 && litShare < 0.85, `right: between about 42% and 77% lit (${litShare.toFixed(2)})`);
+      assert.ok(litShare > 0.3 && litShare < 0.55, `right: about 42% lit on average (${litShare.toFixed(2)})`);
     }
     if (railTimes.length) {
       railBoards += 1;
