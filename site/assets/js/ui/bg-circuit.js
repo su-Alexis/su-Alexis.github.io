@@ -1222,12 +1222,22 @@ export function chipDots(part) {
       }
     }
   } else if (part.kind === 'qfp') {
-    const inset = Math.round(w * 0.28);
-    for (let i = 1; i <= 3; i += 1) {
-      for (let j = 1; j <= 3; j += 1) dots.push([x + inset + ((w - inset * 2) * i) / 4, y + inset + ((h - inset * 2) * j) / 4]);
+    const { share, vias } = thermalPad(part);
+    const inset = Math.round(w * share);
+    for (let i = 1; i <= vias; i += 1) {
+      for (let j = 1; j <= vias; j += 1) dots.push([x + inset + ((w - inset * 2) * i) / (vias + 1), y + inset + ((h - inset * 2) * j) / (vias + 1)]);
     }
   }
   return dots;
+}
+
+// A quad package's thermal pad: its inset from the body edge, as a share of the body,
+// and its vias a side. A medium package (8 cells or more a side) has a bigger pad with
+// 7x7 vias (owner request, October 17, 2026: more glowing dots to match its size); a
+// small one 3x3.
+function thermalPad(part) {
+  const medium = Math.min(part.x1 - part.x0, part.y1 - part.y0) >= 8;
+  return medium ? { share: 0.22, vias: 7 } : { share: 0.28, vias: 3 };
 }
 
 // The chips at work (owner request, October 15, 2026): their dots switch on and off in
@@ -1462,14 +1472,15 @@ function drawPart(b, part) {
   b.fill();
   if (part.kind === 'qfp') {
     // The exposed thermal pad under a quad package, with its via array.
-    const inset = Math.round(w * 0.28);
+    const { share, vias } = thermalPad(part);
+    const inset = Math.round(w * share);
     b.fillStyle = `rgba(${INK.board}, 0.8)`;
     b.fillRect(x + inset, y + inset, w - inset * 2, h - inset * 2);
     b.fillStyle = `rgba(${INK.path}, 0.55)`;
-    for (let i = 1; i <= 3; i += 1) {
-      for (let j = 1; j <= 3; j += 1) {
+    for (let i = 1; i <= vias; i += 1) {
+      for (let j = 1; j <= vias; j += 1) {
         b.beginPath();
-        b.arc(x + inset + ((w - inset * 2) * i) / 4, y + inset + ((h - inset * 2) * j) / 4, 1.3, 0, Math.PI * 2);
+        b.arc(x + inset + ((w - inset * 2) * i) / (vias + 1), y + inset + ((h - inset * 2) * j) / (vias + 1), 1.3, 0, Math.PI * 2);
         b.fill();
       }
     }
@@ -2353,7 +2364,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
             if (part.kind !== 'qfp' || part.x0 * CELL > width || part.y0 * CELL > height) return;
             const pulse = 0.5 + 0.5 * Math.sin((performance.now() / 1000) * ((Math.PI * 2) / 2.6) + i * 1.7);
             const [px, py, pw, ph] = outline(part);
-            const inset = Math.round(pw * 0.28);
+            const inset = Math.round(pw * thermalPad(part).share);
             ctx.shadowColor = `rgba(${INK.gold}, ${(0.6 * pulse).toFixed(3)})`;
             ctx.shadowBlur = 2 + 5 * pulse;
             ctx.strokeStyle = `rgba(255, 214, 140, ${(0.1 + 0.5 * pulse).toFixed(3)})`;

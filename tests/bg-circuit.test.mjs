@@ -414,6 +414,12 @@ test('chip dots light up and go out at random, and data arriving sets a burst go
   const board = planBoard(192, 108, 28, 7, { cols: 192, rows: 108 });
   const hero = board.chips.find((c) => c.kind === 'bga');
   assert.ok(chipDots(hero).length > 100, 'the processor has its ball grid');
+  // Quad packages: 7x7 thermal vias on a medium one (8+ cells a side), 3x3 on a small one.
+  for (const part of board.chips.filter((c) => c.kind === 'qfp')) {
+    const medium = Math.min(part.x1 - part.x0, part.y1 - part.y0) >= 8;
+    assert.equal(chipDots(part).length, medium ? 49 : 9, `${part.label} (${part.x1 - part.x0} cells)`);
+  }
+  assert.ok(board.chips.some((c) => c.kind === 'qfp' && c.x1 - c.x0 >= 8), 'a medium one to check');
   const lights = makeLights(board.chips);
   let peak = 0;
   let seenOn = new Set();
