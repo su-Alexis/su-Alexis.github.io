@@ -347,6 +347,24 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
   assert.ok(fedBoards > 0 && railBoards > 0, 'some boards have feeds and rails to test');
 });
 
+test('MKb<3 is always full size, in the bottom-right corner of the window, with 3 or 4 DRAM chips on its left', () => {
+  // Board planned for a 2560x1440 screen, seen through windows of these sizes (cells).
+  for (const [cols, rows] of [[192, 108], [160, 90], [137, 77], [128, 72], [102, 77], [77, 102], [256, 144]]) {
+    for (let seed = 1; seed <= 6; seed += 1) {
+      const board = planBoard(256, 144, 28, seed, { cols, rows });
+      const hero = board.chips.find((c) => c.hero);
+      const size = hero.x1 - hero.x0;
+      assert.ok(size >= 20 && size <= 22, `healthy size (${size})`);
+      const right = cols - hero.x1;
+      const bottom = rows - hero.y1;
+      assert.ok(right >= 1 && right <= 13 && bottom >= 1 && bottom <= 13, `bottom-right of a ${cols}x${rows} window (${right}, ${bottom})`);
+      const dram = hero.companions.filter((c) => c.kind === 'soic');
+      assert.ok(dram.length === 3 || dram.length === 4, `3 or 4 DRAM chips (${dram.length})`);
+      assert.ok(dram.every((c) => c.x1 < hero.x0 && c.y0 >= 0 && c.y1 <= rows), 'on its left, in the window');
+    }
+  }
+});
+
 test('MKb<3 is no closed loop: the parts on its left and top reach the rest of the board', () => {
   for (const [cols, rows] of [[192, 108], [160, 90], [256, 144], [128, 72]]) {
     for (let seed = 1; seed <= 10; seed += 1) {

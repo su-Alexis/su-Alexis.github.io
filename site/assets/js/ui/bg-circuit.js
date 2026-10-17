@@ -40,6 +40,7 @@ const CELL = 10; // grid pitch, px: trace spacing and pin pitch
 const AREA_PER_PART = 75000; // px^2 of board per main part
 const MIN_PARTS = 3;
 const MAX_PARTS = 40;
+const HERO_SIZE = [20, 22]; // MKb<3's size in cells, never smaller (owner request, October 17, 2026)
 const PART_CLEARANCE = 5; // cells between main parts, room for their traces
 const NEIGHBOURS = 4; // neighbours each part is wired to, at most
 const NET_REACH = 90; // cells: parts further apart are not wired together
@@ -590,12 +591,11 @@ export function planBoard(cols, rows, partCount, seed = null, view = null) {
 }
 
 const OPEN_REACH = 4;
-// True when every part beside MKb<3 (its memory and bridge) reaches the rest of the
-// board without going through MKb<3: no closed loop round the processor (owner request,
-// October 15, 2026). Exported for tests; it uses no DOM.
-export function heartIsOpen({ chips, traces }) {
+// The parts beside MKb<3 (its memory and bridge) that reach too little of the board
+// without going through MKb<3, each with what it does reach: { part, reached }.
+function shutIn({ chips, traces }) {
   const hero = chips.find((part) => part.hero);
-  if (!hero || !hero.companions) return true;
+  if (!hero || !hero.companions) return [];
   const ring = new Set([hero, ...hero.companions]);
   const links = new Map();
   // Logic only: resistors and power coils do not carry the board's data onward.
@@ -610,21 +610,29 @@ export function heartIsOpen({ chips, traces }) {
   }
   // Each one reaches at least OPEN_REACH other chips beyond the ring: a real network,
   // not one lone part wired back to it (owner request, October 16, 2026).
-  return hero.companions.filter((part) => chips.includes(part)).every((part) => {
+  const shut = [];
+  for (const part of hero.companions.filter((p) => chips.includes(p))) {
     const seen = new Set([part]);
     const queue = [part];
     let beyond = 0;
-    while (queue.length) {
+    while (queue.length && beyond < OPEN_REACH) {
       for (const next of links.get(queue.shift()) || []) {
         if (seen.has(next)) continue;
         seen.add(next);
         queue.push(next);
         if (!ring.has(next)) beyond += 1;
-        if (beyond >= OPEN_REACH) return true;
       }
     }
-    return false;
-  });
+    if (beyond < OPEN_REACH) shut.push({ part, reached: seen });
+  }
+  return shut;
+}
+
+// True when every part beside MKb<3 (its memory and bridge) reaches the rest of the
+// board without going through MKb<3: no closed loop round the processor (owner request,
+// October 15, 2026). Exported for tests; it uses no DOM.
+export function heartIsOpen(board) {
+  return shutIn(board).length === 0;
 }
 
 function layOut(cols, rows, partCount, view) {
@@ -832,39 +840,47 @@ function layOut(cols, rows, partCount, view) {
   const seenCols = view ? Math.min(cols, Math.max(40, view.cols)) : cols;
   const seenRows = view ? Math.min(rows, Math.max(40, view.rows)) : rows;
   let cpu = null;
+  let reachOut = null; // MKb<3's neighbours' way out to the board (set below)
   // MKb<3 sits in the bottom-right corner of the window (owner request, October 15, 2026):
   // on a desktop's home page that corner is clear of the modules and the shells, so its
   // data and its processing lights are in plain view. A few cells of jitter keep each
   // boot's board its own. Where it does not fit there (a small window), anywhere in view.
+  // Always a healthy size (owner request, October 17, 2026: it could come out small).
   for (let tries = 0; tries < 30 && !cpu; tries += 1) {
-    const n = randInt(16, 22);
+    const n = randInt(HERO_SIZE[0], HERO_SIZE[1]);
     if (n + 16 > cols || n + 16 > rows) break;
     cpu = place(makeBga(seenCols - n - between(6, 9), seenRows - n - between(6, 9), n), 6);
   }
   for (let tries = 0; tries < 40 && !cpu; tries += 1) {
-    const n = randInt(16, 22);
+    const n = randInt(HERO_SIZE[0], HERO_SIZE[1]);
     if (n + 16 > cols || n + 16 > rows) break;
     cpu = place(makeBga(between(Math.round(seenCols * 0.15), Math.round(seenCols * 0.85) - n), between(Math.round(seenRows * 0.12), Math.round(seenRows * 0.88) - n), n), 6);
   }
   if (cpu) cpu.hero = true;
   if (cpu) {
-    // Memory: two or three identical chips in a row along one side of the processor, a
-    // bus's width from it. Each lies with one row of pins facing MKb<3 and the other facing
-    // out across the board (owner request, October 15, 2026: no closed loop round the
-    // processor), so the memory has room for both its bus to MKb<3 and its links onward.
-    const count = randInt(2, 3);
-    const long = randInt(7, 10);
+    // Memory: three or four identical DRAM chips in a column along MKb<3's left side
+    // (owner requests, October 15 and 17, 2026), a bus's width from it. Each lies with one
+    // row of pins facing MKb<3 and the other facing out across the board (no closed loop
+    // round the processor), so the memory has room for both its bus to MKb<3 and its links
+    // onward. The column is centred on MKb<3 and sized to sit beside it (four chips are a
+    // little shorter than three), so every chip has pins straight across from MKb<3's,
+    // and lifted if it would run past the bottom of the window. Four that do not fit try
+    // three; only a window too narrow for either (a phone) tries the other sides.
     const gap = randInt(7, 10);
-    const pitch = long + randInt(3, 4); // room between chips for their pins' first cells
-    const span = (count - 1) * pitch + long;
-    // MKb<3 keeps its memory to its left (or else above), where the board is on screen.
     let memorySide = -1;
     let memory = [];
-    for (const side of cpu.hero ? [2, 0, 1, 3] : shuffle([0, 1, 2, 3])) {
+    const counts = randInt(0, 1) ? [4, 3] : [3];
+    for (const [side, count] of [2, 0, 1, 3].flatMap((sd) => counts.map((c) => [sd, c]))) {
+      if (memory.length) break;
+      const long = count === 4 ? 6 : 7;
+      const pitch = long + 2; // room between chips for a trace or two
+      const span = (count - 1) * pitch + long;
       const chips = [];
       for (let i = 0; i < count; i += 1) {
         const row = side < 2; // above or below: chips lie along the side, pins up and down
-        const along = (row ? Math.round((cpu.x0 + cpu.x1 - span) / 2) : Math.round((cpu.y0 + cpu.y1 - span) / 2)) + i * pitch;
+        // A column beside MKb<3 is kept above the bottom of the window and the board.
+        const lowest = Math.min(rows - 3, seenRows - 1) - span;
+        const along = (row ? Math.round((cpu.x0 + cpu.x1 - span) / 2) : Math.min(Math.round((cpu.y0 + cpu.y1 - span) / 2), lowest)) + i * pitch;
         const x0 = row ? along : side === 2 ? cpu.x0 - gap - 4 : cpu.x1 + gap;
         const y0 = row ? (side === 0 ? cpu.y0 - gap - 4 : cpu.y1 + gap) : along;
         chips.push(row ? makeChip(x0, y0, long, 4, false) : makeChip(x0, y0, 4, long, false));
@@ -994,11 +1010,12 @@ function layOut(cols, rows, partCount, view) {
       const v = [centre(cpu)[0] - centre(part)[0], centre(cpu)[1] - centre(part)[1]];
       return scale(v, 1 / (Math.hypot(v[0], v[1]) || 1));
     };
-    const outward = (part, want, tries) => {
+    // skip: parts not worth a link (already reached, in the repair below).
+    const outward = (part, want, tries, skip = null) => {
       let joined = 0;
       const outer = part.sides.filter((side) => dot(side.out, toCpu(part)) < 0.5);
       const unfence = fence(part);
-      for (const other of nearest(part).slice(0, tries)) {
+      for (const other of nearest(part).filter((o) => !skip || !skip.has(o)).slice(0, tries)) {
         if (joined >= want) break;
         if (connect(part, other, outer)) joined += 1;
       }
@@ -1033,8 +1050,25 @@ function layOut(cols, rows, partCount, view) {
     // and shut it in before it has its own links out.
     const bridge = cpu.companions.find((part) => part.kind === 'qfp');
     if (bridge) connect(cpu, bridge, false, true);
+    reachOut = outward;
   }
   connectAll(parts.slice());
+  // Once the board's own nets are in, a neighbour of MKb<3 whose links lead only into a
+  // small cluster (a connector, a lone chip) reaches further: links to parts outside what
+  // it reaches already, nearest first, until it reaches enough of the board (heartIsOpen).
+  // This repairs the layout in place, so a fresh layout (planBoard) is rarely needed.
+  if (reachOut) {
+    for (let round = 0; round < 6; round += 1) {
+      const shut = shutIn({ chips: parts, traces });
+      if (!shut.length) break;
+      const { part, reached } = shut[0];
+      if (!reachOut(part, 1, 10, reached)) {
+        // That one has no way out left: try any of the others from its group.
+        const others = cpu.companions.filter((other) => other !== part);
+        if (!others.some((other) => reachOut(other, 1, 10, reached))) break;
+      }
+    }
+  }
   finish(parts.slice());
 
   // 3: smaller chips in the gaps, each wired as it lands.
@@ -1407,6 +1441,20 @@ function drawPart(b, part) {
       const cy = py * CELL - side.out[1] * CELL * 0.5;
       const [pw, ph] = side.out[0] ? [CELL, 4] : [4, CELL];
       b.fillRect(cx - pw / 2, cy - ph / 2, pw, ph);
+    }
+    // A medium quad package (8 cells or more a side) is fine-pitch, like a real LQFP
+    // (owner request, October 17, 2026: more pins to match its size): a shorter pad
+    // between each two neighbouring pins, a no-connect pin with no trace, drawn only.
+    if (part.kind === 'qfp' && Math.min(part.x1 - part.x0, part.y1 - part.y0) >= 8) {
+      const along = side.out[0] ? 1 : 0;
+      const pins = [...side.pins].sort((p, q) => p[along] - q[along]);
+      for (let i = 1; i < pins.length; i += 1) {
+        if (pins[i][along] - pins[i - 1][along] !== 1) continue;
+        const mx = ((pins[i][0] + pins[i - 1][0]) / 2) * CELL - side.out[0] * CELL * 0.72;
+        const my = ((pins[i][1] + pins[i - 1][1]) / 2) * CELL - side.out[1] * CELL * 0.72;
+        const [nw, nh] = side.out[0] ? [CELL * 0.56, 2.4] : [2.4, CELL * 0.56];
+        b.fillRect(mx - nw / 2, my - nh / 2, nw, nh);
+      }
     }
   }
   b.beginPath();
@@ -2188,6 +2236,21 @@ export function startCircuit({ still = false, resume = false } = {}) {
       // view with both ends off it used to be counted out, so it hardly ever lit).
       const inView = (trace) => trace.minX <= width && trace.minY <= height;
 
+      // MKb<3 always sits in the bottom-right corner of the visible window (owner request,
+      // October 17, 2026: after a resize it could end up off screen, or far from the
+      // corner). Once resizing settles, a window that has left it out of its corner gets
+      // a board planned for the new window. The bottom allows extra room, so a phone's
+      // address bar sliding away while scrolling never re-plans the board.
+      const heroInCorner = (w, h) => {
+        const hero = chips.find((part) => part.hero);
+        // A window under 40 cells across or down plans MKb<3 for 40 (layOut), so there it
+        // never sits exactly in the corner; re-planning would not help.
+        if (!hero || w < 40 * CELL || h < 40 * CELL) return true;
+        const right = w - hero.x1 * CELL;
+        const bottom = h - hero.y1 * CELL;
+        return right >= CELL && right <= 14 * CELL && bottom >= CELL && bottom <= 20 * CELL;
+      };
+
       const view = {
         resize(w, h) {
           width = w;
@@ -2207,7 +2270,7 @@ export function startCircuit({ still = false, resume = false } = {}) {
             return;
           }
           const ratio = Math.min(window.devicePixelRatio || 1, 2);
-          if (w <= boardW && h <= boardH && ratio === boardRatio) return;
+          if (w <= boardW && h <= boardH && ratio === boardRatio && heroInCorner(w, h)) return;
           window.clearTimeout(rebuild);
           rebuild = window.setTimeout(() => {
             build();
