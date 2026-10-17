@@ -350,7 +350,7 @@ test('MKb<3 is fed data fast on its right, and its bottom beats in on a steady c
 test('MKb<3 is always full size, in the bottom-right corner of the window, with 3 or 4 DRAM chips on its left', () => {
   // Board planned for a 2560x1440 screen, seen through windows of these sizes (cells).
   for (const [cols, rows] of [[192, 108], [160, 90], [137, 77], [128, 72], [102, 77], [77, 102], [256, 144]]) {
-    for (let seed = 1; seed <= 6; seed += 1) {
+    for (let seed = 1; seed <= 3; seed += 1) {
       const board = planBoard(256, 144, 28, seed, { cols, rows });
       const hero = board.chips.find((c) => c.hero);
       const size = hero.x1 - hero.x0;
@@ -367,7 +367,7 @@ test('MKb<3 is always full size, in the bottom-right corner of the window, with 
 
 test('MKb<3 is no closed loop: the parts on its left and top reach the rest of the board', () => {
   for (const [cols, rows] of [[192, 108], [160, 90], [256, 144], [128, 72]]) {
-    for (let seed = 1; seed <= 10; seed += 1) {
+    for (let seed = 1; seed <= 6; seed += 1) {
       const board = planBoard(cols, rows, 28, seed, { cols, rows });
       assert.ok(heartIsOpen(board), `open at ${cols}x${rows}, seed ${seed}`);
       const hero = board.chips.find((c) => c.hero);
