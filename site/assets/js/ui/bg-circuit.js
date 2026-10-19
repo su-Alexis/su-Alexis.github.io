@@ -64,6 +64,7 @@ const RAIL_RESERVE = 24; // of the quiet lines' cap, kept for those beats so the
 // this range averages 42% (measured over a minute on ten boards).
 const FEED_SHARE = [0.21, 0.55];
 const TURNS_PER_TICK = 4; // most of those a part starts in one frame
+const NEGLECT = 8; // seconds a link in view may go without data before it starts a chain
 const MAX_HOPS = 10; // a chain of transfers ends after this many
 const REPLY_CHANCE = 0.25; // a part answers back on the bus it was reached on
 const CARRY_ON = 0.85; // chance a part passes data on once it arrives
@@ -1735,6 +1736,15 @@ export function makeTraffic(links, { target = 8, visible = () => true, maxPulses
         if (!visible(rail) || send(rail, toHero(rail), 0, COLORS[2], null)) {
           railNext += 1;
           railAt = Math.max(railAt, clock - RAIL_GAP) + RAIL_GAP / rails.length;
+        }
+      }
+      // No wire is left dark for long: a link in view that has carried nothing for
+      // NEGLECT seconds starts a chain of its own now, busy board or not (a big board's
+      // quietest link could otherwise wait its turn for most of a minute).
+      if (links.length && pulses.length < maxPulses) {
+        const idle = stalest(links);
+        if (idle && visible(idle) && clock - (lastSent.get(idle) ?? 0) > NEGLECT) {
+          if (!send(idle, true, 0, toneColour(idle.lines[0]), null)) send(idle, false, 0, toneColour(idle.lines[0]), null);
         }
       }
       // The heart of the board: a good share of new chains start on MKb<3's own buses,
