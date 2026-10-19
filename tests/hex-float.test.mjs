@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { geometry, SHAPE_KINDS } from '../site/assets/js/ui/hex-float.js';
 
-test('every hex_float shape is a whole wireframe about a unit across', () => {
+test('every hex_float shape is a whole 3D wireframe about a unit across', () => {
   assert.ok(SHAPE_KINDS.includes('hexagram') && SHAPE_KINDS.includes('star'), 'stars among them');
   assert.ok(SHAPE_KINDS.length >= 8);
   for (const kind of SHAPE_KINDS) {
@@ -18,5 +18,8 @@ test('every hex_float shape is a whole wireframe about a unit across', () => {
       used.add(a).add(b);
     }
     assert.equal(used.size, points.length, `${kind}: no loose points`);
+    // Every shape is solid 3D (owner request, October 19, 2026): nothing flat.
+    const zs = points.map((point) => point[2]);
+    assert.ok(Math.max(...zs) - Math.min(...zs) >= 0.3, `${kind} has depth`);
   }
 });

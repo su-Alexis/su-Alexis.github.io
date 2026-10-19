@@ -30,31 +30,29 @@ function pickColor() {
   return COLORS[0].rgb;
 }
 
-// The shapes (owner request, October 19, 2026: more kinds of hex, a star, more sizes, and
-// no more shapes that looked broken). Each is local-space vertices and edges, about one
-// unit across, as wireframe neon:
+// The shapes (owner requests, October 19, 2026: more kinds of hex, stars, more sizes, no
+// shapes that look broken, and every one solid 3D, nothing flat). Each is local-space
+// vertices and edges, about one unit across, as wireframe neon:
 //   prism      a hexagonal prism: two hex rings joined by uprights
-//   rings      a flat hex with a smaller one inside it, turned half a step
+//   washer     a thick hex washer: a hex with a smaller hex hole, both extruded
 //   frustum    a hex prism that narrows to a smaller top, like a hex bolt head
 //   crystal    a hex ring with a point above and below it: a quartz-like gem
-//   honeycomb  seven flat hex cells, one in the middle and six around it
+//   honeycomb  seven hex cells with depth, one in the middle and six around it
 //   nut        a hex nut: an extruded hex with a round bore through it
-//   hexagram   a six-pointed star: two triangles, the hex the theme is built on
-//   star       a five-pointed star with a little thickness
-// More, the same day ("more variations and sizes"):
 //   pyramid    a hex pyramid: a hex base rising to a point
 //   cube       a cube, which shows a hexagon when it turns corner on
-//   vortex     three nested hexes, each turned a little further: a hex spiral
-//   octagram   an eight-pointed star: two squares
-//   sparkle    a four-pointed glint, mostly tiny
-// The stars (hexagram, star, octagram, sparkle) twinkle as they drift.
-export const SHAPE_KINDS = Object.freeze(['prism', 'rings', 'frustum', 'crystal', 'honeycomb', 'nut', 'hexagram', 'star', 'pyramid', 'cube', 'vortex', 'octagram', 'sparkle']);
+//   tower      a twisted hex tower: stacked hexes, each turned a little further
+//   hexagram   a six-pointed star, stellated: every point rises to a peak front and back
+//   star       a five-pointed star, stellated the same way
+//   octagram   an eight-pointed star, stellated
+//   sparkle    a four-pointed glint with depth, mostly tiny
+// The stars twinkle as they drift.
+export const SHAPE_KINDS = Object.freeze(['prism', 'washer', 'frustum', 'crystal', 'honeycomb', 'nut', 'pyramid', 'cube', 'tower', 'hexagram', 'star', 'octagram', 'sparkle']);
 const KIND_WEIGHTS = {
-  prism: 0.09, rings: 0.06, frustum: 0.07, crystal: 0.08, honeycomb: 0.07, nut: 0.07, hexagram: 0.1,
-  star: 0.1, pyramid: 0.07, cube: 0.07, vortex: 0.07, octagram: 0.07, sparkle: 0.08,
+  prism: 0.09, washer: 0.06, frustum: 0.07, crystal: 0.08, honeycomb: 0.07, nut: 0.07, pyramid: 0.07,
+  cube: 0.07, tower: 0.07, hexagram: 0.1, star: 0.1, octagram: 0.07, sparkle: 0.08,
 };
 const STARS = new Set(['hexagram', 'star', 'octagram', 'sparkle']);
-const FLAT = new Set([...STARS, 'honeycomb', 'rings', 'vortex']);
 
 export function geometry(kind) {
   const points = [];
@@ -72,11 +70,28 @@ export function geometry(kind) {
   const join = (a, b, n) => {
     for (let k = 0; k < n; k += 1) edges.push([a + k, b + k]);
   };
+  // A ring extruded front and back, joined by uprights.
+  const slab = (n, radius, depth, twist = 0, cx = 0, cy = 0) => join(ring(n, radius, depth, twist, cx, cy), ring(n, radius, -depth, twist, cx, cy), n);
+  // A star of `tips` points, outer and inner corners in turn, with a peak in front and
+  // behind that every corner rises to: a solid, faceted star.
+  const stellated = (tips, inner, depth) => {
+    const start = points.length;
+    const n = tips * 2;
+    for (let k = 0; k < n; k += 1) {
+      const angle = (Math.PI / tips) * k - Math.PI / 2;
+      const radius = k % 2 ? inner : 1;
+      points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, 0]);
+      edges.push([start + k, start + ((k + 1) % n)]);
+    }
+    const front = points.push([0, 0, depth]) - 1;
+    const back = points.push([0, 0, -depth]) - 1;
+    for (let k = 0; k < n; k += 1) edges.push([start + k, front], [start + k, back]);
+  };
   if (kind === 'prism') {
-    join(ring(6, 1, 0.45), ring(6, 1, -0.45), 6);
-  } else if (kind === 'rings') {
-    ring(6, 1, 0);
-    ring(6, 0.55, 0, Math.PI / 6);
+    slab(6, 1, 0.45);
+  } else if (kind === 'washer') {
+    slab(6, 1, 0.22);
+    slab(6, 0.55, 0.22, Math.PI / 6);
   } else if (kind === 'frustum') {
     join(ring(6, 1, -0.3), ring(6, 0.62, 0.3), 6);
   } else if (kind === 'crystal') {
@@ -85,21 +100,17 @@ export function geometry(kind) {
     const bottom = points.push([0, 0, -0.75]) - 1;
     for (let k = 0; k < 6; k += 1) edges.push([belt + k, top], [belt + k, bottom]);
   } else if (kind === 'honeycomb') {
-    // Cells with a side of 0.34 (flat-topped), packed edge to edge.
+    // Cells with a side of 0.34, packed edge to edge, each with a little depth.
     const r = 0.34;
     const step = r * Math.sqrt(3);
-    ring(6, r, 0, 0);
+    slab(6, r, 0.16);
     for (let k = 0; k < 6; k += 1) {
       const angle = (Math.PI / 3) * k + Math.PI / 6;
-      ring(6, r, 0, 0, Math.cos(angle) * step, Math.sin(angle) * step);
+      slab(6, r, 0.16, 0, Math.cos(angle) * step, Math.sin(angle) * step);
     }
   } else if (kind === 'nut') {
-    join(ring(6, 1, 0.28), ring(6, 1, -0.28), 6);
-    join(ring(12, 0.45, 0.28), ring(12, 0.45, -0.28), 12);
-  } else if (kind === 'hexagram') {
-    ring(3, 1, 0, -Math.PI / 2);
-    ring(3, 1, 0, Math.PI / 2);
-    ring(6, 0.22, 0, 0); // a small hex at its heart
+    slab(6, 1, 0.28);
+    slab(12, 0.45, 0.28);
   } else if (kind === 'pyramid') {
     const base = ring(6, 0.95, -0.4);
     const apex = points.push([0, 0, 0.85]) - 1;
@@ -110,37 +121,21 @@ export function geometry(kind) {
     for (let a = 0; a < 8; a += 1) {
       for (const bit of [1, 2, 4]) if (!(a & bit)) edges.push([a, a | bit]);
     }
-  } else if (kind === 'vortex') {
-    ring(6, 1, 0, 0);
-    ring(6, 0.7, 0, Math.PI / 9);
-    ring(6, 0.44, 0, (Math.PI * 2) / 9);
-    ring(6, 0.22, 0, Math.PI / 3);
-  } else if (kind === 'octagram') {
-    ring(4, 1, 0, 0);
-    ring(4, 1, 0, Math.PI / 4);
-  } else if (kind === 'sparkle') {
-    const start = points.length;
-    for (let k = 0; k < 8; k += 1) {
-      const angle = (Math.PI / 4) * k - Math.PI / 2;
-      const radius = k % 2 ? 0.2 : 1;
-      points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, 0]);
-      edges.push([start + k, start + ((k + 1) % 8)]);
+  } else if (kind === 'tower') {
+    let below = -1;
+    for (let level = 0; level < 4; level += 1) {
+      const at = ring(6, 0.72, -0.6 + level * 0.4, level * (Math.PI / 12));
+      if (below >= 0) join(below, at, 6);
+      below = at;
     }
+  } else if (kind === 'hexagram') {
+    stellated(6, 0.58, 0.38);
+  } else if (kind === 'star') {
+    stellated(5, 0.42, 0.34);
+  } else if (kind === 'octagram') {
+    stellated(8, 0.62, 0.36);
   } else {
-    // Five points: outer and inner corners in turn, front and back, joined at the tips.
-    const outline = (z) => {
-      const start = points.length;
-      for (let k = 0; k < 10; k += 1) {
-        const angle = (Math.PI / 5) * k - Math.PI / 2;
-        const radius = k % 2 ? 0.42 : 1;
-        points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, z]);
-        edges.push([start + k, start + ((k + 1) % 10)]);
-      }
-      return start;
-    };
-    const front = outline(0.14);
-    const back = outline(-0.14);
-    for (let k = 0; k < 10; k += 2) edges.push([front + k, back + k]);
+    stellated(4, 0.3, 0.32); // sparkle
   }
   return { points, edges };
 }
@@ -173,7 +168,6 @@ function makeShape(width, height, anywhere) {
   const size = rand(tiers[tier][0], tiers[tier][1]);
   const radius = size * (0.6 + 0.4 * depth) * (kind === 'honeycomb' ? 1.25 : 1);
   const star = STARS.has(kind);
-  const flat = FLAT.has(kind);
   return {
     ...geometry(kind),
     kind,
@@ -186,11 +180,7 @@ function makeShape(width, height, anywhere) {
     sway: rand(0.2, 0.6),
     phase: rand(0, Math.PI * 2),
     angles: [rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2)],
-    spin: flat ? [0, 0, rand(-0.45, 0.45)] : [rand(-0.35, 0.35), rand(-0.35, 0.35), rand(-0.2, 0.2)], // radians per second
-    // Flat shapes (stars, honeycombs, rings) never tumble edge on, where they read as a
-    // sliver: they turn face on and rock back and forth up to this far (radians), at
-    // tilt[2] radians per second.
-    tilt: flat ? [rand(0.25, 0.7), rand(0.25, 0.7), rand(0.3, 0.7)] : null,
+    spin: [rand(-0.35, 0.35), rand(-0.35, 0.35), rand(-0.2, 0.2)], // radians per second
     color: pickColor(),
     twinkle: star ? rand(1.2, 2.6) : 0, // seconds per twinkle, stars only
     flicker: 0, // ms of neon flicker left
@@ -244,11 +234,6 @@ export function startHexFloat({ still = false, resume = false } = {}) {
             shape.y -= shape.rise * dt;
             shape.x += Math.sin(time / 1000 * shape.sway + shape.phase) * 6 * shape.depth * dt;
             for (let k = 0; k < 3; k += 1) shape.angles[k] += shape.spin[k] * dt;
-            if (shape.tilt) {
-              const t = (time / 1000) * shape.tilt[2] + shape.phase;
-              shape.angles[0] = shape.tilt[0] * Math.sin(t);
-              shape.angles[1] = shape.tilt[1] * Math.sin(t * 0.8 + 1.3);
-            }
             if (shape.flicker > 0) shape.flicker -= dt * 1000;
             else if (Math.random() < 0.0012) shape.flicker = rand(60, 180); // rare neon stutter
             // Gone off the top: a new shape rises from the bottom, keeping the depth order.
