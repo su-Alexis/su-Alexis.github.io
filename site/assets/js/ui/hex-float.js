@@ -3,8 +3,9 @@
 // which background is on and starts/stops this renderer.
 //
 // Decorative only. Drawn on a transparent canvas (ui/canvas-bg.js runs the loop), so the
-// page grid still shows through and modules stay readable on top. Shapes are hexagonal
-// prisms and flat double hexes, rotated in 3D with a simple perspective projection; a
+// page grid still shows through and modules stay readable on top. Shapes (geometry
+// below) are hex prisms, crystals, nuts, honeycombs and stars, rotated in 3D with a
+// gentle perspective projection; a
 // wider faint stroke under each thin line fakes the neon glow (no shadowBlur, which is
 // what made earlier effects lag).
 
@@ -29,40 +30,107 @@ function pickColor() {
   return COLORS[0].rgb;
 }
 
-// Local-space vertices and edges. prism: two hex rings joined by uprights.
-// rings: a flat hex with a smaller one inside it, rotated half a step.
-function geometry(kind) {
+// The shapes (owner request, October 19, 2026: more kinds of hex, a star, more sizes, and
+// no more shapes that looked broken). Each is local-space vertices and edges, about one
+// unit across, as wireframe neon:
+//   prism      a hexagonal prism: two hex rings joined by uprights
+//   rings      a flat hex with a smaller one inside it, turned half a step
+//   frustum    a hex prism that narrows to a smaller top, like a hex bolt head
+//   crystal    a hex ring with a point above and below it: a quartz-like gem
+//   honeycomb  seven flat hex cells, one in the middle and six around it
+//   nut        a hex nut: an extruded hex with a round bore through it
+//   hexagram   a six-pointed star: two triangles, the hex the theme is built on
+//   star       a five-pointed star with a little thickness
+// Stars (hexagram, star) twinkle as they drift.
+export const SHAPE_KINDS = Object.freeze(['prism', 'rings', 'frustum', 'crystal', 'honeycomb', 'nut', 'hexagram', 'star']);
+const KIND_WEIGHTS = { prism: 0.16, rings: 0.1, frustum: 0.11, crystal: 0.13, honeycomb: 0.1, nut: 0.1, hexagram: 0.15, star: 0.15 };
+
+export function geometry(kind) {
   const points = [];
   const edges = [];
-  const ring = (radius, z, twist) => {
+  // A closed ring of n points at radius r, height z, turned by twist; returns its first index.
+  const ring = (n, radius, z, twist = 0, cx = 0, cy = 0) => {
     const start = points.length;
-    for (let k = 0; k < 6; k += 1) {
-      const angle = (Math.PI / 3) * k + twist;
-      points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, z]);
-      edges.push([start + k, start + ((k + 1) % 6)]);
+    for (let k = 0; k < n; k += 1) {
+      const angle = ((Math.PI * 2) / n) * k + twist;
+      points.push([cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, z]);
+      edges.push([start + k, start + ((k + 1) % n)]);
     }
     return start;
   };
+  const join = (a, b, n) => {
+    for (let k = 0; k < n; k += 1) edges.push([a + k, b + k]);
+  };
   if (kind === 'prism') {
-    const top = ring(1, 0.45, 0);
-    const bottom = ring(1, -0.45, 0);
-    for (let k = 0; k < 6; k += 1) edges.push([top + k, bottom + k]);
+    join(ring(6, 1, 0.45), ring(6, 1, -0.45), 6);
+  } else if (kind === 'rings') {
+    ring(6, 1, 0);
+    ring(6, 0.55, 0, Math.PI / 6);
+  } else if (kind === 'frustum') {
+    join(ring(6, 1, -0.3), ring(6, 0.62, 0.3), 6);
+  } else if (kind === 'crystal') {
+    const belt = ring(6, 0.62, 0.1);
+    const top = points.push([0, 0, 1.05]) - 1;
+    const bottom = points.push([0, 0, -0.75]) - 1;
+    for (let k = 0; k < 6; k += 1) edges.push([belt + k, top], [belt + k, bottom]);
+  } else if (kind === 'honeycomb') {
+    // Cells with a side of 0.34 (flat-topped), packed edge to edge.
+    const r = 0.34;
+    const step = r * Math.sqrt(3);
+    ring(6, r, 0, 0);
+    for (let k = 0; k < 6; k += 1) {
+      const angle = (Math.PI / 3) * k + Math.PI / 6;
+      ring(6, r, 0, 0, Math.cos(angle) * step, Math.sin(angle) * step);
+    }
+  } else if (kind === 'nut') {
+    join(ring(6, 1, 0.28), ring(6, 1, -0.28), 6);
+    join(ring(12, 0.45, 0.28), ring(12, 0.45, -0.28), 12);
+  } else if (kind === 'hexagram') {
+    ring(3, 1, 0, -Math.PI / 2);
+    ring(3, 1, 0, Math.PI / 2);
+    ring(6, 0.22, 0, 0); // a small hex at its heart
   } else {
-    ring(1, 0, 0);
-    ring(0.55, 0, Math.PI / 6);
+    // Five points: outer and inner corners in turn, front and back, joined at the tips.
+    const outline = (z) => {
+      const start = points.length;
+      for (let k = 0; k < 10; k += 1) {
+        const angle = (Math.PI / 5) * k - Math.PI / 2;
+        const radius = k % 2 ? 0.42 : 1;
+        points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, z]);
+        edges.push([start + k, start + ((k + 1) % 10)]);
+      }
+      return start;
+    };
+    const front = outline(0.14);
+    const back = outline(-0.14);
+    for (let k = 0; k < 10; k += 2) edges.push([front + k, back + k]);
   }
   return { points, edges };
 }
 
+function pickKind() {
+  let roll = Math.random();
+  for (const kind of SHAPE_KINDS) {
+    roll -= KIND_WEIGHTS[kind];
+    if (roll <= 0) return kind;
+  }
+  return 'prism';
+}
+
 function makeShape(width, height, anywhere) {
   const depth = rand(0.35, 1); // 1 = near: bigger, brighter, faster
-  // Sizes vary a lot (owner request): mostly small and medium, now and then a big one.
-  // Depth still shrinks far shapes, but only partly, so size is not just distance.
+  // Sizes vary a lot (owner requests): specks, small and medium most of the time, now and
+  // then a big one. Depth still shrinks far shapes, but only partly, so size is not just
+  // distance. A honeycomb spreads wider, so it starts a little bigger.
+  const kind = pickKind();
   const roll = Math.random();
-  const size = roll < 0.35 ? rand(10, 30) : roll < 0.85 ? rand(30, 80) : rand(80, 150);
-  const radius = size * (0.6 + 0.4 * depth);
+  const size = roll < 0.22 ? rand(6, 14) : roll < 0.55 ? rand(14, 34) : roll < 0.88 ? rand(34, 80) : rand(80, 160);
+  const radius = size * (0.6 + 0.4 * depth) * (kind === 'honeycomb' ? 1.25 : 1);
+  const star = kind === 'hexagram' || kind === 'star';
+  const flat = star || kind === 'honeycomb' || kind === 'rings';
   return {
-    ...geometry(Math.random() < 0.6 ? 'prism' : 'rings'),
+    ...geometry(kind),
+    kind,
     depth,
     radius,
     x: rand(0, width),
@@ -72,8 +140,13 @@ function makeShape(width, height, anywhere) {
     sway: rand(0.2, 0.6),
     phase: rand(0, Math.PI * 2),
     angles: [rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2)],
-    spin: [rand(-0.35, 0.35), rand(-0.35, 0.35), rand(-0.2, 0.2)], // radians per second
+    spin: flat ? [0, 0, rand(-0.45, 0.45)] : [rand(-0.35, 0.35), rand(-0.35, 0.35), rand(-0.2, 0.2)], // radians per second
+    // Flat shapes (stars, honeycombs, rings) never tumble edge on, where they read as a
+    // sliver: they turn face on and rock back and forth up to this far (radians), at
+    // tilt[2] radians per second.
+    tilt: flat ? [rand(0.25, 0.7), rand(0.25, 0.7), rand(0.3, 0.7)] : null,
     color: pickColor(),
+    twinkle: star ? rand(1.2, 2.6) : 0, // seconds per twinkle, stars only
     flicker: 0, // ms of neon flicker left
   };
 }
@@ -92,7 +165,8 @@ function project(shape) {
     const rx = x * cc - y * sc;
     y = x * sc + y * cc;
     x = rx;
-    const perspective = 3 / (3 + z);
+    // A gentle perspective: a strong one warped big shapes until they looked broken.
+    const perspective = 6 / (6 + z);
     return [shape.x + x * shape.radius * perspective, shape.y + y * shape.radius * perspective];
   });
 }
@@ -124,6 +198,11 @@ export function startHexFloat({ still = false, resume = false } = {}) {
             shape.y -= shape.rise * dt;
             shape.x += Math.sin(time / 1000 * shape.sway + shape.phase) * 6 * shape.depth * dt;
             for (let k = 0; k < 3; k += 1) shape.angles[k] += shape.spin[k] * dt;
+            if (shape.tilt) {
+              const t = (time / 1000) * shape.tilt[2] + shape.phase;
+              shape.angles[0] = shape.tilt[0] * Math.sin(t);
+              shape.angles[1] = shape.tilt[1] * Math.sin(t * 0.8 + 1.3);
+            }
             if (shape.flicker > 0) shape.flicker -= dt * 1000;
             else if (Math.random() < 0.0012) shape.flicker = rand(60, 180); // rare neon stutter
             // Gone off the top: a new shape rises from the bottom, keeping the depth order.
@@ -134,11 +213,14 @@ export function startHexFloat({ still = false, resume = false } = {}) {
           }
         },
         draw(fade) {
+          const now = performance.now();
           context.clearRect(0, 0, width, height);
           for (const shape of shapes) {
             const points = project(shape);
             let alpha = (0.14 + 0.36 * shape.depth) * fade;
             if (shape.flicker > 0) alpha *= 0.35;
+            // Stars twinkle: a slow swell between two thirds and full brightness.
+            if (shape.twinkle) alpha *= 0.82 + 0.18 * Math.sin((now / 1000) * ((Math.PI * 2) / shape.twinkle) + shape.phase);
             context.beginPath();
             for (const [from, to] of shape.edges) {
               context.moveTo(points[from][0], points[from][1]);

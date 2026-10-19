@@ -50,7 +50,7 @@ export const BACKGROUNDS = Object.freeze([
   Object.freeze({ id: 'bubbles', description: 'translucent bubbles floating up' }),
   Object.freeze({ id: 'synthwave', description: 'a retro grid racing toward a neon sun' }),
   Object.freeze({ id: 'starfield', description: 'flying through the stars' }),
-  Object.freeze({ id: 'hex_float', description: 'neon wireframe hexagons drifting up' }),
+  Object.freeze({ id: 'hex_float', description: 'neon wireframe hexes and stars drifting up' }),
 ]);
 export const BACKGROUND_IDS = Object.freeze(BACKGROUNDS.map((background) => background.id));
 
