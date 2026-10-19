@@ -11,9 +11,9 @@
 
 import { startCanvas, rand } from './canvas-bg.js';
 
-const AREA_PER_SHAPE = 26000; // px^2 of viewport per shape
-const MIN_SHAPES = 14;
-const MAX_SHAPES = 56; // bounded work on very large screens
+const AREA_PER_SHAPE = 17000; // px^2 of viewport per shape (busier, owner request, October 19, 2026)
+const MIN_SHAPES = 20;
+const MAX_SHAPES = 84; // bounded work on very large screens
 // Neon palette: the site's cyan accent, a hot magenta, and the amber brand color.
 const COLORS = [
   { rgb: '79, 209, 224', weight: 0.55 },
