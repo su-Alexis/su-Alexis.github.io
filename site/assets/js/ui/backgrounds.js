@@ -2,7 +2,7 @@
 // backgrounds in data/commands.js (BACKGROUNDS). Used by ui/terminal-ui.js on every page.
 //
 // One background is selected at a time. "default" is the circuit board (bg-circuit.js;
-// owner decision, October 13, 2026) and hides the page grid; "grid" draws nothing (the
+// owner decision, October 13, 2026) and hides the page grid, as hex_float does; "grid" draws nothing (the
 // grid in layout.css); the others each run a scene on ui/canvas-bg.js (hex-float.js,
 // bg-spheres.js for bubbles, bg-synthwave.js, bg-starfield.js) over the grid. The hidden 31337 matrix rain sits on top of all of
 // them: while it is on, the selected background is paused (the rain covers the page and
@@ -44,8 +44,9 @@ function render({ reducedMotion = false, resume = false } = {}) {
   if (start && !matrixActive()) renderer = start({ still: reducedMotion, resume });
   // Lifts .site above the canvas (layout.css), as .matrix-on does for the rain.
   document.documentElement.classList.toggle('bg-on', renderer !== null);
-  // The default scene replaces the grid; the others draw over it.
-  document.documentElement.classList.toggle('bg-no-grid', renderer !== null && selected === 'default');
+  // The default scene and hex_float (owner request, October 19, 2026) replace the grid;
+  // the others draw over it.
+  document.documentElement.classList.toggle('bg-no-grid', renderer !== null && (selected === 'default' || selected === 'hex_float'));
 }
 
 export function currentBackground() {

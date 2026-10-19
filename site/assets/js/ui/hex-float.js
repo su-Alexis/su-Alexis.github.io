@@ -11,9 +11,9 @@
 
 import { startCanvas, rand } from './canvas-bg.js';
 
-const AREA_PER_SHAPE = 45000; // px^2 of viewport per shape
-const MIN_SHAPES = 10;
-const MAX_SHAPES = 34; // bounded work on very large screens
+const AREA_PER_SHAPE = 32000; // px^2 of viewport per shape
+const MIN_SHAPES = 12;
+const MAX_SHAPES = 46; // bounded work on very large screens
 // Neon palette: the site's cyan accent, a hot magenta, and the amber brand color.
 const COLORS = [
   { rgb: '79, 209, 224', weight: 0.55 },
@@ -41,9 +41,20 @@ function pickColor() {
 //   nut        a hex nut: an extruded hex with a round bore through it
 //   hexagram   a six-pointed star: two triangles, the hex the theme is built on
 //   star       a five-pointed star with a little thickness
-// Stars (hexagram, star) twinkle as they drift.
-export const SHAPE_KINDS = Object.freeze(['prism', 'rings', 'frustum', 'crystal', 'honeycomb', 'nut', 'hexagram', 'star']);
-const KIND_WEIGHTS = { prism: 0.16, rings: 0.1, frustum: 0.11, crystal: 0.13, honeycomb: 0.1, nut: 0.1, hexagram: 0.15, star: 0.15 };
+// More, the same day ("more variations and sizes"):
+//   pyramid    a hex pyramid: a hex base rising to a point
+//   cube       a cube, which shows a hexagon when it turns corner on
+//   vortex     three nested hexes, each turned a little further: a hex spiral
+//   octagram   an eight-pointed star: two squares
+//   sparkle    a four-pointed glint, mostly tiny
+// The stars (hexagram, star, octagram, sparkle) twinkle as they drift.
+export const SHAPE_KINDS = Object.freeze(['prism', 'rings', 'frustum', 'crystal', 'honeycomb', 'nut', 'hexagram', 'star', 'pyramid', 'cube', 'vortex', 'octagram', 'sparkle']);
+const KIND_WEIGHTS = {
+  prism: 0.09, rings: 0.06, frustum: 0.07, crystal: 0.08, honeycomb: 0.07, nut: 0.07, hexagram: 0.1,
+  star: 0.1, pyramid: 0.07, cube: 0.07, vortex: 0.07, octagram: 0.07, sparkle: 0.08,
+};
+const STARS = new Set(['hexagram', 'star', 'octagram', 'sparkle']);
+const FLAT = new Set([...STARS, 'honeycomb', 'rings', 'vortex']);
 
 export function geometry(kind) {
   const points = [];
@@ -89,6 +100,32 @@ export function geometry(kind) {
     ring(3, 1, 0, -Math.PI / 2);
     ring(3, 1, 0, Math.PI / 2);
     ring(6, 0.22, 0, 0); // a small hex at its heart
+  } else if (kind === 'pyramid') {
+    const base = ring(6, 0.95, -0.4);
+    const apex = points.push([0, 0, 0.85]) - 1;
+    for (let k = 0; k < 6; k += 1) edges.push([base + k, apex]);
+  } else if (kind === 'cube') {
+    const c = 0.58; // corners at a unit's distance from the middle
+    for (const x of [-c, c]) for (const y of [-c, c]) for (const z of [-c, c]) points.push([x, y, z]);
+    for (let a = 0; a < 8; a += 1) {
+      for (const bit of [1, 2, 4]) if (!(a & bit)) edges.push([a, a | bit]);
+    }
+  } else if (kind === 'vortex') {
+    ring(6, 1, 0, 0);
+    ring(6, 0.7, 0, Math.PI / 9);
+    ring(6, 0.44, 0, (Math.PI * 2) / 9);
+    ring(6, 0.22, 0, Math.PI / 3);
+  } else if (kind === 'octagram') {
+    ring(4, 1, 0, 0);
+    ring(4, 1, 0, Math.PI / 4);
+  } else if (kind === 'sparkle') {
+    const start = points.length;
+    for (let k = 0; k < 8; k += 1) {
+      const angle = (Math.PI / 4) * k - Math.PI / 2;
+      const radius = k % 2 ? 0.2 : 1;
+      points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, 0]);
+      edges.push([start + k, start + ((k + 1) % 8)]);
+    }
   } else {
     // Five points: outer and inner corners in turn, front and back, joined at the tips.
     const outline = (z) => {
@@ -124,10 +161,19 @@ function makeShape(width, height, anywhere) {
   // distance. A honeycomb spreads wider, so it starts a little bigger.
   const kind = pickKind();
   const roll = Math.random();
-  const size = roll < 0.22 ? rand(6, 14) : roll < 0.55 ? rand(14, 34) : roll < 0.88 ? rand(34, 80) : rand(80, 160);
+  // Six tiers, from glints of dust to a rare giant; sparkles stay small.
+  const tiers = [[3, 7], [7, 14], [14, 30], [30, 60], [60, 110], [110, 240]];
+  const odds = kind === 'sparkle' ? [0.45, 0.35, 0.15, 0.05, 0, 0] : [0.1, 0.18, 0.27, 0.25, 0.15, 0.05];
+  let pick = Math.random();
+  let tier = 0;
+  while (tier < odds.length - 1 && pick > odds[tier]) {
+    pick -= odds[tier];
+    tier += 1;
+  }
+  const size = rand(tiers[tier][0], tiers[tier][1]);
   const radius = size * (0.6 + 0.4 * depth) * (kind === 'honeycomb' ? 1.25 : 1);
-  const star = kind === 'hexagram' || kind === 'star';
-  const flat = star || kind === 'honeycomb' || kind === 'rings';
+  const star = STARS.has(kind);
+  const flat = FLAT.has(kind);
   return {
     ...geometry(kind),
     kind,
