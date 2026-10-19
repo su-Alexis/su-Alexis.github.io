@@ -7,7 +7,7 @@
 // below) are hex prisms, crystals, nuts, honeycombs and stars, rotated in 3D with a
 // gentle perspective projection; a
 // wider faint stroke under each thin line fakes the neon glow (no shadowBlur, which is
-// what made earlier effects lag).
+// what made earlier effects lag); a shape that swells with light gets a wider halo too.
 
 import { startCanvas, rand } from './canvas-bg.js';
 
@@ -53,7 +53,7 @@ function pickColor() {
 //   gear       an eight-toothed gear with a hex hub
 //   diamond    a cut gem: a flat table, a wide girdle and a point below
 //   torus      a hex donut: hex sections swept round a ring
-// The stars twinkle as they drift.
+// The stars glow softly brighter and back as they drift; any shape may swell with light.
 export const SHAPE_KINDS = Object.freeze(['prism', 'washer', 'frustum', 'crystal', 'honeycomb', 'nut', 'pyramid', 'cube', 'tower', 'hexagram', 'star', 'octagram', 'sparkle', 'tetra', 'octa', 'icosa', 'gear', 'diamond', 'torus']);
 // How often each turns up, relative to the others (stars a little more).
 const KIND_WEIGHTS = {
@@ -277,8 +277,9 @@ function makeShape(width, height, anywhere) {
     angles: [rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2)],
     spin: [rand(-0.35, 0.35), rand(-0.35, 0.35), rand(-0.2, 0.2)], // radians per second
     color: pickColor(),
-    twinkle: star ? rand(1.2, 2.6) : 0, // seconds per twinkle, stars only
-    flicker: 0, // ms of neon flicker left
+    twinkle: star ? rand(2.2, 4) : 0, // seconds per slow glow, stars only
+    glow: 0, // seconds left of a glow swell, and its length (glowFor)
+    glowFor: 1,
   };
 }
 
@@ -332,8 +333,13 @@ export function startHexFloat({ still = false, resume = false } = {}) {
             shape.x += shape.vx * dt - (shape.vy / speed) * drift;
             shape.y += shape.vy * dt + (shape.vx / speed) * drift;
             for (let k = 0; k < 3; k += 1) shape.angles[k] += shape.spin[k] * dt;
-            if (shape.flicker > 0) shape.flicker -= dt * 1000;
-            else if (Math.random() < 0.0012) shape.flicker = rand(60, 180); // rare neon stutter
+            // Now and then a shape swells with light and settles again (owner request,
+            // October 19, 2026: a glow instead of the old neon flicker, which dimmed it).
+            if (shape.glow > 0) shape.glow = Math.max(0, shape.glow - dt);
+            else if (Math.random() < 0.0015) {
+              shape.glowFor = rand(0.9, 1.8);
+              shape.glow = shape.glowFor;
+            }
             // Gone off any edge, heading away: a new one comes in from off screen, keeping
             // the depth order.
             const margin = shape.radius * 2;
@@ -350,24 +356,31 @@ export function startHexFloat({ still = false, resume = false } = {}) {
           context.clearRect(0, 0, width, height);
           for (const shape of shapes) {
             const points = project(shape);
-            let alpha = (0.14 + 0.36 * shape.depth) * fade;
-            if (shape.flicker > 0) alpha *= 0.35;
-            // Stars twinkle: a slow swell between two thirds and full brightness.
-            if (shape.twinkle) alpha *= 0.82 + 0.18 * Math.sin((now / 1000) * ((Math.PI * 2) / shape.twinkle) + shape.phase);
+            const alpha = (0.14 + 0.36 * shape.depth) * fade;
+            // How much it glows, 0 to 1: a swell's rise and fall, and for stars a slow
+            // twinkle of their own. Glow only ever adds light; nothing dims or blinks.
+            let glow = shape.glow > 0 ? Math.sin(Math.PI * (1 - shape.glow / shape.glowFor)) : 0;
+            if (shape.twinkle) glow = Math.max(glow, 0.35 + 0.35 * Math.sin((now / 1000) * ((Math.PI * 2) / shape.twinkle) + shape.phase));
             context.beginPath();
             for (const [from, to] of shape.edges) {
               context.moveTo(points[from][0], points[from][1]);
               context.lineTo(points[to][0], points[to][1]);
             }
-            // Glow underlay, then the crisp wire.
-            context.strokeStyle = `rgba(${shape.color}, ${(alpha * 0.22).toFixed(3)})`;
-            context.lineWidth = 4;
+            // A soft outer halo while it glows, the glow underlay, then the crisp wire, all
+            // brighter and wider as the glow rises.
+            if (glow > 0.05) {
+              context.strokeStyle = `rgba(${shape.color}, ${(alpha * 0.1 * glow).toFixed(3)})`;
+              context.lineWidth = 10 + 8 * glow;
+              context.stroke();
+            }
+            context.strokeStyle = `rgba(${shape.color}, ${Math.min(1, alpha * (0.22 + 0.4 * glow)).toFixed(3)})`;
+            context.lineWidth = 4 + 3 * glow;
             context.stroke();
-            context.strokeStyle = `rgba(${shape.color}, ${alpha.toFixed(3)})`;
+            context.strokeStyle = `rgba(${shape.color}, ${Math.min(1, alpha * (1 + 0.5 * glow)).toFixed(3)})`;
             context.lineWidth = 1.1;
             context.stroke();
             // Vertex nodes.
-            context.fillStyle = `rgba(${shape.color}, ${Math.min(1, alpha * 1.6).toFixed(3)})`;
+            context.fillStyle = `rgba(${shape.color}, ${Math.min(1, alpha * (1.6 + glow)).toFixed(3)})`;
             for (const [x, y] of points) context.fillRect(x - 1, y - 1, 2, 2);
           }
         },
