@@ -1,5 +1,5 @@
 // "hex_float" background (owner request; the default for part of October 13, 2026, until
-// the circuit board took over): neon wireframe hexagons drifting up behind the page, cyberpunk style. Chosen with the "background" command; ui/backgrounds.js owns
+// the circuit board took over): neon wireframe hexes, stars and solids drifting across behind the page, cyberpunk style. Chosen with the "background" command; ui/backgrounds.js owns
 // which background is on and starts/stops this renderer.
 //
 // Decorative only. Drawn on a transparent canvas (ui/canvas-bg.js runs the loop), so the
@@ -11,9 +11,9 @@
 
 import { startCanvas, rand } from './canvas-bg.js';
 
-const AREA_PER_SHAPE = 32000; // px^2 of viewport per shape
-const MIN_SHAPES = 12;
-const MAX_SHAPES = 46; // bounded work on very large screens
+const AREA_PER_SHAPE = 26000; // px^2 of viewport per shape
+const MIN_SHAPES = 14;
+const MAX_SHAPES = 56; // bounded work on very large screens
 // Neon palette: the site's cyan accent, a hot magenta, and the amber brand color.
 const COLORS = [
   { rgb: '79, 209, 224', weight: 0.55 },
@@ -46,12 +46,21 @@ function pickColor() {
 //   star       a five-pointed star, stellated the same way
 //   octagram   an eight-pointed star, stellated
 //   sparkle    a four-pointed glint with depth, mostly tiny
+// And more (owner request, October 19, 2026: "more objects"):
+//   tetra      a tetrahedron
+//   octa       an octahedron
+//   icosa      an icosahedron, a twenty-faced geodesic ball
+//   gear       an eight-toothed gear with a hex hub
+//   diamond    a cut gem: a flat table, a wide girdle and a point below
+//   torus      a hex donut: hex sections swept round a ring
 // The stars twinkle as they drift.
-export const SHAPE_KINDS = Object.freeze(['prism', 'washer', 'frustum', 'crystal', 'honeycomb', 'nut', 'pyramid', 'cube', 'tower', 'hexagram', 'star', 'octagram', 'sparkle']);
+export const SHAPE_KINDS = Object.freeze(['prism', 'washer', 'frustum', 'crystal', 'honeycomb', 'nut', 'pyramid', 'cube', 'tower', 'hexagram', 'star', 'octagram', 'sparkle', 'tetra', 'octa', 'icosa', 'gear', 'diamond', 'torus']);
+// How often each turns up, relative to the others (stars a little more).
 const KIND_WEIGHTS = {
-  prism: 0.09, washer: 0.06, frustum: 0.07, crystal: 0.08, honeycomb: 0.07, nut: 0.07, pyramid: 0.07,
-  cube: 0.07, tower: 0.07, hexagram: 0.1, star: 0.1, octagram: 0.07, sparkle: 0.08,
+  prism: 6, washer: 4, frustum: 4, crystal: 5, honeycomb: 4, nut: 4, pyramid: 4, cube: 5, tower: 4,
+  hexagram: 7, star: 7, octagram: 5, sparkle: 6, tetra: 4, octa: 5, icosa: 4, gear: 4, diamond: 5, torus: 4,
 };
+const WEIGHT_TOTAL = Object.values(KIND_WEIGHTS).reduce((sum, w) => sum + w, 0);
 const STARS = new Set(['hexagram', 'star', 'octagram', 'sparkle']);
 
 export function geometry(kind) {
@@ -134,19 +143,108 @@ export function geometry(kind) {
     stellated(5, 0.42, 0.34);
   } else if (kind === 'octagram') {
     stellated(8, 0.62, 0.36);
+  } else if (kind === 'sparkle') {
+    stellated(4, 0.3, 0.32);
+  } else if (kind === 'tetra') {
+    for (const [x, y, z] of [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]]) points.push([x * 0.58, y * 0.58, z * 0.58]);
+    for (let a = 0; a < 4; a += 1) for (let b = a + 1; b < 4; b += 1) edges.push([a, b]);
+  } else if (kind === 'octa') {
+    for (const axis of [0, 1, 2]) {
+      for (const sign of [1, -1]) {
+        const point = [0, 0, 0];
+        point[axis] = sign * 0.95;
+        points.push(point);
+      }
+    }
+    for (let a = 0; a < 6; a += 1) for (let b = a + 1; b < 6; b += 1) if (Math.floor(a / 2) !== Math.floor(b / 2)) edges.push([a, b]);
+  } else if (kind === 'icosa') {
+    // The twelve corners (0, 1, phi) with every sign and turn, scaled to a unit;
+    // neighbours are the pairs two units apart before scaling.
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const raw = [];
+    for (const a of [1, -1]) {
+      for (const b of [phi, -phi]) raw.push([0, a, b], [a, b, 0], [b, 0, a]);
+    }
+    const scale = 1 / Math.hypot(1, phi);
+    for (const [x, y, z] of raw) points.push([x * scale, y * scale, z * scale]);
+    for (let a = 0; a < 12; a += 1) {
+      for (let b = a + 1; b < 12; b += 1) {
+        if (Math.abs(Math.hypot(raw[a][0] - raw[b][0], raw[a][1] - raw[b][1], raw[a][2] - raw[b][2]) - 2) < 0.01) edges.push([a, b]);
+      }
+    }
+  } else if (kind === 'gear') {
+    // Eight teeth: each a rise to the tip and back down, front and back, joined through.
+    const outline = (z) => {
+      const start = points.length;
+      for (let k = 0; k < 32; k += 1) {
+        const angle = (Math.PI / 16) * k;
+        const radius = k % 4 === 1 || k % 4 === 2 ? 1 : 0.76;
+        points.push([Math.cos(angle) * radius, Math.sin(angle) * radius, z]);
+        edges.push([start + k, start + ((k + 1) % 32)]);
+      }
+      return start;
+    };
+    const front = outline(0.2);
+    const back = outline(-0.2);
+    join(front, back, 32);
+    slab(6, 0.3, 0.2);
+  } else if (kind === 'diamond') {
+    const table = ring(8, 0.5, 0.42, Math.PI / 8);
+    const girdle = ring(8, 1, 0.12);
+    const culet = points.push([0, 0, -0.9]) - 1;
+    for (let k = 0; k < 8; k += 1) edges.push([table + k, girdle + k], [table + k, girdle + ((k + 1) % 8)], [girdle + k, culet]);
   } else {
-    stellated(4, 0.3, 0.32); // sparkle
+    // torus: eight hex sections round a ring, each joined to the next.
+    let first = -1;
+    let last = -1;
+    for (let k = 0; k < 8; k += 1) {
+      const around = (Math.PI / 4) * k;
+      const start = points.length;
+      for (let j = 0; j < 6; j += 1) {
+        const tube = (Math.PI / 3) * j;
+        const reach = 0.7 + Math.cos(tube) * 0.28;
+        points.push([Math.cos(around) * reach, Math.sin(around) * reach, Math.sin(tube) * 0.28]);
+        edges.push([start + j, start + ((j + 1) % 6)]);
+      }
+      if (last >= 0) join(last, start, 6);
+      else first = start;
+      last = start;
+    }
+    join(last, first, 6);
   }
   return { points, edges };
 }
 
 function pickKind() {
-  let roll = Math.random();
+  let roll = Math.random() * WEIGHT_TOTAL;
   for (const kind of SHAPE_KINDS) {
     roll -= KIND_WEIGHTS[kind];
     if (roll <= 0) return kind;
   }
   return 'prism';
+}
+
+// Where a shape comes in and which way it floats (owner request, October 19, 2026: in
+// random directions, not only up). New shapes start just off a random edge of the screen
+// and head across it toward a random point inside, at `speed` px per second; the first
+// batch is scattered over the screen already, each heading any way at all. Exported for
+// tests; it uses no DOM.
+export function entry(width, height, radius, anywhere, speed) {
+  const margin = radius * 2;
+  let x;
+  let y;
+  if (anywhere) {
+    x = rand(0, width);
+    y = rand(0, height);
+  } else {
+    const edge = Math.floor(Math.random() * 4);
+    x = edge === 0 ? -margin : edge === 1 ? width + margin : rand(0, width);
+    y = edge === 2 ? -margin : edge === 3 ? height + margin : rand(0, height);
+  }
+  const heading = anywhere
+    ? rand(0, Math.PI * 2)
+    : Math.atan2(rand(height * 0.2, height * 0.8) - y, rand(width * 0.2, width * 0.8) - x);
+  return { x, y, vx: Math.cos(heading) * speed, vy: Math.sin(heading) * speed };
 }
 
 function makeShape(width, height, anywhere) {
@@ -173,10 +271,7 @@ function makeShape(width, height, anywhere) {
     kind,
     depth,
     radius,
-    x: rand(0, width),
-    // New shapes rise from just below the screen; the first batch is scattered everywhere.
-    y: anywhere ? rand(0, height) : height + radius * 2,
-    rise: rand(8, 22) * depth, // px per second
+    ...entry(width, height, radius, anywhere, rand(8, 22) * depth),
     sway: rand(0.2, 0.6),
     phase: rand(0, Math.PI * 2),
     angles: [rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2)],
@@ -231,13 +326,20 @@ export function startHexFloat({ still = false, resume = false } = {}) {
         step(dt, time) {
           for (let i = 0; i < shapes.length; i += 1) {
             const shape = shapes[i];
-            shape.y -= shape.rise * dt;
-            shape.x += Math.sin(time / 1000 * shape.sway + shape.phase) * 6 * shape.depth * dt;
+            // Along its heading, with a gentle sideways drift across it.
+            const drift = Math.sin((time / 1000) * shape.sway + shape.phase) * 6 * shape.depth * dt;
+            const speed = Math.hypot(shape.vx, shape.vy) || 1;
+            shape.x += shape.vx * dt - (shape.vy / speed) * drift;
+            shape.y += shape.vy * dt + (shape.vx / speed) * drift;
             for (let k = 0; k < 3; k += 1) shape.angles[k] += shape.spin[k] * dt;
             if (shape.flicker > 0) shape.flicker -= dt * 1000;
             else if (Math.random() < 0.0012) shape.flicker = rand(60, 180); // rare neon stutter
-            // Gone off the top: a new shape rises from the bottom, keeping the depth order.
-            if (shape.y < -shape.radius * 2) {
+            // Gone off any edge, heading away: a new one comes in from off screen, keeping
+            // the depth order.
+            const margin = shape.radius * 2;
+            const gone = (shape.x < -margin && shape.vx <= 0) || (shape.x > width + margin && shape.vx >= 0)
+              || (shape.y < -margin && shape.vy <= 0) || (shape.y > height + margin && shape.vy >= 0);
+            if (gone) {
               shapes[i] = makeShape(width, height, false);
               shapes.sort((p, q) => p.depth - q.depth);
             }
