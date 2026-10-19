@@ -1,7 +1,7 @@
 // The hex_float background's shapes (ui/hex-float.js): every kind is a sound wireframe.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometry, SHAPE_KINDS, entry } from '../site/assets/js/ui/hex-float.js';
+import { geometry, SHAPE_KINDS, entry, drift } from '../site/assets/js/ui/hex-float.js';
 
 test('every hex_float shape is a whole 3D wireframe about a unit across', () => {
   assert.ok(SHAPE_KINDS.includes('hexagram') && SHAPE_KINDS.includes('star'), 'stars among them');
@@ -35,4 +35,28 @@ test('new hex_float shapes come in from off screen, heading across it in any dir
     headings.add(Math.round((Math.atan2(vy, vx) + Math.PI) / (Math.PI / 4)) % 8);
   }
   assert.equal(headings.size, 8, 'every way across the screen, not only up');
+});
+
+test('about 42% of the hex_float shapes are replaced each minute, on desktops and laptops', () => {
+  for (const [w, h] of [[1920, 1080], [1366, 768], [2560, 1440]]) {
+    let total = 0;
+    const runs = 1500;
+    for (let i = 0; i < runs; i += 1) {
+      const depth = 0.35 + Math.random() * 0.65;
+      const radius = 30 * (0.6 + 0.4 * depth);
+      const shape = entry(w, h, radius, false, (8 + Math.random() * 14) * depth * drift(w, h));
+      const margin = radius * 2;
+      let t = 0;
+      while (t < 3000) {
+        shape.x += shape.vx * 0.5;
+        shape.y += shape.vy * 0.5;
+        t += 0.5;
+        if ((shape.x < -margin && shape.vx <= 0) || (shape.x > w + margin && shape.vx >= 0)
+          || (shape.y < -margin && shape.vy <= 0) || (shape.y > h + margin && shape.vy >= 0)) break;
+      }
+      total += t;
+    }
+    const perMinute = 60 / (total / runs);
+    assert.ok(perMinute > 0.37 && perMinute < 0.47, `${w}x${h}: ${(perMinute * 100).toFixed(1)}% a minute`);
+  }
 });

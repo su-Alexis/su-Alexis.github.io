@@ -11,6 +11,24 @@
 
 import { startCanvas, rand } from './canvas-bg.js';
 
+// Turnover and glow (owner request, October 19, 2026: 42% for both). TURNOVER is the
+// share of the shapes on screen that leave and are replaced each minute, on any screen:
+// speeds scale with the screen's size (drift) so a shape takes as long to cross a phone
+// as a desktop. GLOW_SHARE is the share of the time an ordinary shape is glowing: a glow
+// lasts GLOW_LENGTH seconds on average, so one starts at GLOW_RATE per second, timed by
+// the clock, not the frame rate, so it is the same on a 60 or a 144 Hz screen.
+const TURNOVER = 0.42;
+const CROSSING = 60 / TURNOVER; // seconds a shape spends on screen, on average
+const GLOW_SHARE = 0.42;
+const GLOW_LENGTH = 1.35; // the mean of rand(0.9, 1.8)
+const GLOW_RATE = GLOW_SHARE / ((1 - GLOW_SHARE) * GLOW_LENGTH);
+// Speed scale for this screen: a shape at the base speeds (8 to 22 px a second, by depth)
+// crosses a 1920x1080 screen in about BASE_CROSSING seconds (measured, tests/hex-float).
+const BASE_CROSSING = 205;
+// A line across a screen is pi * area / perimeter long on average (Cauchy), so speeds
+// scale with that to keep the crossing time the same on every screen.
+const chord = (width, height) => (Math.PI * width * height) / (2 * (width + height)) + 60;
+export const drift = (width, height) => (BASE_CROSSING / CROSSING) * (chord(width, height) / chord(1920, 1080));
 const AREA_PER_SHAPE = 17000; // px^2 of viewport per shape (busier, owner request, October 19, 2026)
 const MIN_SHAPES = 20;
 const MAX_SHAPES = 84; // bounded work on very large screens
@@ -271,7 +289,7 @@ function makeShape(width, height, anywhere) {
     kind,
     depth,
     radius,
-    ...entry(width, height, radius, anywhere, rand(8, 22) * depth),
+    ...entry(width, height, radius, anywhere, rand(8, 22) * depth * drift(width, height)),
     sway: rand(0.2, 0.6),
     phase: rand(0, Math.PI * 2),
     angles: [rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2)],
@@ -336,7 +354,7 @@ export function startHexFloat({ still = false, resume = false } = {}) {
             // Now and then a shape swells with light and settles again (owner request,
             // October 19, 2026: a glow instead of the old neon flicker, which dimmed it).
             if (shape.glow > 0) shape.glow = Math.max(0, shape.glow - dt);
-            else if (Math.random() < 0.0015) {
+            else if (Math.random() < dt * GLOW_RATE) {
               shape.glowFor = rand(0.9, 1.8);
               shape.glow = shape.glowFor;
             }
