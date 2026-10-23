@@ -11,7 +11,8 @@
 
 const CERTS = Object.freeze([
   Object.freeze({ status: 'CERTIFIED', name: 'CompTIA Security+', when: '' }),
-  Object.freeze({ status: 'EXAM', name: 'CompTIA SecurityX (formerly CASP+)', when: 'Oct 23, 2026' }),
+  // Passed October 23, 2026 (owner).
+  Object.freeze({ status: 'CERTIFIED', name: 'CompTIA SecurityX (formerly CASP+)', when: '' }),
   Object.freeze({ status: 'IN PROGRESS', name: 'EC-Council CEH v13 AI', when: 'Dec 2026' }),
   Object.freeze({ status: 'IN PROGRESS', name: 'CompTIA Network+', when: 'Jan 31, 2027' }),
   Object.freeze({ status: 'TARGET', name: 'EC-Council CEH v13 AI Practical', when: 'Feb 2027' }),

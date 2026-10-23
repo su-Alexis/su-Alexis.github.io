@@ -20,7 +20,8 @@ test('certs.txt matches the certifications on the home page', () => {
     assert.ok(home.includes(cert.name), cert.name);
     if (cert.when) assert.ok(home.includes(cert.when), `${cert.name} ${cert.when}`);
   }
-  assert.equal(CERT_ROWS.filter((cert) => cert.status === 'CERTIFIED').length, 1, 'only Security+ is earned');
+  // Earned: Security+, and SecurityX (passed October 23, 2026). Nothing else until the owner says so.
+  assert.deepEqual(CERT_ROWS.filter((cert) => cert.status === 'CERTIFIED').map((cert) => cert.name), ['CompTIA Security+', 'CompTIA SecurityX (formerly CASP+)']);
 });
 
 test('project READMEs quote their project pages word for word', () => {
