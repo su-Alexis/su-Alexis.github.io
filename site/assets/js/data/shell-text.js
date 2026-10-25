@@ -89,7 +89,7 @@ export const FILES = Object.freeze({
   home: Object.freeze({
     'about.txt': freeze([
       h('# Alexis Pontious'),
-      o('Cybersecurity, Ethical Hacking & AI Security Practitioner'),
+      o('Cybersecurity Practitioner | Ethical Hacking & AI Security'),
       o(''),
       o('I focus on practical cybersecurity, systems, and technical problem-solving across Windows, Linux, and macOS. My work includes system hardening, malware remediation, endpoint and network troubleshooting, virtualization, scripting, and hands-on lab practice.'),
       o(''),
